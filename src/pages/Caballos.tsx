@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { caballosApi, Caballo } from "@/lib/api";
+import { caballosApi, Caballo, CaballoSearchFilters } from "@/lib/api";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,9 +35,13 @@ export default function CaballosPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingCaballo, setEditingCaballo] = useState<Caballo | null>(null);
 
+  // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
+  const [searchFilters, setSearchFilters] = useState<CaballoSearchFilters>({});
+  const [isSearchActive, setIsSearchActive] = useState(false);
+
   // Estados de filtros
   const [filters, setFilters] = useState({
-    tipoCaballo: "all",
+    tipo: "all",
     disponible: "all",
   });
 
@@ -45,18 +49,65 @@ export default function CaballosPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  const { data: caballos = [], isLoading } = useQuery({
+  // 🔍 HANDLER PARA BÚSQUEDA INTELIGENTE
+  const handleSmartSearch = (filters: Record<string, unknown>) => {
+    const typedFilters: CaballoSearchFilters = {};
+
+    if (filters.nombre) typedFilters.nombre = String(filters.nombre);
+    if (filters.tipo)
+      typedFilters.tipo = String(filters.tipo) as "ESCUELA" | "PRIVADO";
+    if (filters.disponible !== undefined)
+      typedFilters.disponible = Boolean(filters.disponible);
+
+    setSearchFilters(typedFilters);
+    setCurrentPage(1);
+  };
+
+  // ✅ NUEVO: Escuchar evento de búsqueda global desde el Layout
+  useEffect(() => {
+    const handleGlobalSearchEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { filters, entityType } = customEvent.detail;
+
+      if (entityType === "caballos") {
+        handleSmartSearch(filters);
+      }
+    };
+
+    window.addEventListener("globalSearch", handleGlobalSearchEvent);
+
+    return () => {
+      window.removeEventListener("globalSearch", handleGlobalSearchEvent);
+    };
+  }, []);
+
+  // 🔍 QUERY PARA BÚSQUEDA INTELIGENTE
+  const { data: searchResults, isLoading: isSearching } = useQuery({
+    queryKey: ["caballos-search", searchFilters],
+    queryFn: () => {
+      if (Object.keys(searchFilters).length > 0) {
+        setIsSearchActive(true);
+        return caballosApi.buscar(searchFilters);
+      }
+      setIsSearchActive(false);
+      return caballosApi.listar();
+    },
+    enabled: true,
+  });
+
+  const { data: allCaballos = [], isLoading: isLoadingAll } = useQuery({
     queryKey: ["caballos"],
     queryFn: caballosApi.listar,
+    enabled: !isSearchActive,
   });
+
+  const caballos = searchResults || allCaballos;
+  const isLoading = isSearching || isLoadingAll;
 
   // Filtrar datos
   const filteredData = useMemo(() => {
     return caballos.filter((caballo: Caballo) => {
-      if (
-        filters.tipoCaballo !== "all" &&
-        caballo.tipoCaballo !== filters.tipoCaballo
-      ) {
+      if (filters.tipo !== "all" && caballo.tipo !== filters.tipo) {
         return false;
       }
       if (
@@ -81,7 +132,7 @@ export default function CaballosPage() {
   // Configuración de filtros
   const filterConfig = [
     {
-      name: "tipoCaballo",
+      name: "tipo",
       label: "Tipo",
       type: "select" as const,
       options: [
@@ -107,9 +158,10 @@ export default function CaballosPage() {
 
   const handleResetFilters = () => {
     setFilters({
-      tipoCaballo: "all",
+      tipo: "all",
       disponible: "all",
     });
+    setSearchFilters({});
     setCurrentPage(1);
   };
 
@@ -121,7 +173,7 @@ export default function CaballosPage() {
   const createMutation = useMutation({
     mutationFn: caballosApi.crear,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["caballos"] });
+      queryClient.invalidateQueries({ queryKey: ["caballos-search"] });
       setIsOpen(false);
       const successMsg =
         data.__successMessage || "Caballo creado correctamente";
@@ -135,7 +187,7 @@ export default function CaballosPage() {
     mutationFn: ({ id, data }: { id: number; data: Partial<Caballo> }) =>
       caballosApi.actualizar(id, data),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["caballos"] });
+      queryClient.invalidateQueries({ queryKey: ["caballos-search"] });
       setIsOpen(false);
       setEditingCaballo(null);
       const successMsg =
@@ -149,7 +201,7 @@ export default function CaballosPage() {
   const deleteMutation = useMutation({
     mutationFn: caballosApi.eliminar,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["caballos"] });
+      queryClient.invalidateQueries({ queryKey: ["caballos-search"] });
       const successMsg =
         data.__successMessage || "Caballo eliminado correctamente";
       toast.success(successMsg);
@@ -163,7 +215,7 @@ export default function CaballosPage() {
     const formData = new FormData(e.currentTarget);
     const data = {
       nombre: formData.get("nombre") as string,
-      tipoCaballo: formData.get("tipoCaballo") as "ESCUELA" | "PRIVADO",
+      tipo: formData.get("tipo") as "ESCUELA" | "PRIVADO",
       disponible: formData.get("disponible") === "on",
     };
 
@@ -179,10 +231,8 @@ export default function CaballosPage() {
     {
       header: "Tipo",
       cell: (row: Caballo) => (
-        <StatusBadge
-          status={row.tipoCaballo === "ESCUELA" ? "info" : "warning"}
-        >
-          {row.tipoCaballo === "ESCUELA" ? "Escuela" : "Privado"}
+        <StatusBadge status={row.tipo === "ESCUELA" ? "info" : "warning"}>
+          {row.tipo === "ESCUELA" ? "Escuela" : "Privado"}
         </StatusBadge>
       ),
     },
@@ -269,10 +319,10 @@ export default function CaballosPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="tipoCaballo">Tipo</Label>
+                    <Label htmlFor="tipo">Tipo</Label>
                     <Select
-                      name="tipoCaballo"
-                      defaultValue={editingCaballo?.tipoCaballo || "ESCUELA"}
+                      name="tipo"
+                      defaultValue={editingCaballo?.tipo || "ESCUELA"}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -321,7 +371,11 @@ export default function CaballosPage() {
           columns={columns}
           data={paginatedData}
           isLoading={isLoading}
-          emptyMessage="No hay caballos que coincidan con los filtros"
+          emptyMessage={
+            isSearchActive
+              ? "No se encontraron caballos con esos criterios de búsqueda"
+              : "No hay caballos que coincidan con los filtros"
+          }
         />
 
         {filteredData.length > 0 && (

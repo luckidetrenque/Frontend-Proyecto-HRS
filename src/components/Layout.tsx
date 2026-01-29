@@ -1,5 +1,5 @@
-import { ReactNode, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { ReactNode, useCallback, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   Users,
@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserDropdown } from "@/components/UserDropdown";
+import SmartSearch from "@/components/ui/smart-search";
 import {
   AlumnoIcon,
   InstructorIcon,
@@ -37,6 +38,29 @@ const navigation = [
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  // Determinar el tipo de entidad según la ruta actual
+  const entityType = useMemo(() => {
+    if (location.pathname.startsWith("/alumnos")) return "alumnos";
+    if (location.pathname.startsWith("/instructores")) return "instructores";
+    if (location.pathname.startsWith("/caballos")) return "caballos";
+    if (location.pathname.startsWith("/clases")) return "clases";
+    return null;
+  }, [location.pathname]);
+
+  // Handler para la búsqueda global
+  const handleGlobalSearch = useCallback(
+    (filters: Record<string, unknown>) => {
+      // Emitir evento personalizado con los filtros
+      window.dispatchEvent(
+        new CustomEvent("globalSearch", {
+          detail: { filters, entityType },
+        }),
+      );
+    },
+    [entityType],
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -81,6 +105,15 @@ export function Layout({ children }: LayoutProps) {
 
           {/* User Dropdown + Mobile Menu Button */}
           <div className="flex items-center gap-2">
+            {/* Buscador Global */}
+            {entityType && (
+              <div className="hidden lg:block flex-1 max-w-xl mx-4">
+                <SmartSearch
+                  entityType={entityType}
+                  onSearch={handleGlobalSearch}
+                />
+              </div>
+            )}
             <UserDropdown />
             <Button
               variant="ghost"

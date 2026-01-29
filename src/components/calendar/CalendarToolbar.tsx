@@ -1,7 +1,7 @@
 /**
  * CalendarToolbar.tsx
  * Barra de herramientas con todos los botones de acción del calendario
- * Incluye: Exportar Excel, Cancelar Día, Copiar Semana, Eliminar Clases
+ * Incluye: Exportar Excel, Cancelar Día, Copiar Clases, Eliminar Clases
  */
 
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,7 @@ import { useState } from "react";
 import { MOTIVOS_CANCELACION } from "./calendar.styles";
 
 interface CalendarToolbarProps {
-  // Copiar Semana
+  // Copiar Clases
   isCopyOpen: boolean;
   onCopyOpenChange: (open: boolean) => void;
   onCopySubmit: (e: React.FormEvent<HTMLFormElement>) => void;
@@ -208,7 +208,7 @@ export function CalendarToolbar({
         </>
       )}
 
-      {/* Copiar Semana */}
+      {/* Copiar Clases */}
       <Dialog open={isCopyOpen} onOpenChange={onCopyOpenChange}>
         <Button
           variant="outline"
@@ -216,7 +216,7 @@ export function CalendarToolbar({
           onClick={() => onCopyOpenChange(true)}
         >
           <ClipboardCopy className="mr-2 h-4 w-4" />
-          Copiar Semana
+          Copiar Clases
         </Button>
         <DialogContent className="sm:max-w-md">
           <form onSubmit={onCopySubmit}>
@@ -239,11 +239,22 @@ export function CalendarToolbar({
                   <Label htmlFor="inicioDes">Día de destino</Label>
                   <Input id="inicioDes" name="inicioDes" type="date" required />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cantidadSemanas">Cantidad de semanas</Label>
+                  <Input
+                    id="cantidadSemanas"
+                    name="cantidadSemanas"
+                    type="number"
+                    min={1}
+                    defaultValue={1}
+                    required
+                  />
+                </div>
               </div>
             </div>
             <DialogFooter>
               <Button type="submit" disabled={copyPending}>
-                {copyPending ? "Copiando..." : "Copiar semana"}
+                {copyPending ? "Copiando..." : "Copiar clases"}
               </Button>
             </DialogFooter>
           </form>

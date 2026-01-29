@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import IdleHandler from "@/components/auth/IdleHandler";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -16,6 +17,7 @@ import CalendarioPage from "./pages/Calendario";
 import ClasesPage from "./pages/Clases";
 import InstructoresPage from "./pages/Instructores";
 import Reportes from "./pages/Reportes";
+import AlumnoDetalle from "@/pages/AlumnoDetalle";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +28,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <IdleHandler />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -90,6 +93,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Reportes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumnos/:id"
+              element={
+                <ProtectedRoute>
+                  <AlumnoDetalle />
                 </ProtectedRoute>
               }
             />

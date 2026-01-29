@@ -43,35 +43,35 @@ export interface UpdateData {
   // nombre?: string;
   // apellido?: string;
   rol?: string;
-  activo: boolean
+  activo: boolean;
   fechaCreacion: string;
   // personaDni?: string;
   // personaTipoDni?: string;
 }
 
-
 // Codifica credenciales en Base64 para Basic Auth
 export const encodeCredentials = (
   username: string,
-  password: string
+  password: string,
 ): string => {
   return btoa(`${username}:${password}`);
 };
 
 // Obtiene las credenciales guardadas
 export const getStoredCredentials = (): string | null => {
-  return localStorage.getItem("authCredentials");
+  return sessionStorage.getItem("authCredentials");
 };
 
 // Guarda las credenciales
-export const storeCredentials = (credentials: string): void => {
-  localStorage.setItem("authCredentials", credentials);
+export const storeCredentials = (credentials: string, user: User): void => {
+  sessionStorage.setItem("authCredentials", credentials);
+  sessionStorage.setItem("user", JSON.stringify(user));
 };
 
 // Limpia las credenciales
 export const clearCredentials = (): void => {
-  localStorage.removeItem("authCredentials");
-  localStorage.removeItem("user");
+  sessionStorage.removeItem("authCredentials");
+  sessionStorage.removeItem("user");
 };
 
 // Login con Basic Auth
@@ -93,8 +93,8 @@ export const login = async (credentials: LoginCredentials): Promise<User> => {
 
   const user = await response.json();
 
-  storeCredentials(encoded);
-  localStorage.setItem("user", JSON.stringify(user));
+  storeCredentials(encoded, user);
+  sessionStorage.setItem("user", JSON.stringify(user));
 
   return user;
 };
@@ -136,10 +136,10 @@ export const update = async (data: UpdateData): Promise<User> => {
   }
 
   const updatedUser = await response.json();
-  localStorage.setItem("user", JSON.stringify(updatedUser));
+  sessionStorage.setItem("user", JSON.stringify(updatedUser));
 
   return updatedUser;
-}
+};
 
 // Logout
 export const logout = async (): Promise<void> => {
@@ -160,7 +160,7 @@ export const logout = async (): Promise<void> => {
 // Update user profile
 export const updateProfile = async (
   id: number,
-  data: Partial<UpdateData>
+  data: Partial<UpdateData>,
 ): Promise<User> => {
   const credentials = getStoredCredentials();
 
@@ -179,15 +179,15 @@ export const updateProfile = async (
   }
 
   const updatedUser = await response.json();
-  localStorage.setItem("user", JSON.stringify(updatedUser));
+  sessionStorage.setItem("user", JSON.stringify(updatedUser));
 
   return updatedUser;
-}
+};
 
 // Helper para hacer peticiones autenticadas
 export const authenticatedFetch = async (
   url: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<Response> => {
   const credentials = getStoredCredentials();
 

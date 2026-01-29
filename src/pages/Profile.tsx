@@ -33,7 +33,7 @@ export default function Profile() {
 
     // Actualizar el contexto de autenticación si es necesario
     const updatedUser = { ...user, ...updatedData };
-    localStorage.setItem("user", JSON.stringify(updatedUser));
+    sessionStorage.setItem("user", JSON.stringify(updatedUser));
   };
 
   if (!user) {

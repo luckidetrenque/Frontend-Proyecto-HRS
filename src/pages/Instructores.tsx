@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -19,7 +19,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { instructoresApi, Instructor } from "@/lib/api";
+import {
+  instructoresApi,
+  Instructor,
+  InstructorSearchFilters,
+} from "@/lib/api";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,6 +34,12 @@ export default function InstructoresPage() {
     null,
   );
 
+  // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
+  const [searchFilters, setSearchFilters] = useState<InstructorSearchFilters>(
+    {},
+  );
+  const [isSearchActive, setIsSearchActive] = useState(false);
+
   // Estados de filtros
   const [filters, setFilters] = useState({
     activo: "all",
@@ -39,10 +49,67 @@ export default function InstructoresPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  const { data: instructores = [], isLoading } = useQuery({
+  // 🔍 HANDLER PARA BÚSQUEDA INTELIGENTE
+  const handleSmartSearch = (filters: Record<string, unknown>) => {
+    const typedFilters: InstructorSearchFilters = {};
+
+    if (filters.nombre) typedFilters.nombre = String(filters.nombre);
+    if (filters.apellido) typedFilters.apellido = String(filters.apellido);
+    if (filters.activo !== undefined)
+      typedFilters.activo = Boolean(filters.activo);
+    if (filters.fechaNacimiento)
+      typedFilters.fechaNacimiento = String(filters.fechaNacimiento);
+
+    setSearchFilters(typedFilters);
+    setCurrentPage(1); // Reset a página 1 al buscar
+  };
+  // ✅ NUEVO: Escuchar evento de búsqueda global desde el Layout
+  useEffect(() => {
+    const handleGlobalSearchEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { filters, entityType } = customEvent.detail;
+
+      // Solo procesar si el evento es para esta entidad
+      if (entityType === "instructores") {
+        handleSmartSearch(filters);
+      }
+    };
+
+    // Registrar el listener
+    window.addEventListener("globalSearch", handleGlobalSearchEvent);
+
+    // Cleanup: remover el listener al desmontar
+    return () => {
+      window.removeEventListener("globalSearch", handleGlobalSearchEvent);
+    };
+  }, []);
+
+  // 🔍 QUERY PARA BÚSQUEDA INTELIGENTE
+  const { data: searchResults, isLoading: isSearching } = useQuery({
+    queryKey: ["instructores-search", searchFilters],
+    queryFn: () => {
+      // Si hay filtros de búsqueda, usar endpoint de búsqueda
+      if (Object.keys(searchFilters).length > 0) {
+        setIsSearchActive(true);
+        return instructoresApi.buscar(searchFilters);
+      }
+      // Si no hay filtros, listar todos
+      setIsSearchActive(false);
+      return instructoresApi.listar();
+    },
+    enabled: true,
+  });
+
+  // Query original (como fallback)
+  const { data: allInstructores = [], isLoading: isLoadingAll } = useQuery({
     queryKey: ["instructores"],
     queryFn: instructoresApi.listar,
+    enabled: !isSearchActive, // Solo cargar si no hay búsqueda activa
   });
+
+  // Usar resultados de búsqueda o todos los instructores
+  const instructores = searchResults || allInstructores;
+  const isLoading = isSearching || isLoadingAll;
 
   // Filtrar datos
   const filteredData = useMemo(() => {
@@ -88,6 +155,7 @@ export default function InstructoresPage() {
     setFilters({
       activo: "all",
     });
+    setSearchFilters({}); // ✅ AGREGAR ESTA LÍNEA
     setCurrentPage(1);
   };
 
@@ -99,7 +167,7 @@ export default function InstructoresPage() {
   const createMutation = useMutation({
     mutationFn: instructoresApi.crear,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["instructores"] });
+      queryClient.invalidateQueries({ queryKey: ["instructores-search"] });
       setIsOpen(false);
       const successMsg =
         data.__successMessage || "Instructor creado correctamente";
@@ -113,7 +181,7 @@ export default function InstructoresPage() {
     mutationFn: ({ id, data }: { id: number; data: Partial<Instructor> }) =>
       instructoresApi.actualizar(id, data),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["instructores"] });
+      queryClient.invalidateQueries({ queryKey: ["instructores-search"] });
       setIsOpen(false);
       setEditingInstructor(null);
       const successMsg =
@@ -127,7 +195,7 @@ export default function InstructoresPage() {
   const deleteMutation = useMutation({
     mutationFn: instructoresApi.eliminar,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["instructores"] });
+      queryClient.invalidateQueries({ queryKey: ["instructores-search"] });
       const successMsg =
         data.__successMessage || "Instructor eliminado correctamente";
       toast.success(successMsg);
@@ -349,7 +417,11 @@ export default function InstructoresPage() {
           columns={columns}
           data={paginatedData}
           isLoading={isLoading}
-          emptyMessage="No hay instructores que coincidan con los filtros"
+          emptyMessage={
+            isSearchActive
+              ? "No se encontraron instructores con esos criterios de búsqueda"
+              : "No hay instructores que coincidan con los filtros"
+          }
         />
 
         {filteredData.length > 0 && (

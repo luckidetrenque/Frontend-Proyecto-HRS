@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import { Search, X, Loader2, Filter, TrendingUp } from "lucide-react";
 
 // Tipos de entidades
@@ -39,7 +45,7 @@ const KEYWORDS = {
     programada: ["programada", "programadas", "pendiente", "pendientes"],
     completada: ["completada", "completadas", "finalizada", "finalizadas"],
     cancelada: ["cancelada", "canceladas"],
-    enCurso: ["en curso", "activa", "activas", "en progreso"],
+    iniciada: ["iniciada", "en curso", "activa", "activas", "en progreso"],
   },
 };
 
@@ -108,9 +114,9 @@ const interpretarBusqueda = (
     }
   } else if (entityType === "caballos") {
     if (keywords.escuela.some((k) => queryLower.includes(k)))
-      filters.tipoCaballo = "ESCUELA";
+      filters.tipo = "ESCUELA";
     if (keywords.privado.some((k) => queryLower.includes(k)))
-      filters.tipoCaballo = "PRIVADO";
+      filters.tipo = "PRIVADO";
     if (keywords.disponible.some((k) => queryLower.includes(k)))
       filters.disponible = true;
     if (keywords.noDisponible.some((k) => queryLower.includes(k)))
@@ -122,8 +128,8 @@ const interpretarBusqueda = (
       filters.estado = "COMPLETADA";
     if (keywords.cancelada.some((k) => queryLower.includes(k)))
       filters.estado = "CANCELADA";
-    if (keywords.enCurso.some((k) => queryLower.includes(k)))
-      filters.estado = "EN_CURSO";
+    if (keywords.iniciada.some((k) => queryLower.includes(k)))
+      filters.estado = "INICIADA";
 
     const fecha = parseFecha(queryLower);
     if (fecha) filters.dia = fecha;
@@ -162,6 +168,17 @@ export default function SmartSearch({
   const timeoutRef = useRef<NodeJS.Timeout>();
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Default placeholder based on entity type
+  const defaultPlaceholder = useMemo(() => {
+    const placeholders = {
+      alumnos: "Buscar alumnos por nombre, estado, fecha...",
+      instructores: "Buscar instructores por nombre, disponibilidad...",
+      caballos: "Buscar caballos por nombre, tipo, disponibilidad...",
+      clases: "Buscar clases por estado, fecha, especialidad...",
+    };
+    return placeholders[entityType];
+  }, [entityType]);
 
   // Sugerencias dinámicas basadas en el tipo de entidad
   const defaultSuggestions = React.useMemo(() => {
@@ -255,7 +272,7 @@ export default function SmartSearch({
   };
 
   return (
-    <div className="relative w-full max-w-2xl">
+    <div className="relative w-full">
       {/* Search Input */}
       <div className="relative">
         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -273,11 +290,8 @@ export default function SmartSearch({
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setShowSuggestions(true)}
           onKeyDown={handleKeyDown}
-          placeholder={
-            placeholder ||
-            `Buscar ${entityType}... (ej: "activos propietarios" o "Juan García")`
-          }
-          className="w-full h-11 pl-10 pr-10 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+          placeholder={placeholder || defaultPlaceholder}
+          className="w-full h-10 pl-10 pr-10 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
         />
 
         {query && (
@@ -337,7 +351,7 @@ export default function SmartSearch({
       )}
 
       {/* Active Filters Display */}
-      {query && (
+      {/* {query && (
         <div className="mt-3 flex flex-wrap gap-2">
           {Object.entries(interpretarBusqueda(query, entityType)).map(
             ([key, value]) => (
@@ -351,7 +365,7 @@ export default function SmartSearch({
             ),
           )}
         </div>
-      )}
+      )} */}
     </div>
   );
 }

@@ -6,18 +6,19 @@ interface PageHeaderProps {
   action?: ReactNode;
 }
 
+// page-header.tsx
 export function PageHeader({ title, description, action }: PageHeaderProps) {
   return (
-    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 className="font-display text-2xl font-semibold text-foreground md:text-3xl">
+    <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+      <div className="space-y-1">
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
           {title}
         </h1>
-        {description && (
-          <p className="mt-1 text-muted-foreground">{description}</p>
-        )}
+        {description && <p className="text-muted-foreground">{description}</p>}
       </div>
-      {action && <div className="flex-shrink-0">{action}</div>}
+
+      {/* Contenedor de acciones: le damos un ancho total en móvil y auto en desktop */}
+      {action && <div className="w-full md:w-auto flex-shrink-0">{action}</div>}
     </div>
   );
 }

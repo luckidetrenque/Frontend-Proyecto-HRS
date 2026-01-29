@@ -224,8 +224,7 @@ export default function ReportesPage() {
         nombre,
         cantidad,
         tipo:
-          caballos.find((c: Caballo) => c.nombre === nombre)?.tipoCaballo ||
-          "ESCUELA",
+          caballos.find((c: Caballo) => c.nombre === nombre)?.tipo || "ESCUELA",
       }))
       .sort((a, b) => b.cantidad - a.cantidad);
   }, [clasesFiltradas, caballos]);
@@ -903,9 +902,8 @@ export default function ReportesPage() {
                     <div>
                       <p className="text-2xl font-bold">
                         {
-                          caballos.filter(
-                            (c: Caballo) => c.tipoCaballo === "ESCUELA",
-                          ).length
+                          caballos.filter((c: Caballo) => c.tipo === "ESCUELA")
+                            .length
                         }
                       </p>
                       <p className="text-sm text-muted-foreground">
@@ -916,7 +914,7 @@ export default function ReportesPage() {
                       {caballos.length > 0
                         ? (
                             (caballos.filter(
-                              (c: Caballo) => c.tipoCaballo === "ESCUELA",
+                              (c: Caballo) => c.tipo === "ESCUELA",
                             ).length /
                               caballos.length) *
                             100
@@ -929,9 +927,8 @@ export default function ReportesPage() {
                     <div>
                       <p className="text-2xl font-bold">
                         {
-                          caballos.filter(
-                            (c: Caballo) => c.tipoCaballo === "PRIVADO",
-                          ).length
+                          caballos.filter((c: Caballo) => c.tipo === "PRIVADO")
+                            .length
                         }
                       </p>
                       <p className="text-sm text-muted-foreground">
@@ -942,7 +939,7 @@ export default function ReportesPage() {
                       {caballos.length > 0
                         ? (
                             (caballos.filter(
-                              (c: Caballo) => c.tipoCaballo === "PRIVADO",
+                              (c: Caballo) => c.tipo === "PRIVADO",
                             ).length /
                               caballos.length) *
                             100

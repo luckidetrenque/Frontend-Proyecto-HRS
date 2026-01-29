@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -34,28 +34,80 @@ import {
   Alumno,
   Instructor,
   Caballo,
+  ClaseDetallada,
+  ClaseSearchFilters,
 } from "@/lib/api";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { ALUMNO_COMODIN_ID } from "@/components/calendar/calendar.styles";
 
 const estadoColors: Record<
   string,
   "success" | "warning" | "error" | "info" | "default"
 > = {
   PROGRAMADA: "warning",
-  EN_CURSO: "info",
+  INICIADA: "info",
   COMPLETADA: "success",
   CANCELADA: "error",
   ACA: "info",
   ASA: "info",
 };
 
-const especialidad = ["EQUINOTERAPIA", "EQUITACION", "ADIESTRAMIENTO"];
+const especialidad = ["EQUINOTERAPIA", "EQUITACION", "ADIESTRAMIENTO", "MONTA"];
 
 export default function ClasesPage() {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [editingClase, setEditingClase] = useState<Clase | null>(null);
+
+  // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
+  const [searchFilters, setSearchFilters] = useState<ClaseSearchFilters>({});
+  const [isSearchActive, setIsSearchActive] = useState(false);
+
+  // 🔍 HANDLER PARA BÚSQUEDA INTELIGENTE
+  const handleSmartSearch = (filters: Record<string, unknown>) => {
+    const typedFilters: ClaseSearchFilters = {};
+
+    if (filters.dia) typedFilters.dia = String(filters.dia);
+    if (filters.hora) typedFilters.hora = String(filters.hora);
+    if (filters.alumnoId) typedFilters.alumnoId = Number(filters.alumnoId);
+    if (filters.instructorId)
+      typedFilters.instructorId = Number(filters.instructorId);
+    if (filters.caballoId) typedFilters.caballoId = Number(filters.caballoId);
+    if (filters.especialidad)
+      typedFilters.especialidad = String(filters.especialidad) as
+        | "ADIESTRAMIENTO"
+        | "EQUINOTERAPIA"
+        | "EQUITACION";
+    if (filters.estado)
+      typedFilters.estado = String(filters.estado) as
+        | "PROGRAMADA"
+        | "INICIADA"
+        | "COMPLETADA"
+        | "CANCELADA"
+        | "ACA"
+        | "ASA";
+
+    setSearchFilters(typedFilters);
+    setCurrentPage(1);
+  };
+
+  useEffect(() => {
+    const handleGlobalSearchEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { filters, entityType } = customEvent.detail;
+
+      if (entityType === "clases") {
+        handleSmartSearch(filters);
+      }
+    };
+
+    window.addEventListener("globalSearch", handleGlobalSearchEvent);
+
+    return () => {
+      window.removeEventListener("globalSearch", handleGlobalSearchEvent);
+    };
+  }, []);
 
   // Estados de filtros
   const [filters, setFilters] = useState({
@@ -72,10 +124,33 @@ export default function ClasesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  const { data: clases = [], isLoading } = useQuery({
+  // Estados para controlar la especialidad y el alumno en el formulario
+  const [especialidadSeleccionada, setEspecialidadSeleccionada] =
+    useState<string>("");
+  const [alumnoIdSeleccionado, setAlumnoIdSeleccionado] = useState<string>("");
+
+  // 🔍 QUERY PARA BÚSQUEDA INTELIGENTE
+  const { data: searchResults, isLoading: isSearching } = useQuery({
+    queryKey: ["clases-search", searchFilters],
+    queryFn: () => {
+      if (Object.keys(searchFilters).length > 0) {
+        setIsSearchActive(true);
+        return clasesApi.buscar(searchFilters);
+      }
+      setIsSearchActive(false);
+      return clasesApi.listarDetalladas();
+    },
+    enabled: true,
+  });
+
+  const { data: allClases = [], isLoading: isLoadingAll } = useQuery({
     queryKey: ["clases"],
     queryFn: clasesApi.listarDetalladas,
+    enabled: !isSearchActive,
   });
+
+  const clases = searchResults || allClases;
+  const isLoading = isSearching || isLoadingAll;
 
   const { data: alumnos = [] } = useQuery({
     queryKey: ["alumnos"],
@@ -197,7 +272,7 @@ export default function ClasesPage() {
       type: "select" as const,
       options: [
         { label: "Programada", value: "PROGRAMADA" },
-        { label: "En Curso", value: "EN_CURSO" },
+        { label: "Iniciada", value: "INICIADA" },
         { label: "Completada", value: "COMPLETADA" },
         { label: "Cancelada", value: "CANCELADA" },
         { label: "ACA", value: "ACA" },
@@ -205,6 +280,30 @@ export default function ClasesPage() {
       ],
     },
   ];
+
+  // Función para abrir el diálogo de edición
+  const handleOpenEditDialog = (clase: Clase) => {
+    setEditingClase(clase);
+    setEspecialidadSeleccionada(clase.especialidad);
+    setAlumnoIdSeleccionado(String(clase.alumnoId));
+    setIsOpen(true);
+  };
+
+  // Función para abrir el diálogo de nueva clase
+  const handleOpenCreateDialog = () => {
+    setEditingClase(null);
+    setEspecialidadSeleccionada("");
+    setAlumnoIdSeleccionado("");
+    setIsOpen(true);
+  };
+
+  // Función para cerrar el diálogo y resetear estados
+  const handleCloseDialog = () => {
+    setIsOpen(false);
+    setEditingClase(null);
+    setEspecialidadSeleccionada("");
+    setAlumnoIdSeleccionado("");
+  };
 
   const handleFilterChange = (name: string, value: string) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
@@ -222,6 +321,7 @@ export default function ClasesPage() {
       estado: "all",
     });
     setCurrentPage(1);
+    setSearchFilters({});
   };
 
   const handlePageSizeChange = (size: number) => {
@@ -229,10 +329,20 @@ export default function ClasesPage() {
     setCurrentPage(1);
   };
 
+  // Manejador para cambio de especialidad
+  const handleEspecialidadChange = (value: string) => {
+    setEspecialidadSeleccionada(value);
+
+    // Si es MONTA, asignar automáticamente el alumno comodín
+    if (value === "MONTA") {
+      setAlumnoIdSeleccionado(String(ALUMNO_COMODIN_ID));
+    }
+  };
+
   const createMutation = useMutation({
     mutationFn: clasesApi.crear,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["clases"] });
+      queryClient.invalidateQueries({ queryKey: ["clases-search"] });
       setIsOpen(false);
       const successMsg = data.__successMessage || "Clase creada correctamente";
       toast.success(successMsg);
@@ -245,7 +355,7 @@ export default function ClasesPage() {
     mutationFn: ({ id, data }: { id: number; data: Partial<Clase> }) =>
       clasesApi.actualizar(id, data),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["clases"] });
+      queryClient.invalidateQueries({ queryKey: ["clases-search"] });
       setIsOpen(false);
       setEditingClase(null);
       const successMsg =
@@ -259,7 +369,7 @@ export default function ClasesPage() {
   const deleteMutation = useMutation({
     mutationFn: clasesApi.eliminar,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["clases"] });
+      queryClient.invalidateQueries({ queryKey: ["clases-search"] });
       const successMsg =
         data.__successMessage || "Clase eliminada correctamente";
       toast.success(successMsg);
@@ -276,7 +386,8 @@ export default function ClasesPage() {
       especialidad: formData.get("especialidad") as
         | "ADIESTRAMIENTO"
         | "EQUINOTERAPIA"
-        | "EQUITACION",
+        | "EQUITACION"
+        | "MONTA",
       dia: new Date(formData.get("dia") as string).toISOString().split("T")[0],
       hora: new Date(`1970-01-01T${formData.get("hora") as string}`)
         .toISOString()
@@ -285,7 +396,7 @@ export default function ClasesPage() {
       duracion: 60,
       estado: formData.get("estado") as
         | "PROGRAMADA"
-        | "EN_CURSO"
+        | "INICIADA"
         | "COMPLETADA"
         | "CANCELADA"
         | "ACA"
@@ -344,6 +455,8 @@ export default function ClasesPage() {
       })
       .replace(":", ":"); // Asegura que use el separador estándar
   };
+
+  const hoy = new Date();
 
   const columns = [
     {
@@ -449,7 +562,15 @@ export default function ClasesPage() {
                         id="dia"
                         name="dia"
                         type="date"
-                        defaultValue={editingClase?.dia}
+                        defaultValue={
+                          editingClase?.dia ||
+                          hoy.getFullYear() +
+                            "-" +
+                            hoy.getMonth() +
+                            1 +
+                            "-" +
+                            hoy.getDate()
+                        }
                         required
                       />
                     </div>
@@ -459,9 +580,11 @@ export default function ClasesPage() {
                         id="hora"
                         name="hora"
                         type="time"
-                        defaultValue={obtenerHoraArgentina(
-                          editingClase?.diaHoraCompleto?.toString(),
-                        )}
+                        defaultValue={
+                          editingClase
+                            ? obtenerHoraArgentina(editingClase.diaHoraCompleto)
+                            : "09:00"
+                        }
                         // defaultValue={editingClase?.hora}
                         required
                       />
@@ -469,10 +592,32 @@ export default function ClasesPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="alumnoId">Alumno</Label>
+                      <Label htmlFor="alumnoId">
+                        {" "}
+                        Alumno
+                        {especialidadSeleccionada === "MONTA" && (
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            (Auto)
+                          </span>
+                        )}
+                      </Label>
+                      {/* Campo oculto para enviar el alumnoId cuando el select está deshabilitado */}
+                      {especialidadSeleccionada === "MONTA" && (
+                        <input
+                          type="hidden"
+                          name="alumnoId"
+                          value={alumnoIdSeleccionado}
+                        />
+                      )}
                       <Select
-                        name="alumnoId"
+                        name={
+                          especialidadSeleccionada === "MONTA" ? "" : "alumnoId"
+                        }
+                        required={especialidadSeleccionada !== "MONTA"}
+                        value={alumnoIdSeleccionado}
+                        onValueChange={setAlumnoIdSeleccionado}
                         defaultValue={String(editingClase?.alumnoId || "")}
+                        disabled={especialidadSeleccionada === "MONTA"}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar alumno" />
@@ -507,7 +652,7 @@ export default function ClasesPage() {
                                 value={String(caballo.id)}
                               >
                                 {caballo.nombre} (
-                                {caballo.tipoCaballo === "ESCUELA"
+                                {caballo.tipo === "ESCUELA"
                                   ? "Escuela"
                                   : "Privado"}
                                 )
@@ -545,6 +690,8 @@ export default function ClasesPage() {
                       <Label htmlFor="especialidad">Especialidad</Label>
                       <Select
                         name="especialidad"
+                        value={especialidadSeleccionada}
+                        onValueChange={handleEspecialidadChange}
                         defaultValue={editingClase?.especialidad || ""}
                       >
                         <SelectTrigger>
@@ -565,14 +712,14 @@ export default function ClasesPage() {
                       <Label htmlFor="estado">Estado</Label>
                       <Select
                         name="estado"
-                        defaultValue={editingClase?.estado || ""}
+                        defaultValue={editingClase?.estado || "PROGRAMADA"}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar estado" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="PROGRAMADA">Programada</SelectItem>
-                          <SelectItem value="EN_CURSO">En Curso</SelectItem>
+                          <SelectItem value="INICIADA">Iniciada</SelectItem>
                           <SelectItem value="COMPLETADA">Completada</SelectItem>
                           <SelectItem value="CANCELADA">Cancelada</SelectItem>
                           <SelectItem value="ACA">ACA</SelectItem>
@@ -620,7 +767,11 @@ export default function ClasesPage() {
           columns={columns}
           data={paginatedData}
           isLoading={isLoading}
-          emptyMessage="No hay clases que coincidan con los filtros"
+          emptyMessage={
+            isSearchActive
+              ? "No se encontraron clases con esos criterios de búsqueda"
+              : "No hay clases que coincidan con los filtros"
+          }
         />
 
         {filteredData.length > 0 && (

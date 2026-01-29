@@ -39,7 +39,7 @@ export function useCalendar() {
 
   // Estados del calendario
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [viewMode, setViewMode] = useState<ViewMode>("day");
 
   // Estados del diálogo crear/editar
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -168,7 +168,8 @@ export function useCalendar() {
     mutationFn: (datos: {
       diaInicioOrigen: string;
       diaInicioDestino: string;
-    }) => clasesApi.copiarSemana(datos),
+      cantidadSemanas: number;
+    }) => clasesApi.copiarClases(datos),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["clases"] });
       setIsCopyOpen(false);
@@ -325,12 +326,13 @@ export function useCalendar() {
     const data = {
       diaInicioOrigen: formData.get("inicioOri") as string,
       diaInicioDestino: formData.get("inicioDes") as string,
+      cantidadSemanas: Number(formData.get("cantidadSemanas")),
     };
 
-    if (!data.diaInicioOrigen || !data.diaInicioDestino) {
-      toast.error("Ambas fechas son obligatorias");
-      return;
-    }
+    // if (!data.diaInicioOrigen || !data.diaInicioDestino) {
+    //   toast.error("Ambas fechas son obligatorias");
+    //   return;
+    // }
 
     copyWeekMutation.mutate(data);
   };
@@ -341,6 +343,7 @@ export function useCalendar() {
     const data = {
       diaInicioOrigen: formData.get("inicioOri") as string,
       diaInicioDestino: formData.get("inicioDes") as string,
+      cantidadSemanas: 1,
     };
 
     if (!data.diaInicioOrigen || !data.diaInicioDestino) {

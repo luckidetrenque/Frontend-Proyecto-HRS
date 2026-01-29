@@ -62,9 +62,9 @@ export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
         // Simulación por defecto si no hay callback
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        // Actualizar localStorage
+        // Actualizar sessionStorage
         const updatedUser = { ...user, ...editedData };
-        localStorage.setItem("user", JSON.stringify(updatedUser));
+        sessionStorage.setItem("user", JSON.stringify(updatedUser));
       }
 
       toast.success("Perfil actualizado correctamente");

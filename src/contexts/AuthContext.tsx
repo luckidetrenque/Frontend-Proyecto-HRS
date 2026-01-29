@@ -43,10 +43,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Recuperar usuario de localStorage al cargar
+  // Recuperar usuario de sessionStorage al cargar
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    const storedCredentials = localStorage.getItem("authCredentials");
+    const storedUser = sessionStorage.getItem("user");
+    const storedCredentials = sessionStorage.getItem("authCredentials");
 
     if (storedUser && storedCredentials) {
       try {

@@ -30,19 +30,19 @@ export interface Instructor {
 export interface Caballo {
   id: number;
   nombre: string;
-  tipoCaballo: "ESCUELA" | "PRIVADO";
+  tipo: "ESCUELA" | "PRIVADO";
   disponible: boolean;
   alumnoId?: number;
 }
 
 export interface Clase {
   id: number;
-  especialidad: "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUITACION";
+  especialidad: "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUITACION" | "MONTA";
   dia: string;
   hora: string;
   estado:
     | "PROGRAMADA"
-    | "EN_CURSO"
+    | "INICIADA"
     | "COMPLETADA"
     | "CANCELADA"
     | "ACA"
@@ -78,7 +78,7 @@ export interface InstructorSearchFilters {
 
 export interface CaballoSearchFilters {
   nombre?: string;
-  tipoCaballo?: "ESCUELA" | "PRIVADO";
+  tipo?: "ESCUELA" | "PRIVADO";
   disponible?: boolean;
 }
 
@@ -88,10 +88,10 @@ export interface ClaseSearchFilters {
   alumnoId?: number;
   instructorId?: number;
   caballoId?: number;
-  especialidad?: "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUIITACION";
+  especialidad?: "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUITACION";
   estado?:
     | "PROGRAMADA"
-    | "EN_CURSO"
+    | "INICIADA"
     | "COMPLETADA"
     | "CANCELADA"
     | "ACA"
@@ -109,7 +109,7 @@ interface SearchResponse<T> {
 
 // Helper function to make API requests with authentication
 async function apiFetch(endpoint: string, options: RequestInit = {}) {
-  const credentials = localStorage.getItem("authCredentials");
+  const credentials = sessionStorage.getItem("authCredentials");
 
   // Definimos los headers usando el tipo Record para evitar el 'any'
   const headers: Record<string, string> = {
@@ -130,8 +130,8 @@ async function apiFetch(endpoint: string, options: RequestInit = {}) {
 // API Functions
 async function handleResponse<T>(response: Response): Promise<T> {
   if (response.status === 401) {
-    localStorage.removeItem("authCredentials");
-    localStorage.removeItem("user");
+    sessionStorage.removeItem("authCredentials");
+    sessionStorage.removeItem("user");
     window.location.href = "/login";
     throw new Error("Sesión no autorizada");
   }
@@ -352,6 +352,12 @@ export const clasesApi = {
     const response = await apiFetch(`/clases/${id}`);
     return handleResponse<Clase>(response);
   },
+  obtenerPorAlumnoConDetalles: async (
+    id: number,
+  ): Promise<Clase & { __successMessage?: string }> => {
+    const response = await apiFetch(`/clases/alumno/${id}/detalles`);
+    return handleResponse<Clase>(response);
+  },
   crear: async (
     clase: Omit<Clase, "id">,
   ): Promise<Clase & { __successMessage?: string }> => {
@@ -412,10 +418,10 @@ export const clasesApi = {
   },
 
   // Calendario
-  copiarSemana: async (
+  copiarClases: async (
     payload?: unknown,
   ): Promise<unknown & { __successMessage?: string }> => {
-    const response = await apiFetch(`/calendario/copiar-semana`, {
+    const response = await apiFetch(`/calendario/copiar-clases`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: payload ? JSON.stringify(payload) : undefined,
@@ -426,7 +432,7 @@ export const clasesApi = {
   eliminarClases: async (
     payload?: unknown,
   ): Promise<unknown & { __successMessage?: string }> => {
-    const response = await apiFetch(`/calendario/eliminar-periodo`, {
+    const response = await apiFetch(`/calendario/eliminar-clases`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: payload ? JSON.stringify(payload) : undefined,

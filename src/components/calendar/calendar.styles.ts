@@ -34,6 +34,7 @@ export const ESPECIALIDADES = [
   "EQUINOTERAPIA",
   "EQUITACION",
   "ADIESTRAMIENTO",
+  "MONTA",
 ] as const;
 
 // Motivos de cancelación predefinidos
@@ -52,7 +53,7 @@ export const ESTADO_COLORS: Record<
   "success" | "warning" | "error" | "info" | "default"
 > = {
   PROGRAMADA: "warning",
-  EN_CURSO: "info",
+  INICIADA: "info",
   COMPLETADA: "success",
   CANCELADA: "error",
   ACA: "info",
@@ -62,7 +63,7 @@ export const ESTADO_COLORS: Record<
 // Estilos Tailwind por estado (para celdas y badges)
 export const ESTADO_STYLES: Record<string, string> = {
   PROGRAMADA: "bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100",
-  EN_CURSO: "bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100",
+  INICIADA: "bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100",
   COMPLETADA:
     "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100",
   CANCELADA: "bg-red-50 text-red-700 border-red-300 hover:bg-red-100",
@@ -73,7 +74,7 @@ export const ESTADO_STYLES: Record<string, string> = {
 // Estados disponibles
 export const ESTADOS: Clase["estado"][] = [
   "PROGRAMADA",
-  "EN_CURSO",
+  "INICIADA",
   "COMPLETADA",
   "CANCELADA",
   "ACA",
@@ -83,7 +84,7 @@ export const ESTADOS: Clase["estado"][] = [
 // Íconos por estado (para uso en badges o listas)
 export const ESTADO_ICONS: Record<string, string> = {
   PROGRAMADA: "Clock",
-  EN_CURSO: "Play",
+  INICIADA: "Play",
   COMPLETADA: "Check",
   CANCELADA: "X",
   ACA: "AlertTriangle", // Ausencia con aviso
@@ -111,3 +112,7 @@ export const MAX_CLASES_POR_CELDA = {
   week: 10,
   day: Infinity,
 };
+
+// ID del alumno comodín para la especialidad MONTA
+// Este ID debe coincidir con el alumno "Escuela - Comodín" en tu base de datos
+export const ALUMNO_COMODIN_ID = 1; // Ajusta este ID según tu BD

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -28,13 +28,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { alumnosApi, Alumno, AlumnoSearchFilters } from "@/lib/api";
-import { Plus, Pencil, Trash2, MessageCircleMore } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  MessageCircleMore,
+  Voicemail,
+  Mail,
+} from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 export default function AlumnosPage() {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [editingAlumno, setEditingAlumno] = useState<Alumno | null>(null);
+  const navigate = useNavigate();
 
   // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
   const [searchFilters, setSearchFilters] = useState<AlumnoSearchFilters>({});
@@ -66,6 +75,26 @@ export default function AlumnosPage() {
     },
     enabled: true,
   });
+
+  useEffect(() => {
+    const handleGlobalSearchEvent = (e: CustomEvent) => {
+      const { filters, entityType } = e.detail;
+      if (entityType === "alumnos") {
+        handleSmartSearch(filters);
+      }
+    };
+
+    window.addEventListener(
+      "globalSearch",
+      handleGlobalSearchEvent as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        "globalSearch",
+        handleGlobalSearchEvent as EventListener,
+      );
+    };
+  }, []);
 
   // Query original (puedes mantenerlo como fallback)
   const { data: allAlumnos = [], isLoading: isLoadingAll } = useQuery({
@@ -285,20 +314,17 @@ export default function AlumnosPage() {
           >
             <MessageCircleMore className="h-4 w-4 text-success" />
           </Button>
-          {/* {alumnoActivo && (
-            <FloatingWhatsApp
-              phoneNumber={`549221${alumnoActivo.telefono}`}
-              accountName={alumnoActivo.nombre}
-              // avatar={alumnoActivo.avatar}
-              statusMessage="En línea"
-              chatMessage={`Hola 👋, ¿en qué puedo ayudarte, ${alumnoActivo.nombre}?`}
-              placeholder="Escribe un mensaje..."
-              allowClickAway={true} // Cierra al hacer clic fuera
-              notification={true} // Muestra un punto de notificación
-              onClose={() => setAlumnoActivo(null)} // Limpia el estado al cerrar
-            />
-          )} */}
-
+          <Button
+            title={`Enviar correo a ${row.nombre} ${row.apellido}`}
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.location.href = `mailto:${row.email}?subject=${encodeURIComponent(`Contacto para ${row.nombre} ${row.apellido}`)}`;
+            }}
+          >
+            <Mail className="h-4 w-4 text-success" />
+          </Button>
           <Button
             title={`Editar datos del alumno ${row.nombre} ${row.apellido}`}
             variant="ghost"
@@ -364,194 +390,184 @@ export default function AlumnosPage() {
         title="Alumnos"
         description="Gestiona los alumnos inscriptos en la escuela"
         action={
-          <Dialog
-            open={isOpen}
-            onOpenChange={(open) => {
-              setIsOpen(open);
-              if (!open) setEditingAlumno(null);
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Nuevo Alumno
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <form onSubmit={handleSubmit}>
-                <DialogHeader>
-                  <DialogTitle className="font-display">
-                    {editingAlumno ? "Editar Alumno" : "Nuevo Alumno"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {editingAlumno
-                      ? "Modifica los datos del alumno"
-                      : "Completa los datos para registrar un nuevo alumno"}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="nombre">Nombre/s</Label>
-                      <Input
-                        id="nombre"
-                        name="nombre"
-                        type="text"
-                        defaultValue={editingAlumno?.nombre}
-                        placeholder="Nombre/s del alumno"
-                        required
-                      />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            {/* Contenedor específico para el buscador para controlar su ancho */}
+            <div className="w-full sm:w-72 lg:w-96"></div>
+            <Dialog
+              open={isOpen}
+              onOpenChange={(open) => {
+                setIsOpen(open);
+                if (!open) setEditingAlumno(null);
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button className="h-11 shrink-0">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nuevo Alumno
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <form onSubmit={handleSubmit}>
+                  <DialogHeader>
+                    <DialogTitle className="font-display">
+                      {editingAlumno ? "Editar Alumno" : "Nuevo Alumno"}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {editingAlumno
+                        ? "Modifica los datos del alumno"
+                        : "Completa los datos para registrar un nuevo alumno"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="nombre">Nombre/s</Label>
+                        <Input
+                          id="nombre"
+                          name="nombre"
+                          type="text"
+                          defaultValue={editingAlumno?.nombre}
+                          placeholder="Nombre/s del alumno"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="apellido">Apellido/s</Label>
+                        <Input
+                          id="apellido"
+                          name="apellido"
+                          type="text"
+                          defaultValue={editingAlumno?.apellido}
+                          placeholder="Apellido/s del alumno"
+                          required
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="apellido">Apellido/s</Label>
-                      <Input
-                        id="apellido"
-                        name="apellido"
-                        type="text"
-                        defaultValue={editingAlumno?.apellido}
-                        placeholder="Apellido/s del alumno"
-                        required
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="dni">DNI</Label>
+                        <Input
+                          id="dni"
+                          name="dni"
+                          type="string"
+                          defaultValue={editingAlumno?.dni}
+                          placeholder="Solo números sin puntos"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="fechaNacimiento">
+                          Fecha de Nacimiento
+                        </Label>
+                        <Input
+                          id="fechaNacimiento"
+                          name="fechaNacimiento"
+                          type="date"
+                          defaultValue={editingAlumno?.fechaNacimiento}
+                          required
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="dni">DNI</Label>
-                      <Input
-                        id="dni"
-                        name="dni"
-                        type="string"
-                        defaultValue={editingAlumno?.dni}
-                        placeholder="Solo números sin puntos"
-                        required
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="telefono">Teléfono</Label>
+                        <Input
+                          id="telefono"
+                          name="telefono"
+                          type="tel"
+                          defaultValue={editingAlumno?.telefono}
+                          placeholder="Sin el 0 ni el 15"
+                          pattern="\+?[0-9]*"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          defaultValue={editingAlumno?.email}
+                          placeholder="alumno@correo.com"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="fechaNacimiento">
-                        Fecha de Nacimiento
-                      </Label>
-                      <Input
-                        id="fechaNacimiento"
-                        name="fechaNacimiento"
-                        type="date"
-                        defaultValue={editingAlumno?.fechaNacimiento}
-                        required
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="fechaInscripcion">
+                          Fecha de Inscripcion
+                        </Label>
+                        <Input
+                          id="fechaInscripcion"
+                          name="fechaInscripcion"
+                          type="date"
+                          defaultValue={
+                            editingAlumno?.fechaInscripcion ||
+                            new Date().toISOString().split("T")[0]
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cantidadClases">Clases por Mes</Label>
+                        <Select
+                          name="cantidadClases"
+                          defaultValue={String(
+                            editingAlumno?.cantidadClases || 4,
+                          )}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="4">4 clases</SelectItem>
+                            <SelectItem value="8">8 clases</SelectItem>
+                            <SelectItem value="12">12 clases</SelectItem>
+                            <SelectItem value="16">16 clases</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="telefono">Teléfono</Label>
-                      <Input
-                        id="telefono"
-                        name="telefono"
-                        type="tel"
-                        defaultValue={editingAlumno?.telefono}
-                        placeholder="Sin el 0 ni el 15"
-                        pattern="\+?[0-9]*"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        defaultValue={editingAlumno?.email}
-                        placeholder="alumno@correo.com"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="fechaInscripcion">
-                        Fecha de Inscripcion
-                      </Label>
-                      <Input
-                        id="fechaInscripcion"
-                        name="fechaInscripcion"
-                        type="date"
-                        defaultValue={
-                          editingAlumno?.fechaInscripcion ||
-                          new Date().toISOString().split("T")[0]
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cantidadClases">Clases por Mes</Label>
-                      <Select
-                        name="cantidadClases"
-                        defaultValue={String(
-                          editingAlumno?.cantidadClases || 4,
-                        )}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="4">4 clases</SelectItem>
-                          <SelectItem value="8">8 clases</SelectItem>
-                          <SelectItem value="12">12 clases</SelectItem>
-                          <SelectItem value="16">16 clases</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3">
-                      <Switch
-                        id="propietario"
-                        name="propietario"
-                        defaultChecked={editingAlumno?.propietario}
-                      />
-                      <Label htmlFor="propietario">Tiene caballo propio</Label>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Switch
-                        id="activo"
-                        name="activo"
-                        defaultChecked={editingAlumno?.activo ?? true}
-                      />
-                      <Label htmlFor="activo">Esta activo</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center gap-3">
+                        <Switch
+                          id="propietario"
+                          name="propietario"
+                          defaultChecked={editingAlumno?.propietario}
+                        />
+                        <Label htmlFor="propietario">
+                          Tiene caballo propio
+                        </Label>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Switch
+                          id="activo"
+                          name="activo"
+                          defaultChecked={editingAlumno?.activo ?? true}
+                        />
+                        <Label htmlFor="activo">Esta activo</Label>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    type="submit"
-                    disabled={
-                      createMutation.isPending || updateMutation.isPending
-                    }
-                  >
-                    {editingAlumno ? "Guardar Cambios" : "Crear Alumno"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <DialogFooter>
+                    <Button
+                      type="submit"
+                      disabled={
+                        createMutation.isPending || updateMutation.isPending
+                      }
+                    >
+                      {editingAlumno ? "Guardar Cambios" : "Crear Alumno"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         }
       />
 
       <div className="space-y-4">
-        {/* 🔍 BUSCADOR INTELIGENTE */}
-        <div className="mb-6">
-          <SmartSearch
-            entityType="alumnos"
-            placeholder="Buscar alumnos por nombre, estado, fecha de inscripción..."
-            onSearch={handleSmartSearch}
-            suggestions={[
-              "activos propietarios",
-              "inactivos",
-              "sin caballo",
-              "inscritos 2024",
-              "Juan García",
-            ]}
-          />
-        </div>
-
         {/* Filtros tradicionales (opcional) */}
         <FilterBar
           filters={filterConfig}
@@ -570,6 +586,7 @@ export default function AlumnosPage() {
               ? "No se encontraron alumnos con esos criterios de búsqueda"
               : "No hay alumnos que coincidan con los filtros"
           }
+          onRowClick={(alumno) => navigate(`/alumnos/${alumno.id}`)}
         />
 
         {filteredData.length > 0 && (

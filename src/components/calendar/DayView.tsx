@@ -65,28 +65,27 @@ export function DayView({
   }, [caballos]);
 
   return (
-    <div className="overflow-auto">
+    <div className="overflow-auto max-h-[calc(100vh-200px)]">
       <table className="w-full min-w-[800px] border-collapse">
         {/* CABECERA */}
-        <thead>
+        <thead className="sticky top-0 z-20">
           <tr className="bg-secondary/50">
-            <th className="sticky left-0 z-10 w-20 border border-border bg-secondary/80 px-2 py-3 text-left text-sm font-semibold text-muted-foreground backdrop-blur-sm">
+            <th className="sticky left-0 z-30 w-20 border border-border bg-secondary/80 px-2 py-3 text-left text-sm font-semibold text-muted-foreground backdrop-blur-sm">
               Hora
             </th>
             {caballosOrdenados.map((caballo) => (
               <th
                 key={caballo.id}
-                className="min-w-[100px] border border-border px-2 py-3 text-center text-xs font-semibold uppercase tracking-wide"
+                className="min-w-[100px] border border-border px-2 py-3 text-center text-xs font-semibold uppercase tracking-wide bg-secondary/80 backdrop-blur-sm"
                 title={
-                  caballo.tipoCaballo === "PRIVADO"
+                  caballo.tipo === "PRIVADO"
                     ? "Caballo Privado"
                     : "Caballo de Escuela"
                 }
               >
                 <span
                   className={cn(
-                    caballo.tipoCaballo === "PRIVADO" &&
-                      "text-primary font-bold",
+                    caballo.tipo === "PRIVADO" && "text-primary font-bold",
                   )}
                 >
                   {caballo.nombre}
@@ -100,7 +99,7 @@ export function DayView({
         <tbody>
           {TIME_SLOTS.map((hora) => (
             <tr key={hora} className="hover:bg-muted/30 transition-colors">
-              <td className="sticky left-0 z-10 border border-border bg-card px-2 py-2 text-sm font-medium text-muted-foreground">
+              <td className="sticky left-0 z-10 border border-border bg-card px-2 py-2 text-sm font-medium text-muted-foreground backdrop-blur-sm">
                 {hora}
               </td>
 

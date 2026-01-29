@@ -33,8 +33,13 @@ import { CalendarToolbar } from "@/components/calendar/CalendarToolbar";
 import { MonthView } from "@/components/calendar/MonthView";
 import { WeekView } from "@/components/calendar/WeekView";
 import { DayView } from "@/components/calendar/DayView";
-import { ESPECIALIDADES, ESTADOS } from "@/components/calendar/calendar.styles";
+import {
+  ESPECIALIDADES,
+  ESTADOS,
+  ALUMNO_COMODIN_ID,
+} from "@/components/calendar/calendar.styles";
 import { Alumno, Instructor, Caballo } from "@/lib/api";
+import { useEffect, useState } from "react";
 
 export default function CalendarioPage() {
   const {
@@ -84,6 +89,32 @@ export default function CalendarioPage() {
     getInstructorNombre,
     getCaballoNombre,
   } = useCalendar();
+
+  // Estado para controlar la especialidad seleccionada y el alumno
+  const [especialidadSeleccionada, setEspecialidadSeleccionada] =
+    useState<string>("");
+  const [alumnoIdSeleccionado, setAlumnoIdSeleccionado] = useState<string>("");
+
+  // Efecto para resetear los estados cuando se abre/cierra el diálogo
+  useEffect(() => {
+    if (isDialogOpen && claseToEdit) {
+      setEspecialidadSeleccionada(claseToEdit.especialidad);
+      setAlumnoIdSeleccionado(String(claseToEdit.alumnoId));
+    } else if (!isDialogOpen) {
+      setEspecialidadSeleccionada("");
+      setAlumnoIdSeleccionado("");
+    }
+  }, [isDialogOpen, claseToEdit]);
+
+  // Manejador para cambio de especialidad
+  const handleEspecialidadChange = (value: string) => {
+    setEspecialidadSeleccionada(value);
+
+    // Si es MONTA, asignar automáticamente el alumno comodín
+    if (value === "MONTA") {
+      setAlumnoIdSeleccionado(String(ALUMNO_COMODIN_ID));
+    }
+  };
 
   // Configuración de filtros
   const filterConfig = [
@@ -229,7 +260,7 @@ export default function CalendarioPage() {
         </div>
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded-full bg-info/50" />
-          <span className="text-sm text-muted-foreground">En Curso</span>
+          <span className="text-sm text-muted-foreground">Iniciada</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded-full bg-success/50" />
@@ -264,140 +295,172 @@ export default function CalendarioPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="hora">Hora de Inicio</Label>
-                <Input
-                  id="hora"
-                  name="hora"
-                  type="time"
-                  defaultValue={
-                    claseToEdit
-                      ? claseToEdit.hora.slice(0, 5)
-                      : prefilledHora || "09:00"
-                  }
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="alumnoId">Alumno</Label>
-                <Select
-                  name="alumnoId"
-                  required
-                  defaultValue={
-                    claseToEdit ? String(claseToEdit.alumnoId) : undefined
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar alumno" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {alumnos.map((alumno: Alumno) => (
-                      <SelectItem key={alumno.id} value={String(alumno.id)}>
-                        {alumno.nombre} {alumno.apellido}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="instructorId">Instructor</Label>
-                <Select
-                  name="instructorId"
-                  required
-                  defaultValue={
-                    claseToEdit ? String(claseToEdit.instructorId) : undefined
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar instructor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {instructores
-                      .filter((i: Instructor) => i.activo)
-                      .map((instructor: Instructor) => (
-                        <SelectItem
-                          key={instructor.id}
-                          value={String(instructor.id)}
-                        >
-                          {instructor.nombre} {instructor.apellido}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="caballoId">Caballo</Label>
-                <Select
-                  name="caballoId"
-                  required
-                  defaultValue={
-                    claseToEdit
-                      ? String(claseToEdit.caballoId)
-                      : prefilledCaballoId
-                        ? String(prefilledCaballoId)
-                        : undefined
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar caballo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {caballos
-                      .filter((c: Caballo) => c.disponible)
-                      .map((caballo: Caballo) => (
-                        <SelectItem key={caballo.id} value={String(caballo.id)}>
-                          {caballo.nombre} (
-                          {caballo.tipoCaballo === "ESCUELA"
-                            ? "Escuela"
-                            : "Privado"}
-                          )
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="especialidad">Especialidad</Label>
-                <Select
-                  name="especialidad"
-                  required
-                  defaultValue={
-                    claseToEdit ? claseToEdit.especialidad : undefined
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar especialidad" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ESPECIALIDADES.map((esp) => (
-                      <SelectItem key={esp} value={esp}>
-                        {esp}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {claseToEdit && (
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="estado">Estado</Label>
-                  <Select
-                    name="estado"
+                  <Label htmlFor="hora">Hora de Inicio</Label>
+                  <Input
+                    id="hora"
+                    name="hora"
+                    type="time"
+                    defaultValue={
+                      claseToEdit
+                        ? claseToEdit.hora.slice(0, 5)
+                        : prefilledHora || "09:00"
+                    }
                     required
-                    defaultValue={claseToEdit.estado}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="alumnoId">
+                    {" "}
+                    Alumno
+                    {especialidadSeleccionada === "MONTA" && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        (Asignado automáticamente)
+                      </span>
+                    )}
+                  </Label>
+                  {/* Campo oculto para enviar el alumnoId cuando el select está deshabilitado */}
+                  {especialidadSeleccionada === "MONTA" && (
+                    <input
+                      type="hidden"
+                      name="alumnoId"
+                      value={alumnoIdSeleccionado}
+                    />
+                  )}
+                  <Select
+                    name={
+                      especialidadSeleccionada === "MONTA" ? "" : "alumnoId"
+                    }
+                    required={especialidadSeleccionada !== "MONTA"}
+                    value={alumnoIdSeleccionado}
+                    onValueChange={setAlumnoIdSeleccionado}
+                    defaultValue={
+                      claseToEdit ? String(claseToEdit.alumnoId) : undefined
+                    }
+                    disabled={especialidadSeleccionada === "MONTA"}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Seleccionar alumno" />
                     </SelectTrigger>
                     <SelectContent>
-                      {ESTADOS.map((estado) => (
-                        <SelectItem key={estado} value={estado}>
-                          {estado}
+                      {alumnos.map((alumno: Alumno) => (
+                        <SelectItem key={alumno.id} value={String(alumno.id)}>
+                          {alumno.nombre} {alumno.apellido}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="instructorId">Instructor</Label>
+                  <Select
+                    name="instructorId"
+                    required
+                    defaultValue={
+                      claseToEdit ? String(claseToEdit.instructorId) : undefined
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar instructor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {instructores
+                        .filter((i: Instructor) => i.activo)
+                        .map((instructor: Instructor) => (
+                          <SelectItem
+                            key={instructor.id}
+                            value={String(instructor.id)}
+                          >
+                            {instructor.nombre} {instructor.apellido}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="caballoId">Caballo</Label>
+                  <Select
+                    name="caballoId"
+                    required
+                    defaultValue={
+                      claseToEdit
+                        ? String(claseToEdit.caballoId)
+                        : prefilledCaballoId
+                          ? String(prefilledCaballoId)
+                          : undefined
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar caballo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {caballos
+                        .filter((c: Caballo) => c.disponible)
+                        .map((caballo: Caballo) => (
+                          <SelectItem
+                            key={caballo.id}
+                            value={String(caballo.id)}
+                          >
+                            {caballo.nombre} (
+                            {caballo.tipo === "ESCUELA" ? "Escuela" : "Privado"}
+                            )
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="especialidad">Especialidad</Label>
+                  <Select
+                    name="especialidad"
+                    required
+                    value={especialidadSeleccionada}
+                    onValueChange={handleEspecialidadChange}
+                    defaultValue={
+                      claseToEdit ? claseToEdit.especialidad : undefined
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar especialidad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ESPECIALIDADES.map((esp) => (
+                        <SelectItem key={esp} value={esp}>
+                          {esp}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {claseToEdit && (
+                  <div className="space-y-2">
+                    <Label htmlFor="estado">Estado</Label>
+                    <Select
+                      name="estado"
+                      required
+                      defaultValue={claseToEdit.estado}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ESTADOS.map((estado) => (
+                          <SelectItem key={estado} value={estado}>
+                            {estado}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
             </div>
             <DialogFooter>
               <Button
