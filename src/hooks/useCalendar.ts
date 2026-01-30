@@ -280,6 +280,21 @@ export function useCalendar() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
+    // ✅ Validación de clase de prueba
+    const esPrueba = formData.get("esPrueba") === "on";
+    const alumnoId = Number(formData.get("alumnoId"));
+
+    if (esPrueba) {
+      const alumno = alumnos.find((a: Alumno) => a.id === alumnoId);
+
+      if (alumno && alumno.activo) {
+        toast.error(
+          "Las clases de prueba solo pueden asignarse a alumnos inactivos",
+        );
+        return;
+      }
+    }
+
     if (claseToEdit) {
       // Modo edición
       const data = {
@@ -307,6 +322,7 @@ export function useCalendar() {
         dia: format(currentDate, "yyyy-MM-dd"),
         hora: formData.get("hora") as string,
         estado: "PROGRAMADA" as const,
+        esPrueba: formData.get("esPrueba") === "on",
       };
       createMutation.mutate(data);
     }

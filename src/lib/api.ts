@@ -52,12 +52,14 @@ export interface Clase {
   instructorId: number;
   caballoId: number;
   diaHoraCompleto?: string;
+  esPrueba?: boolean;
 }
 
 export interface ClaseDetallada extends Clase {
   alumno?: Alumno;
   instructor?: Instructor;
   caballo?: Caballo;
+  esPrueba?: boolean;
 }
 
 export interface AlumnoSearchFilters {
@@ -213,6 +215,20 @@ export const alumnosApi = {
       return data;
     }
     return data.alumnos || [];
+  },
+
+  crearAlumnoDePrueba: async (
+    alumno: Omit<
+      Alumno,
+      "id" | "cantidadClases" | "activo" | "fechaInscripcion"
+    >,
+  ): Promise<Alumno & { __successMessage?: string }> => {
+    const response = await apiFetch(`/alumnos/prueba`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(alumno),
+    });
+    return handleResponse<Alumno>(response);
   },
 };
 

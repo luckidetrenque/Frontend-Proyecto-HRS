@@ -1,6 +1,7 @@
 /**
  * ClasePopover.tsx
  * Popover con detalles de la clase (compartido entre vistas)
+ * ✅ Con soporte para clases de prueba
  */
 
 import { Clase } from "@/lib/api";
@@ -20,9 +21,9 @@ import {
   CalendarDays,
   Edit,
   Trash2,
-  Icon,
+  GraduationCap,
 } from "lucide-react";
-import { ESTADO_COLORS, ESTADOS, ESTADO_ICONS } from "./calendar.styles";
+import { ESTADO_COLORS, ESTADOS } from "./calendar.styles";
 
 interface ClasePopoverProps {
   clase: Clase;
@@ -71,13 +72,37 @@ export function ClasePopover({
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="center" sideOffset={5}>
         <div className="p-4">
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-3 flex items-center justify-between gap-2">
             <h4 className="font-semibold">Detalles de la Clase</h4>
-            <StatusBadge status={ESTADO_COLORS[clase.estado]}>
-              <Icon name={ESTADO_ICONS[clase.estado]} iconNode={[]} />
-              {clase.estado}
-            </StatusBadge>
+            <div className="flex items-center gap-2">
+              {/* ✅ Badge de clase de prueba */}
+              {clase.esPrueba && (
+                <StatusBadge status="warning">
+                  <GraduationCap className="h-3 w-3 mr-1" />
+                  Prueba
+                </StatusBadge>
+              )}
+              <StatusBadge status={ESTADO_COLORS[clase.estado]}>
+                {clase.estado}
+              </StatusBadge>
+            </div>
           </div>
+
+          {/* ✅ Alerta de clase de prueba */}
+          {clase.esPrueba && (
+            <div className="mb-3 rounded-md bg-orange-50 border border-orange-200 p-2.5 text-xs text-orange-800">
+              <div className="flex items-start gap-2">
+                <GraduationCap className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <strong className="font-semibold">Clase de Prueba</strong>
+                  <p className="mt-1 text-orange-700">
+                    Esta clase no cuenta como clase regular del alumno. El
+                    alumno debe estar inactivo.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2">

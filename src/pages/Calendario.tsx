@@ -460,6 +460,25 @@ export default function CalendarioPage() {
                     </Select>
                   </div>
                 )}
+                {/* ✅ NUEVO: Checkbox para clase de prueba */}
+                {!claseToEdit && ( // Solo al crear, no al editar
+                  <div className="flex items-center gap-3 rounded-md border border-orange-300 bg-orange-50 p-3">
+                    <input
+                      type="checkbox"
+                      id="esPrueba"
+                      name="esPrueba"
+                      className="h-4 w-4 rounded border-orange-400 text-orange-600 focus:ring-orange-500"
+                    />
+                    <Label htmlFor="esPrueba" className="text-sm">
+                      <span className="font-semibold text-orange-800">
+                        Clase de Prueba
+                      </span>
+                      <span className="ml-2 text-xs text-orange-600">
+                        (El alumno debe estar inactivo)
+                      </span>
+                    </Label>
+                  </div>
+                )}
               </div>
             </div>
             <DialogFooter>

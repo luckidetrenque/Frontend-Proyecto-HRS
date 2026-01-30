@@ -71,6 +71,12 @@ export const ESTADO_STYLES: Record<string, string> = {
   ASA: "bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100",
 };
 
+// Estilos específicos para clases de prueba
+export const CLASE_PRUEBA_STYLE =
+  "bg-orange-100 border-orange-400 text-orange-800";
+export const CLASE_PRUEBA_BADGE =
+  "bg-orange-500/20 text-orange-700 border-orange-400";
+
 // Estados disponibles
 export const ESTADOS: Clase["estado"][] = [
   "PROGRAMADA",
@@ -116,3 +122,14 @@ export const MAX_CLASES_POR_CELDA = {
 // ID del alumno comodín para la especialidad MONTA
 // Este ID debe coincidir con el alumno "Escuela - Comodín" en tu base de datos
 export const ALUMNO_COMODIN_ID = 1; // Ajusta este ID según tu BD
+
+// Función auxiliar para obtener el estilo según estado y tipo
+export const getClaseStyle = (estado: string, esPrueba?: boolean): string => {
+  const baseStyle = ESTADO_STYLES[estado] || ESTADO_STYLES["PROGRAMADA"];
+
+  if (esPrueba) {
+    return `${CLASE_PRUEBA_STYLE} border-l-4`; // Borde izquierdo naranja grueso
+  }
+
+  return baseStyle;
+};

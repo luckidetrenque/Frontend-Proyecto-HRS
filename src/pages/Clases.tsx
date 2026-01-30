@@ -406,6 +406,7 @@ export default function ClasesPage() {
       instructorId: Number(formData.get("instructorId")),
       caballoId: Number(formData.get("caballoId")),
       diaHoraCompleto: "",
+      esPrueba: formData.get("esPrueba") === "on",
     };
 
     if (editingClase) {
@@ -490,6 +491,13 @@ export default function ClasesPage() {
           {row.estado}
         </StatusBadge>
       ),
+    },
+    {
+      header: "Tipo",
+      cell: (row: Clase) =>
+        row.esPrueba ? (
+          <StatusBadge status="warning">🎓 Prueba</StatusBadge>
+        ) : null,
     },
     {
       header: "Acciones",
@@ -737,6 +745,25 @@ export default function ClasesPage() {
                       />
                     </div>
                   </div>
+                  {/* ✅ NUEVO: Checkbox para clase de prueba */}
+                  {!editingClase && (
+                    <div className="flex items-center gap-3 rounded-md border border-orange-300 bg-orange-50 p-3">
+                      <input
+                        type="checkbox"
+                        id="esPrueba"
+                        name="esPrueba"
+                        className="h-4 w-4 rounded border-orange-400 text-orange-600 focus:ring-orange-500"
+                      />
+                      <Label htmlFor="esPrueba" className="text-sm">
+                        <span className="font-semibold text-orange-800">
+                          Clase de Prueba
+                        </span>
+                        <span className="ml-2 text-xs text-orange-600">
+                          (El alumno debe estar inactivo)
+                        </span>
+                      </Label>
+                    </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button

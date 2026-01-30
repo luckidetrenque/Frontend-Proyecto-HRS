@@ -1,6 +1,7 @@
 /**
  * DayView.tsx - Vista de Día estilo Excel para el Calendario
  * Refactorizada - Solo muestra la tabla, sin botones de acción
+ * ✅ Con soporte para clases de prueba
  */
 
 import { useMemo, useState } from "react";
@@ -8,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { Clase, Caballo } from "@/lib/api";
 import { ClasePopover } from "./ClasePopover";
 import { ClaseBadge } from "./ClaseBadge";
-import { TIME_SLOTS } from "./calendar.styles";
+import { TIME_SLOTS, getClaseStyle } from "./calendar.styles";
 
 interface DayViewProps {
   selectedDate: Date;
@@ -111,7 +112,7 @@ export function DayView({
                   <td
                     key={key}
                     className={cn(
-                      "border border-border p-1 text-center transition-colors",
+                      "border border-border p-1 text-center transition-colors relative",
                       !clase &&
                         onCellClick &&
                         "cursor-pointer hover:bg-primary/10",
@@ -126,7 +127,16 @@ export function DayView({
                       <ClasePopover
                         clase={clase}
                         trigger={
-                          <div>
+                          <div className="relative">
+                            {/* ✅ Indicador de clase de prueba en esquina superior derecha */}
+                            {clase.esPrueba && (
+                              <span
+                                className="absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs shadow-sm border border-orange-600"
+                                title="Clase de Prueba"
+                              >
+                                🎓
+                              </span>
+                            )}
                             <ClaseBadge
                               clase={clase}
                               alumnoNombre={getAlumnoNombre(clase.alumnoId)}
