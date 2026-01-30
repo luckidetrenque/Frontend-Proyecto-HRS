@@ -11,6 +11,9 @@ import { Switch } from "@/components/ui/switch";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import SmartSearch from "@/components/ui/smart-search";
+import { AlumnoCard } from "@/components/alumnos/AlumnoCard";
+import { AlumnoCardSkeleton } from "@/components/alumnos/AlumnoCardSkeleton";
+
 import {
   Dialog,
   DialogContent,
@@ -384,6 +387,8 @@ export default function AlumnosPage() {
     }
   };
 
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+
   return (
     <Layout>
       <PageHeader
@@ -393,6 +398,23 @@ export default function AlumnosPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             {/* Contenedor específico para el buscador para controlar su ancho */}
             <div className="w-full sm:w-72 lg:w-96"></div>
+
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === "table" ? "default" : "outline"}
+                onClick={() => setViewMode("table")}
+              >
+                Tabla
+              </Button>
+
+              <Button
+                variant={viewMode === "cards" ? "default" : "outline"}
+                onClick={() => setViewMode("cards")}
+              >
+                Cards
+              </Button>
+            </div>
+
             <Dialog
               open={isOpen}
               onOpenChange={(open) => {
@@ -577,17 +599,44 @@ export default function AlumnosPage() {
           isLoading={isLoading}
         />
 
-        <DataTable
-          columns={columns}
-          data={paginatedData}
-          isLoading={isLoading}
-          emptyMessage={
-            isSearchActive
-              ? "No se encontraron alumnos con esos criterios de búsqueda"
-              : "No hay alumnos que coincidan con los filtros"
-          }
-          onRowClick={(alumno) => navigate(`/alumnos/${alumno.id}`)}
-        />
+        {viewMode === "table" ? (
+          <DataTable
+            columns={columns}
+            data={paginatedData}
+            isLoading={isLoading}
+            emptyMessage={
+              isSearchActive
+                ? "No se encontraron alumnos con esos criterios de búsqueda"
+                : "No hay alumnos que coincidan con los filtros"
+            }
+            onRowClick={(alumno) => navigate(`/alumnos/${alumno.id}`)}
+          />
+        ) : isLoading ? (
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+            {Array.from({ length: pageSize }).map((_, i) => (
+              <AlumnoCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+            {paginatedData.map((alumno) => (
+              <AlumnoCard
+                key={alumno.id}
+                alumno={alumno}
+                onClick={() => navigate(`/alumnos/${alumno.id}`)}
+                onEdit={() => {
+                  setEditingAlumno(alumno);
+                  setIsOpen(true);
+                }}
+                onDelete={() => {
+                  if (confirm("¿Eliminar este alumno?")) {
+                    deleteMutation.mutate(alumno.id);
+                  }
+                }}
+              />
+            ))}
+          </div>
+        )}
 
         {filteredData.length > 0 && (
           <PaginationControls
