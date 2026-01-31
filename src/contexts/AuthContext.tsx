@@ -51,7 +51,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (storedUser && storedCredentials) {
       try {
         setUser(JSON.parse(storedUser));
-      } catch {
+      } catch (error) {
+        console.error("Error al recuperar sesión:", error);
         clearCredentials();
       }
     }
@@ -87,19 +88,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const update = async (data: RegisterData): Promise<void> => {
-    setIsLoading(true);
-    try {
-      await registerService(data);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const value: AuthContextType = {
     user,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && !!sessionStorage.getItem("authCredentials"),
     login,
     register,
     logout,

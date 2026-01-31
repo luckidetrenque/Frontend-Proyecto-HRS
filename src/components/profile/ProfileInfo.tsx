@@ -28,9 +28,14 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { uploadAvatar } from "@/services/uploadService";
 
 interface ProfileInfoProps {
-  onUpdate?: (data: { username?: string; email?: string }) => Promise<void>;
+  onUpdate?: (data: {
+    username?: string;
+    email?: string;
+    avatarUrl?: string;
+  }) => Promise<void>;
 }
 
 export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
@@ -46,6 +51,7 @@ export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
     activo: user?.activo || false,
     fechaCreacion: user?.fechaCreacion || "",
   });
+  const [isUploading, setIsUploading] = useState(false);
 
   const getInitials = () => {
     if (!user?.username) return "U";
@@ -91,9 +97,34 @@ export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
     setIsEditing(false);
   };
 
-  const handleAvatarUpload = () => {
-    // Aquí implementarías la lógica de upload
-    toast.info("Función de cambio de avatar próximamente");
+  const handleAvatarUpload = async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      setIsUploading(true);
+      try {
+        const avatarUrl = await uploadAvatar(file);
+
+        // Actualizar perfil con nueva URL
+        await onUpdate?.({ avatarUrl });
+
+        toast.success("Avatar actualizado correctamente");
+      } catch (error) {
+        toast.error("Error al subir avatar", {
+          description:
+            error instanceof Error ? error.message : "Inténtalo de nuevo",
+        });
+      } finally {
+        setIsUploading(false);
+      }
+    };
+
+    input.click();
   };
 
   if (!user) return null;
@@ -110,7 +141,10 @@ export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
               onMouseLeave={() => setAvatarHover(false)}
             >
               <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
-                <AvatarImage src={user.avatarUrl} alt={user.username} />
+                <AvatarImage
+                  src={user.avatarUrl || "https://via.placeholder.com"}
+                  alt={user.username}
+                />
                 <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
                   {getInitials()}
                 </AvatarFallback>
@@ -264,50 +298,6 @@ export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
                     <Mail className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">{user.email}</span>
                   </div>
-                )}
-              </div>
-
-              {/* password */}
-              <div className="space-y-2 hidden">
-                <Label htmlFor="password" className="text-sm font-medium">
-                  Contraseña
-                </Label>
-                {isEditing ? (
-                  <Input
-                    id="password"
-                    type="password"
-                    value={user.password}
-                    onChange={(e) =>
-                      setEditedData({ ...editedData, password: e.target.value })
-                    }
-                    disabled={isSaving}
-                    className="transition-all"
-                    readOnly
-                  />
-                ) : (
-                  ""
-                )}
-              </div>
-
-              {/* rol */}
-              <div className="space-y-2 hidden">
-                <Label htmlFor="rol" className="text-sm font-medium">
-                  Rol
-                </Label>
-                {isEditing ? (
-                  <Input
-                    id="rol"
-                    type="text"
-                    value={user.rol}
-                    onChange={(e) =>
-                      setEditedData({ ...editedData, rol: e.target.value })
-                    }
-                    disabled={isSaving}
-                    className="transition-all"
-                    readOnly
-                  />
-                ) : (
-                  ""
                 )}
               </div>
             </div>

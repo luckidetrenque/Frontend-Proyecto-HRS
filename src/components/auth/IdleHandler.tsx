@@ -1,10 +1,11 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { clearCredentials, getStoredCredentials } from "@/services/authService";
 import { toast } from "sonner";
 
 const IdleHandler = () => {
   const navigate = useNavigate();
+  const timer = useRef<number | null>(null);
 
   const handleLogout = useCallback(() => {
     const isLogged = getStoredCredentials();
@@ -16,12 +17,11 @@ const IdleHandler = () => {
   }, [navigate]);
 
   useEffect(() => {
-    let timer: number;
     const timeout = 15 * 60 * 1000; // 15 minutos
 
     const resetTimer = () => {
-      if (timer) window.clearTimeout(timer);
-      timer = window.setTimeout(handleLogout, timeout);
+      if (timer.current) window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(handleLogout, timeout);
     };
 
     // Eventos que reinician el contador
@@ -32,7 +32,7 @@ const IdleHandler = () => {
 
     return () => {
       events.forEach((e) => window.removeEventListener(e, resetTimer));
-      window.clearTimeout(timer);
+      if (timer.current) window.clearTimeout(timer.current);
     };
   }, [handleLogout]);
 

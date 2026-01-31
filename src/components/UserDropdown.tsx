@@ -115,9 +115,8 @@ export function UserDropdown() {
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </div>
           </DropdownMenuItem>
-
           <DropdownMenuItem
-            onClick={() => navigate("/profile")}
+            onClick={() => navigate("/settings")}
             className="cursor-pointer py-2.5"
           >
             <div className="flex items-center justify-between w-full">

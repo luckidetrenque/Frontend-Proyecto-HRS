@@ -14,6 +14,9 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, UserPlus } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { API_BASE_URL } from "@/services/authService";
 
 const Register: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -26,6 +29,31 @@ const Register: React.FC = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [error, setError] = useState<string>("");
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+
+  const calculatePasswordStrength = (password: string): number => {
+    let strength = 0;
+    if (password.length >= 8) strength += 20;
+    if (password.length >= 12) strength += 20;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength += 20;
+    if (/\d/.test(password)) strength += 20;
+    if (/[^a-zA-Z0-9]/.test(password)) strength += 20;
+    return strength;
+  };
+
+  const checkEmailWhitelist = async (email: string): Promise<boolean> => {
+    setIsCheckingEmail(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/check-email/${email}`);
+      return response.ok;
+    } catch {
+      return false;
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
 
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -34,6 +62,10 @@ const Register: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "password") {
+      setPasswordStrength(calculatePasswordStrength(value));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,28 +74,34 @@ const Register: React.FC = () => {
     // const { username, email, password, confirmPassword, nombre, apellido } = formData;
     const { username, email, password, confirmPassword } = formData;
 
+    setError(""); // Limpiar errores previos
+
     if (!username.trim() || !password.trim()) {
-      toast({
-        title: "Error",
-        description: "El usuario y la contraseña son obligatorios",
-        variant: "destructive",
-      });
+      setError("El usuario y la contraseña son obligatorios");
       return;
     }
 
+    if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
+      setError("Ingresa un correo electrónico válido");
+      return;
+    }
     if (password !== confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Las contraseñas no coinciden",
-        variant: "destructive",
-      });
+      setError("Las contraseñas no coinciden");
       return;
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres");
+      return;
+    }
+
+    // Validar whitelist
+    const isAllowed = await checkEmailWhitelist(email.trim());
+    if (!isAllowed) {
+      setError("Este correo no está autorizado para registrarse");
       toast({
-        title: "Error",
-        description: "La contraseña debe tener al menos 6 caracteres",
+        title: "Email no autorizado",
+        description: "Este correo no está en la lista de usuarios autorizados",
         variant: "destructive",
       });
       return;
@@ -100,7 +138,7 @@ const Register: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md animate-in fade-in-50 duration-500">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
             Crear Cuenta
@@ -109,9 +147,16 @@ const Register: React.FC = () => {
             Completa el formulario para registrarte
           </CardDescription>
         </CardHeader>
+        {error && (
+          <div className="px-6">
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          </div>
+        )}
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="username">Usuario</Label>
                 <Input
@@ -137,7 +182,7 @@ const Register: React.FC = () => {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="password">Contraseña *</Label>
                 <div className="relative">
@@ -166,24 +211,50 @@ const Register: React.FC = () => {
                   </Button>
                 </div>
               </div>
+            </div>
+            {formData.password && (
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar contraseña *</Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  disabled={isSubmitting}
-                  autoComplete="new-password"
-                />
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    Seguridad de la contraseña
+                  </span>
+                  <span className="font-medium">
+                    {passwordStrength < 40
+                      ? "Débil"
+                      : passwordStrength < 80
+                        ? "Regular"
+                        : "Fuerte"}
+                  </span>
+                </div>
+                <Progress value={passwordStrength} className="h-2" />
               </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirmar contraseña *</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                disabled={isSubmitting}
+                autoComplete="new-password"
+              />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? (
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isSubmitting || isCheckingEmail}
+            >
+              {isCheckingEmail ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></span>
+                  Validando email...
+                </span>
+              ) : isSubmitting ? (
                 <span className="flex items-center gap-2">
                   <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></span>
                   Registrando...

@@ -1,6 +1,6 @@
 import { Update } from "vite/types/hmrPayload.js";
 
-const API_BASE_URL = "http://localhost:8080/api/v1/auth";
+export const API_BASE_URL = "http://localhost:8080/api/v1/auth";
 
 export interface User {
   id: number;
@@ -14,8 +14,10 @@ export interface User {
   fechaCreacion: string;
   // personaDni?: string;
   // personaTipoDni?: string;
-  // avatarUrl: "https://picsum.photos/id/237/200/300";
+  avatarUrl?: string;
 }
+
+export type SafeUser = Omit<User, "password">;
 
 export interface LoginCredentials {
   username: string;
@@ -65,7 +67,8 @@ export const getStoredCredentials = (): string | null => {
 // Guarda las credenciales
 export const storeCredentials = (credentials: string, user: User): void => {
   sessionStorage.setItem("authCredentials", credentials);
-  sessionStorage.setItem("user", JSON.stringify(user));
+  const { password, ...safeUser } = user;
+  sessionStorage.setItem("user", JSON.stringify(safeUser));
 };
 
 // Limpia las credenciales
@@ -92,11 +95,10 @@ export const login = async (credentials: LoginCredentials): Promise<User> => {
   }
 
   const user = await response.json();
-
   storeCredentials(encoded, user);
-  sessionStorage.setItem("user", JSON.stringify(user));
 
-  return user;
+  const { password, ...safeUser } = user;
+  return safeUser as User;
 };
 
 // Registro de usuario
@@ -136,9 +138,10 @@ export const update = async (data: UpdateData): Promise<User> => {
   }
 
   const updatedUser = await response.json();
-  sessionStorage.setItem("user", JSON.stringify(updatedUser));
+  const { password, ...safeUser } = updatedUser;
+  sessionStorage.setItem("user", JSON.stringify(safeUser));
 
-  return updatedUser;
+  return safeUser as User;
 };
 
 // Logout
@@ -179,9 +182,10 @@ export const updateProfile = async (
   }
 
   const updatedUser = await response.json();
-  sessionStorage.setItem("user", JSON.stringify(updatedUser));
+  const { password, ...safeUser } = updatedUser;
+  sessionStorage.setItem("user", JSON.stringify(safeUser));
 
-  return updatedUser;
+  return safeUser as User;
 };
 
 // Helper para hacer peticiones autenticadas
