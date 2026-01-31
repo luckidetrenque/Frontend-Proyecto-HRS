@@ -396,9 +396,6 @@ export default function AlumnosPage() {
         description="Gestiona los alumnos inscriptos en la escuela"
         action={
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            {/* Contenedor específico para el buscador para controlar su ancho */}
-            <div className="w-full sm:w-72 lg:w-96"></div>
-
             <div className="flex gap-2">
               <Button
                 variant={viewMode === "table" ? "default" : "outline"}

@@ -145,7 +145,7 @@ export function Layout({ children }: LayoutProps) {
                     to={item.href}
                     onClick={() => setMobileMenuOpen(false)}
                     className={cn(
-                      "flex items-center justify-between rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200",
+                      "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
                       isActive
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:bg-secondary hover:text-foreground",
