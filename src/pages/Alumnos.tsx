@@ -10,10 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { PaginationControls } from "@/components/ui/pagination-controls";
-import SmartSearch from "@/components/ui/smart-search";
-import { AlumnoCard } from "@/components/alumnos/AlumnoCard";
-import { AlumnoCardSkeleton } from "@/components/alumnos/AlumnoCardSkeleton";
-
+import { GenericCard } from "@/components/cards/GenericCard";
+import { GenericCardSkeleton } from "@/components/cards/GenericCardSkeleton";
 import {
   Dialog,
   DialogContent,
@@ -41,11 +39,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { ProtectedData } from "@/components/ui/protected-data";
 
 export default function AlumnosPage() {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [editingAlumno, setEditingAlumno] = useState<Alumno | null>(null);
+  const [alumnoToDelete, setAlumnoToDelete] = useState<Alumno | null>(null);
+
   const navigate = useNavigate();
 
   // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
@@ -263,7 +264,10 @@ export default function AlumnosPage() {
       header: "Nombre y Apellido",
       cell: (row: Alumno) => `${row.nombre} ${row.apellido}`,
     },
-    { header: "DNI", accessorKey: "dni" as keyof Alumno },
+    {
+      header: "DNI",
+      cell: (row: Alumno) => <ProtectedData value={row.dni} />,
+    },
     { header: "Teléfono", accessorKey: "telefono" as keyof Alumno },
     { header: "Email", accessorKey: "email" as keyof Alumno },
     {
@@ -611,30 +615,52 @@ export default function AlumnosPage() {
         ) : isLoading ? (
           <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
             {Array.from({ length: pageSize }).map((_, i) => (
-              <AlumnoCardSkeleton key={i} />
+              <GenericCardSkeleton key={i} />
             ))}
           </div>
         ) : (
           <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
             {paginatedData.map((alumno) => (
-              <AlumnoCard
+              <GenericCard
+                item={alumno}
                 key={alumno.id}
-                alumno={alumno}
+                title={`${alumno.nombre} ${alumno.apellido}`}
+                subtitle=""
+                // TODO subtitle="Descripción crear campo en db"
+                fields={[
+                  { label: "DNI", value: alumno.dni },
+                  { label: "Teléfono", value: alumno.telefono },
+                  { label: "Email", value: alumno.email || "-" },
+                  {
+                    label: "Clases / Mes",
+                    value: alumno.cantidadClases || "-",
+                  },
+                  {
+                    label: "Estado ",
+                    value: alumno.activo,
+                    type: "badge",
+                    trueLabel: "Activo",
+                    falseLabel: "Inactivo",
+                  },
+
+                  {
+                    label: "Propietario ",
+                    value: alumno.propietario,
+                    type: "badge",
+                    trueLabel: "Sí",
+                    falseLabel: "No",
+                  },
+                ]}
                 onClick={() => navigate(`/alumnos/${alumno.id}`)}
                 onEdit={() => {
                   setEditingAlumno(alumno);
                   setIsOpen(true);
                 }}
-                onDelete={() => {
-                  if (confirm("¿Eliminar este alumno?")) {
-                    deleteMutation.mutate(alumno.id);
-                  }
-                }}
+                onDelete={() => setAlumnoToDelete(alumno)}
               />
             ))}
           </div>
         )}
-
         {filteredData.length > 0 && (
           <PaginationControls
             currentPage={currentPage}
@@ -645,6 +671,37 @@ export default function AlumnosPage() {
             onPageSizeChange={handlePageSizeChange}
           />
         )}
+        <Dialog
+          open={!!alumnoToDelete}
+          onOpenChange={() => setAlumnoToDelete(null)}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Eliminar alumno</DialogTitle>
+              <DialogDescription>
+                ¿Seguro que deseas eliminar a {alumnoToDelete?.nombre}?
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAlumnoToDelete(null)}>
+                Cancelar
+              </Button>
+
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (alumnoToDelete) {
+                    deleteMutation.mutate(alumnoToDelete.id);
+                    setAlumnoToDelete(null);
+                  }
+                }}
+              >
+                Eliminar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

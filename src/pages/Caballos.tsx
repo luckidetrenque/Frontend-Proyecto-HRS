@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { GenericCard } from "@/components/cards/GenericCard";
+import { GenericCardSkeleton } from "@/components/cards/GenericCardSkeleton";
 import {
   Dialog,
   DialogContent,
@@ -29,11 +31,15 @@ import {
 import { caballosApi, Caballo, CaballoSearchFilters } from "@/lib/api";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 export default function CaballosPage() {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [editingCaballo, setEditingCaballo] = useState<Caballo | null>(null);
+  const [caballoToDelete, setCaballoToDelete] = useState<Caballo | null>(null);
+
+  const navigate = useNavigate();
 
   // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
   const [searchFilters, setSearchFilters] = useState<CaballoSearchFilters>({});
@@ -276,85 +282,105 @@ export default function CaballosPage() {
     },
   ];
 
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+
   return (
     <Layout>
       <PageHeader
         title="Caballos"
         description="Control de caballos de la escuela y privados"
         action={
-          <Dialog
-            open={isOpen}
-            onOpenChange={(open) => {
-              setIsOpen(open);
-              if (!open) setEditingCaballo(null);
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Nuevo Caballo
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === "table" ? "default" : "outline"}
+                onClick={() => setViewMode("table")}
+              >
+                Tabla
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <form onSubmit={handleSubmit}>
-                <DialogHeader>
-                  <DialogTitle className="font-display">
-                    {editingCaballo ? "Editar Caballo" : "Nuevo Caballo"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {editingCaballo
-                      ? "Modifica los datos del caballo"
-                      : "Completa los datos para registrar un nuevo caballo"}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nombre">Nombre/s</Label>
-                    <Input
-                      id="nombre"
-                      name="nombre"
-                      defaultValue={editingCaballo?.nombre}
-                      placeholder="Nombre/s del caballo"
-                      required
-                    />
+
+              <Button
+                variant={viewMode === "cards" ? "default" : "outline"}
+                onClick={() => setViewMode("cards")}
+              >
+                Cards
+              </Button>
+            </div>
+
+            <Dialog
+              open={isOpen}
+              onOpenChange={(open) => {
+                setIsOpen(open);
+                if (!open) setEditingCaballo(null);
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nuevo Caballo
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <form onSubmit={handleSubmit}>
+                  <DialogHeader>
+                    <DialogTitle className="font-display">
+                      {editingCaballo ? "Editar Caballo" : "Nuevo Caballo"}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {editingCaballo
+                        ? "Modifica los datos del caballo"
+                        : "Completa los datos para registrar un nuevo caballo"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="nombre">Nombre/s</Label>
+                      <Input
+                        id="nombre"
+                        name="nombre"
+                        defaultValue={editingCaballo?.nombre}
+                        placeholder="Nombre/s del caballo"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tipo">Tipo</Label>
+                      <Select
+                        name="tipo"
+                        defaultValue={editingCaballo?.tipo || "ESCUELA"}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ESCUELA">Escuela</SelectItem>
+                          <SelectItem value="PRIVADO">Privado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        id="disponible"
+                        name="disponible"
+                        defaultChecked={editingCaballo?.disponible ?? true}
+                      />
+                      <Label htmlFor="disponible">Disponible</Label>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tipo">Tipo</Label>
-                    <Select
-                      name="tipo"
-                      defaultValue={editingCaballo?.tipo || "ESCUELA"}
+                  <DialogFooter>
+                    <Button
+                      type="submit"
+                      disabled={
+                        createMutation.isPending || updateMutation.isPending
+                      }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ESCUELA">Escuela</SelectItem>
-                        <SelectItem value="PRIVADO">Privado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Switch
-                      id="disponible"
-                      name="disponible"
-                      defaultChecked={editingCaballo?.disponible ?? true}
-                    />
-                    <Label htmlFor="disponible">Disponible</Label>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    type="submit"
-                    disabled={
-                      createMutation.isPending || updateMutation.isPending
-                    }
-                  >
-                    {editingCaballo ? "Guardar Cambios" : "Crear Caballo"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                      {editingCaballo ? "Guardar Cambios" : "Crear Caballo"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         }
       />
 
@@ -366,17 +392,54 @@ export default function CaballosPage() {
           onReset={handleResetFilters}
           isLoading={isLoading}
         />
-
-        <DataTable
-          columns={columns}
-          data={paginatedData}
-          isLoading={isLoading}
-          emptyMessage={
-            isSearchActive
-              ? "No se encontraron caballos con esos criterios de búsqueda"
-              : "No hay caballos que coincidan con los filtros"
-          }
-        />
+        {viewMode === "table" ? (
+          <DataTable
+            columns={columns}
+            data={paginatedData}
+            isLoading={isLoading}
+            emptyMessage={
+              isSearchActive
+                ? "No se encontraron caballos con esos criterios de búsqueda"
+                : "No hay caballos que coincidan con los filtros"
+            }
+            onRowClick={(caballo) => navigate(`/caballos/${caballo.id}`)}
+          />
+        ) : isLoading ? (
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+            {Array.from({ length: pageSize }).map((_, i) => (
+              <GenericCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+            {paginatedData.map((caballo) => (
+              <GenericCard
+                item={caballo}
+                key={caballo.id}
+                title={caballo.nombre}
+                subtitle=""
+                // TODO subtitle="Descripción crear campo en db"
+                fields={[
+                  { label: "Nombre", value: caballo.nombre },
+                  { label: "Tipo", value: caballo.tipo },
+                  {
+                    label: "Estado ",
+                    value: caballo.disponible,
+                    type: "badge",
+                    trueLabel: "Disponible",
+                    falseLabel: "No disponible",
+                  },
+                ]}
+                onClick={() => navigate(`/caballos/${caballo.id}`)}
+                onEdit={() => {
+                  setEditingCaballo(caballo);
+                  setIsOpen(true);
+                }}
+                onDelete={() => setCaballoToDelete(caballo)}
+              />
+            ))}
+          </div>
+        )}
 
         {filteredData.length > 0 && (
           <PaginationControls

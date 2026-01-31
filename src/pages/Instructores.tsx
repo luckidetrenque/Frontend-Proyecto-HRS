@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { GenericCard } from "@/components/cards/GenericCard";
+import { GenericCardSkeleton } from "@/components/cards/GenericCardSkeleton";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +28,7 @@ import {
 } from "@/lib/api";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const PRESET_COLORS = [
   "#3B82F6", // blue
@@ -46,6 +49,10 @@ export default function InstructoresPage() {
   const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(
     null,
   );
+  const [instructorToDelete, setInstructorToDelete] =
+    useState<Instructor | null>(null);
+
+  const navigate = useNavigate();
 
   const [instructorColor, setInstructorColor] = useState<string>(
     PRESET_COLORS[0],
@@ -300,164 +307,186 @@ export default function InstructoresPage() {
     },
   ];
 
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+
   return (
     <Layout>
       <PageHeader
         title="Instructores"
         description="Administra el equipo de instructores de la escuela"
         action={
-          <Dialog
-            open={isOpen}
-            onOpenChange={(open) => {
-              setIsOpen(open);
-              if (!open) setEditingInstructor(null);
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Nuevo Instructor
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === "table" ? "default" : "outline"}
+                onClick={() => setViewMode("table")}
+              >
+                Tabla
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <form onSubmit={handleSubmit}>
-                <DialogHeader>
-                  <DialogTitle className="font-display">
-                    {editingInstructor
-                      ? "Editar Instructor"
-                      : "Nuevo Instructor"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {editingInstructor
-                      ? "Modifica los datos del instructor"
-                      : "Completa los datos para registrar un nuevo instructor"}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="nombre">Nombre/s</Label>
-                      <Input
-                        id="nombre"
-                        name="nombre"
-                        defaultValue={editingInstructor?.nombre}
-                        placeholder="Nombre/s del instructor"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="apellido">Apellido/s</Label>
-                      <Input
-                        id="apellido"
-                        name="apellido"
-                        defaultValue={editingInstructor?.apellido}
-                        placeholder="Apellido/s del instructor"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="dni">DNI</Label>
-                      <Input
-                        id="dni"
-                        name="dni"
-                        type="string"
-                        defaultValue={editingInstructor?.dni}
-                        placeholder="Solo números sin puntos"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="fechaNacimiento">
-                        Fecha de Nacimiento
-                      </Label>
-                      <Input
-                        id="fechaNacimiento"
-                        name="fechaNacimiento"
-                        type="date"
-                        defaultValue={editingInstructor?.fechaNacimiento}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="telefono">Teléfono</Label>
-                      <Input
-                        id="telefono"
-                        name="telefono"
-                        type="tel"
-                        defaultValue={editingInstructor?.telefono}
-                        placeholder="Sin el 0 ni el 15"
-                        pattern="\+?[0-9]*"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        defaultValue={editingInstructor?.email}
-                        placeholder="instructor@correo.com"
-                      />
-                    </div>
-                  </div>
 
-                  {/* ✅ AGREGAR ESTA SECCIÓN COMPLETA */}
-                  <div className="space-y-2">
-                    <Label>Color del Instructor</Label>
-                    <div className="flex gap-2 flex-wrap">
-                      {PRESET_COLORS.map((color) => (
-                        <button
-                          type="button"
-                          key={color}
-                          onClick={() => setInstructorColor(color)}
-                          className={`w-10 h-10 rounded-full border-2 transition-all ${
-                            instructorColor === color
-                              ? "border-primary ring-2 ring-primary/20 scale-110"
-                              : "border-gray-300 hover:scale-105"
-                          }`}
-                          style={{ backgroundColor: color }}
-                          title={color}
+              <Button
+                variant={viewMode === "cards" ? "default" : "outline"}
+                onClick={() => setViewMode("cards")}
+              >
+                Cards
+              </Button>
+            </div>
+
+            <Dialog
+              open={isOpen}
+              onOpenChange={(open) => {
+                setIsOpen(open);
+                if (!open) setEditingInstructor(null);
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nuevo Instructor
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <form onSubmit={handleSubmit}>
+                  <DialogHeader>
+                    <DialogTitle className="font-display">
+                      {editingInstructor
+                        ? "Editar Instructor"
+                        : "Nuevo Instructor"}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {editingInstructor
+                        ? "Modifica los datos del instructor"
+                        : "Completa los datos para registrar un nuevo instructor"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="nombre">Nombre/s</Label>
+                        <Input
+                          id="nombre"
+                          name="nombre"
+                          defaultValue={editingInstructor?.nombre}
+                          placeholder="Nombre/s del instructor"
+                          required
                         />
-                      ))}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="apellido">Apellido/s</Label>
+                        <Input
+                          id="apellido"
+                          name="apellido"
+                          defaultValue={editingInstructor?.apellido}
+                          placeholder="Apellido/s del instructor"
+                          required
+                        />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 mt-2 p-2 border rounded-md bg-muted/30">
-                      <div
-                        className="w-6 h-6 rounded border-2 border-gray-300"
-                        style={{ backgroundColor: instructorColor }}
-                      />
-                      <span className="text-sm font-mono text-muted-foreground">
-                        {instructorColor}
-                      </span>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="dni">DNI</Label>
+                        <Input
+                          id="dni"
+                          name="dni"
+                          type="string"
+                          defaultValue={editingInstructor?.dni}
+                          placeholder="Solo números sin puntos"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="fechaNacimiento">
+                          Fecha de Nacimiento
+                        </Label>
+                        <Input
+                          id="fechaNacimiento"
+                          name="fechaNacimiento"
+                          type="date"
+                          defaultValue={editingInstructor?.fechaNacimiento}
+                          required
+                        />
+                      </div>
                     </div>
-                  </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="telefono">Teléfono</Label>
+                        <Input
+                          id="telefono"
+                          name="telefono"
+                          type="tel"
+                          defaultValue={editingInstructor?.telefono}
+                          placeholder="Sin el 0 ni el 15"
+                          pattern="\+?[0-9]*"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          defaultValue={editingInstructor?.email}
+                          placeholder="instructor@correo.com"
+                        />
+                      </div>
+                    </div>
 
-                  <div className="flex items-center gap-3">
-                    <Switch
-                      id="activo"
-                      name="activo"
-                      defaultChecked={editingInstructor?.activo ?? true}
-                    />
-                    <Label htmlFor="activo">Instructor activo</Label>
+                    {/* ✅ AGREGAR ESTA SECCIÓN COMPLETA */}
+                    <div className="space-y-2">
+                      <Label>Color del Instructor</Label>
+                      <div className="flex gap-2 flex-wrap">
+                        {PRESET_COLORS.map((color) => (
+                          <button
+                            type="button"
+                            key={color}
+                            onClick={() => setInstructorColor(color)}
+                            className={`w-10 h-10 rounded-full border-2 transition-all ${
+                              instructorColor === color
+                                ? "border-primary ring-2 ring-primary/20 scale-110"
+                                : "border-gray-300 hover:scale-105"
+                            }`}
+                            style={{ backgroundColor: color }}
+                            title={color}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2 mt-2 p-2 border rounded-md bg-muted/30">
+                        <div
+                          className="w-6 h-6 rounded border-2 border-gray-300"
+                          style={{ backgroundColor: instructorColor }}
+                        />
+                        <span className="text-sm font-mono text-muted-foreground">
+                          {instructorColor}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        id="activo"
+                        name="activo"
+                        defaultChecked={editingInstructor?.activo ?? true}
+                      />
+                      <Label htmlFor="activo">Instructor activo</Label>
+                    </div>
                   </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    type="submit"
-                    disabled={
-                      createMutation.isPending || updateMutation.isPending
-                    }
-                  >
-                    {editingInstructor ? "Guardar Cambios" : "Crear Instructor"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <DialogFooter>
+                    <Button
+                      type="submit"
+                      disabled={
+                        createMutation.isPending || updateMutation.isPending
+                      }
+                    >
+                      {editingInstructor
+                        ? "Guardar Cambios"
+                        : "Crear Instructor"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         }
       />
 
@@ -470,16 +499,57 @@ export default function InstructoresPage() {
           isLoading={isLoading}
         />
 
-        <DataTable
-          columns={columns}
-          data={paginatedData}
-          isLoading={isLoading}
-          emptyMessage={
-            isSearchActive
-              ? "No se encontraron instructores con esos criterios de búsqueda"
-              : "No hay instructores que coincidan con los filtros"
-          }
-        />
+        {viewMode === "table" ? (
+          <DataTable
+            columns={columns}
+            data={paginatedData}
+            isLoading={isLoading}
+            emptyMessage={
+              isSearchActive
+                ? "No se encontraron instructores con esos criterios de búsqueda"
+                : "No hay instructores que coincidan con los filtros"
+            }
+            onRowClick={(instructor) =>
+              navigate(`/instructores/${instructor.id}`)
+            }
+          />
+        ) : isLoading ? (
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+            {Array.from({ length: pageSize }).map((_, i) => (
+              <GenericCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+            {paginatedData.map((instructor) => (
+              <GenericCard
+                item={instructor}
+                key={instructor.id}
+                title={`${instructor.nombre} ${instructor.apellido}`}
+                subtitle=""
+                // TODO subtitle="Descripción crear campo en db"
+                fields={[
+                  { label: "DNI", value: instructor.dni },
+                  { label: "Teléfono", value: instructor.telefono },
+                  { label: "Email", value: instructor.email || "-" },
+                  {
+                    label: "Estado ",
+                    value: instructor.activo,
+                    type: "badge",
+                    trueLabel: "Activo",
+                    falseLabel: "Inactivo",
+                  },
+                ]}
+                onClick={() => navigate(`/instructores/${instructor.id}`)}
+                onEdit={() => {
+                  setEditingInstructor(instructor);
+                  setIsOpen(true);
+                }}
+                onDelete={() => setInstructorToDelete(instructor)}
+              />
+            ))}
+          </div>
+        )}
 
         {filteredData.length > 0 && (
           <PaginationControls

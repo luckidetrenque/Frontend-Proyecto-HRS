@@ -40,6 +40,9 @@ import {
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ALUMNO_COMODIN_ID } from "@/components/calendar/calendar.styles";
+import { useNavigate } from "react-router-dom";
+import { GenericCardSkeleton } from "@/components/cards/GenericCardSkeleton";
+import { GenericCard } from "@/components/cards/GenericCard";
 
 const estadoColors: Record<
   string,
@@ -59,6 +62,9 @@ export default function ClasesPage() {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [editingClase, setEditingClase] = useState<Clase | null>(null);
+  const [claseToDelete, setClaseToDelete] = useState<Clase | null>(null);
+
+  const navigate = useNavigate();
 
   // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
   const [searchFilters, setSearchFilters] = useState<ClaseSearchFilters>({});
@@ -531,253 +537,283 @@ export default function ClasesPage() {
     },
   ];
 
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+
   return (
     <Layout>
       <PageHeader
         title="Clases"
         description="Programa y gestiona las clases de equitación"
         action={
-          <Dialog
-            open={isOpen}
-            onOpenChange={(open) => {
-              setIsOpen(open);
-              if (!open) setEditingClase(null);
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Nueva Clase
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === "table" ? "default" : "outline"}
+                onClick={() => setViewMode("table")}
+              >
+                Tabla
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-lg">
-              <form onSubmit={handleSubmit}>
-                <DialogHeader>
-                  <DialogTitle className="font-display">
-                    {editingClase ? "Editar Clase" : "Nueva Clase"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {editingClase
-                      ? "Modifica los datos de la clase"
-                      : "Completa los datos para programar una nueva clase"}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="dia">Dia</Label>
-                      <Input
-                        id="dia"
-                        name="dia"
-                        type="date"
-                        defaultValue={
-                          editingClase?.dia ||
-                          hoy.getFullYear() +
-                            "-" +
-                            hoy.getMonth() +
-                            1 +
-                            "-" +
-                            hoy.getDate()
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="hora">Hora</Label>
-                      <Input
-                        id="hora"
-                        name="hora"
-                        type="time"
-                        defaultValue={
-                          editingClase
-                            ? obtenerHoraArgentina(editingClase.diaHoraCompleto)
-                            : "09:00"
-                        }
-                        // defaultValue={editingClase?.hora}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="alumnoId">
-                        {" "}
-                        Alumno
-                        {especialidadSeleccionada === "MONTA" && (
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            (Auto)
-                          </span>
-                        )}
-                      </Label>
-                      {/* Campo oculto para enviar el alumnoId cuando el select está deshabilitado */}
-                      {especialidadSeleccionada === "MONTA" && (
-                        <input
-                          type="hidden"
-                          name="alumnoId"
-                          value={alumnoIdSeleccionado}
+
+              <Button
+                variant={viewMode === "cards" ? "default" : "outline"}
+                onClick={() => setViewMode("cards")}
+              >
+                Cards
+              </Button>
+            </div>
+
+            <Dialog
+              open={isOpen}
+              onOpenChange={(open) => {
+                setIsOpen(open);
+                if (!open) setEditingClase(null);
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nueva Clase
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-lg">
+                <form onSubmit={handleSubmit}>
+                  <DialogHeader>
+                    <DialogTitle className="font-display">
+                      {editingClase ? "Editar Clase" : "Nueva Clase"}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {editingClase
+                        ? "Modifica los datos de la clase"
+                        : "Completa los datos para programar una nueva clase"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="dia">Dia</Label>
+                        <Input
+                          id="dia"
+                          name="dia"
+                          type="date"
+                          defaultValue={
+                            editingClase?.dia ||
+                            hoy.getFullYear() +
+                              "-" +
+                              hoy.getMonth() +
+                              1 +
+                              "-" +
+                              hoy.getDate()
+                          }
+                          required
                         />
-                      )}
-                      <Select
-                        name={
-                          especialidadSeleccionada === "MONTA" ? "" : "alumnoId"
-                        }
-                        required={especialidadSeleccionada !== "MONTA"}
-                        value={alumnoIdSeleccionado}
-                        onValueChange={setAlumnoIdSeleccionado}
-                        defaultValue={String(editingClase?.alumnoId || "")}
-                        disabled={especialidadSeleccionada === "MONTA"}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar alumno" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {alumnos.map((alumno: Alumno) => (
-                            <SelectItem
-                              key={alumno.id}
-                              value={String(alumno.id)}
-                            >
-                              {alumno.nombre} {alumno.apellido}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="caballoId">Caballo</Label>
-                      <Select
-                        name="caballoId"
-                        defaultValue={String(editingClase?.caballoId || "")}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar caballo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {caballos
-                            .filter((c: Caballo) => c.disponible)
-                            .map((caballo: Caballo) => (
-                              <SelectItem
-                                key={caballo.id}
-                                value={String(caballo.id)}
-                              >
-                                {caballo.nombre} (
-                                {caballo.tipo === "ESCUELA"
-                                  ? "Escuela"
-                                  : "Privado"}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="hora">Hora</Label>
+                        <Input
+                          id="hora"
+                          name="hora"
+                          type="time"
+                          defaultValue={
+                            editingClase
+                              ? obtenerHoraArgentina(
+                                  editingClase.diaHoraCompleto,
                                 )
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                              : "09:00"
+                          }
+                          // defaultValue={editingClase?.hora}
+                          required
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="instructorId">Instructor</Label>
-                      <Select
-                        name="instructorId"
-                        defaultValue={String(editingClase?.instructorId || "")}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar instructor" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {instructores
-                            .filter((i: Instructor) => i.activo)
-                            .map((instructor: Instructor) => (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="alumnoId">
+                          {" "}
+                          Alumno
+                          {especialidadSeleccionada === "MONTA" && (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              (Auto)
+                            </span>
+                          )}
+                        </Label>
+                        {/* Campo oculto para enviar el alumnoId cuando el select está deshabilitado */}
+                        {especialidadSeleccionada === "MONTA" && (
+                          <input
+                            type="hidden"
+                            name="alumnoId"
+                            value={alumnoIdSeleccionado}
+                          />
+                        )}
+                        <Select
+                          name={
+                            especialidadSeleccionada === "MONTA"
+                              ? ""
+                              : "alumnoId"
+                          }
+                          required={especialidadSeleccionada !== "MONTA"}
+                          value={alumnoIdSeleccionado}
+                          onValueChange={setAlumnoIdSeleccionado}
+                          defaultValue={String(editingClase?.alumnoId || "")}
+                          disabled={especialidadSeleccionada === "MONTA"}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar alumno" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {alumnos.map((alumno: Alumno) => (
                               <SelectItem
-                                key={instructor.id}
-                                value={String(instructor.id)}
+                                key={alumno.id}
+                                value={String(alumno.id)}
                               >
-                                {instructor.nombre} {instructor.apellido}
+                                {alumno.nombre} {alumno.apellido}
                               </SelectItem>
                             ))}
-                        </SelectContent>
-                      </Select>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="caballoId">Caballo</Label>
+                        <Select
+                          name="caballoId"
+                          defaultValue={String(editingClase?.caballoId || "")}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar caballo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {caballos
+                              .filter((c: Caballo) => c.disponible)
+                              .map((caballo: Caballo) => (
+                                <SelectItem
+                                  key={caballo.id}
+                                  value={String(caballo.id)}
+                                >
+                                  {caballo.nombre} (
+                                  {caballo.tipo === "ESCUELA"
+                                    ? "Escuela"
+                                    : "Privado"}
+                                  )
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="especialidad">Especialidad</Label>
-                      <Select
-                        name="especialidad"
-                        value={especialidadSeleccionada}
-                        onValueChange={handleEspecialidadChange}
-                        defaultValue={editingClase?.especialidad || ""}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar especialidad" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {especialidad.map((esp) => (
-                            <SelectItem key={esp} value={esp}>
-                              {esp}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="instructorId">Instructor</Label>
+                        <Select
+                          name="instructorId"
+                          defaultValue={String(
+                            editingClase?.instructorId || "",
+                          )}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar instructor" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {instructores
+                              .filter((i: Instructor) => i.activo)
+                              .map((instructor: Instructor) => (
+                                <SelectItem
+                                  key={instructor.id}
+                                  value={String(instructor.id)}
+                                >
+                                  {instructor.nombre} {instructor.apellido}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="especialidad">Especialidad</Label>
+                        <Select
+                          name="especialidad"
+                          value={especialidadSeleccionada}
+                          onValueChange={handleEspecialidadChange}
+                          defaultValue={editingClase?.especialidad || ""}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar especialidad" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {especialidad.map((esp) => (
+                              <SelectItem key={esp} value={esp}>
+                                {esp}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="estado">Estado</Label>
+                        <Select
+                          name="estado"
+                          defaultValue={editingClase?.estado || "PROGRAMADA"}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar estado" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PROGRAMADA">
+                              Programada
                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                            <SelectItem value="INICIADA">Iniciada</SelectItem>
+                            <SelectItem value="COMPLETADA">
+                              Completada
+                            </SelectItem>
+                            <SelectItem value="CANCELADA">Cancelada</SelectItem>
+                            <SelectItem value="ACA">ACA</SelectItem>
+                            <SelectItem value="ASA">ASA</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="observaciones">Observaciones</Label>
+                        <Input
+                          id="observaciones"
+                          name="observaciones"
+                          defaultValue={editingClase?.observaciones || ""}
+                          placeholder="Ej. Lluvia, Feriado, etc"
+                        />
+                      </div>
                     </div>
+                    {/* ✅ NUEVO: Checkbox para clase de prueba */}
+                    {!editingClase && (
+                      <div className="flex items-center gap-3 rounded-md border border-orange-300 bg-orange-50 p-3">
+                        <input
+                          type="checkbox"
+                          id="esPrueba"
+                          name="esPrueba"
+                          className="h-4 w-4 rounded border-orange-400 text-orange-600 focus:ring-orange-500"
+                        />
+                        <Label htmlFor="esPrueba" className="text-sm">
+                          <span className="font-semibold text-orange-800">
+                            Clase de Prueba
+                          </span>
+                          <span className="ml-2 text-xs text-orange-600">
+                            (El alumno debe estar inactivo)
+                          </span>
+                        </Label>
+                      </div>
+                    )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="estado">Estado</Label>
-                      <Select
-                        name="estado"
-                        defaultValue={editingClase?.estado || "PROGRAMADA"}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar estado" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="PROGRAMADA">Programada</SelectItem>
-                          <SelectItem value="INICIADA">Iniciada</SelectItem>
-                          <SelectItem value="COMPLETADA">Completada</SelectItem>
-                          <SelectItem value="CANCELADA">Cancelada</SelectItem>
-                          <SelectItem value="ACA">ACA</SelectItem>
-                          <SelectItem value="ASA">ASA</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="observaciones">Observaciones</Label>
-                      <Input
-                        id="observaciones"
-                        name="observaciones"
-                        defaultValue={editingClase?.observaciones || ""}
-                        placeholder="Ej. Lluvia, Feriado, etc"
-                      />
-                    </div>
-                  </div>
-                  {/* ✅ NUEVO: Checkbox para clase de prueba */}
-                  {!editingClase && (
-                    <div className="flex items-center gap-3 rounded-md border border-orange-300 bg-orange-50 p-3">
-                      <input
-                        type="checkbox"
-                        id="esPrueba"
-                        name="esPrueba"
-                        className="h-4 w-4 rounded border-orange-400 text-orange-600 focus:ring-orange-500"
-                      />
-                      <Label htmlFor="esPrueba" className="text-sm">
-                        <span className="font-semibold text-orange-800">
-                          Clase de Prueba
-                        </span>
-                        <span className="ml-2 text-xs text-orange-600">
-                          (El alumno debe estar inactivo)
-                        </span>
-                      </Label>
-                    </div>
-                  )}
-                </div>
-                <DialogFooter>
-                  <Button
-                    type="submit"
-                    disabled={
-                      createMutation.isPending || updateMutation.isPending
-                    }
-                  >
-                    {editingClase ? "Guardar Cambios" : "Crear Clase"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <DialogFooter>
+                    <Button
+                      type="submit"
+                      disabled={
+                        createMutation.isPending || updateMutation.isPending
+                      }
+                    >
+                      {editingClase ? "Guardar Cambios" : "Crear Clase"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         }
       />
 
@@ -790,16 +826,74 @@ export default function ClasesPage() {
           isLoading={isLoading}
         />
 
-        <DataTable
-          columns={columns}
-          data={paginatedData}
-          isLoading={isLoading}
-          emptyMessage={
-            isSearchActive
-              ? "No se encontraron clases con esos criterios de búsqueda"
-              : "No hay clases que coincidan con los filtros"
-          }
-        />
+        {viewMode === "table" ? (
+          <DataTable
+            columns={columns}
+            data={paginatedData}
+            isLoading={isLoading}
+            emptyMessage={
+              isSearchActive
+                ? "No se encontraron alumnos con esos criterios de búsqueda"
+                : "No hay alumnos que coincidan con los filtros"
+            }
+            onRowClick={(clase) => navigate(`/clases/${clase.id}`)}
+          />
+        ) : isLoading ? (
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+            {Array.from({ length: pageSize }).map((_, i) => (
+              <GenericCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+            {paginatedData.map((clase) => (
+              <GenericCard
+                item={clase}
+                key={clase.id}
+                title={`Clase de ${
+                  clase.especialidad.charAt(0) +
+                  clase.especialidad.slice(1).toLowerCase()
+                }`}
+                subtitle=""
+                // TODO subtitle="Descripción crear campo en db"
+                fields={[
+                  {
+                    label: "Dia",
+                    value: `${clase.dia.split("-")[2]}/${clase.dia.split("-")[1]}/${
+                      clase.dia.split("-")[0]
+                    }`,
+                  },
+                  {
+                    label: "Hora",
+                    value: formatearConZona(clase.diaHoraCompleto),
+                  },
+                  { label: "Alumno", value: getAlumnoNombre(clase.alumnoId) },
+                  {
+                    label: "Instructor",
+                    value: getInstructorNombre(clase.instructorId),
+                  },
+                  {
+                    label: "Caballo",
+                    value: getCaballoNombre(clase.caballoId),
+                  },
+                  {
+                    label: "Estado ",
+                    value: clase.estado,
+                    type: "badge",
+                    trueLabel: "",
+                    falseLabel: "",
+                  },
+                ]}
+                onClick={() => navigate(`/clases/${clase.id}`)}
+                onEdit={() => {
+                  setEditingClase(clase);
+                  setIsOpen(true);
+                }}
+                onDelete={() => setClaseToDelete(clase)}
+              />
+            ))}
+          </div>
+        )}
 
         {filteredData.length > 0 && (
           <PaginationControls
