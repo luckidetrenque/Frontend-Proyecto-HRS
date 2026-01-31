@@ -13,7 +13,7 @@ type EntityType = "alumnos" | "instructores" | "caballos" | "clases";
 interface SearchConfig {
   entityType: EntityType;
   placeholder?: string;
-  onSearch: (filters: Record<string, any>) => void;
+  onSearch: (filters: Record<string, unknown>) => void;
   suggestions?: string[];
 }
 
@@ -76,21 +76,22 @@ const parseFecha = (texto: string): string | null => {
 const interpretarBusqueda = (
   query: string,
   entityType: EntityType,
-): Record<string, any> => {
-  const filters: Record<string, any> = {};
+): Record<string, unknown> => {
+  const filters: Record<string, unknown> = {};
   const queryLower = query.toLowerCase().trim();
 
   // Detectar palabras clave según entidad
   const keywords = KEYWORDS[entityType];
 
   if (entityType === "alumnos") {
-    if (keywords.activo.some((k) => queryLower.includes(k)))
+    const keywordsAlumnos = keywords as typeof KEYWORDS.alumnos;
+    if (keywordsAlumnos.activo.some((k) => queryLower.includes(k)))
       filters.activo = true;
-    if (keywords.inactivo.some((k) => queryLower.includes(k)))
+    if (keywordsAlumnos.inactivo.some((k) => queryLower.includes(k)))
       filters.activo = false;
-    if (keywords.propietario.some((k) => queryLower.includes(k)))
+    if (keywordsAlumnos.propietario.some((k) => queryLower.includes(k)))
       filters.propietario = true;
-    if (keywords.noPropietario.some((k) => queryLower.includes(k)))
+    if (keywordsAlumnos.noPropietario.some((k) => queryLower.includes(k)))
       filters.propietario = false;
 
     // Detectar fecha de inscripción
@@ -103,9 +104,10 @@ const interpretarBusqueda = (
       }
     }
   } else if (entityType === "instructores") {
-    if (keywords.activo.some((k) => queryLower.includes(k)))
+    const keywordsInstructores = keywords as typeof KEYWORDS.instructores;
+    if (keywordsInstructores.activo.some((k) => queryLower.includes(k)))
       filters.activo = true;
-    if (keywords.inactivo.some((k) => queryLower.includes(k)))
+    if (keywordsInstructores.inactivo.some((k) => queryLower.includes(k)))
       filters.activo = false;
 
     const fecha = parseFecha(queryLower);
@@ -113,22 +115,24 @@ const interpretarBusqueda = (
       filters.fechaNacimiento = fecha;
     }
   } else if (entityType === "caballos") {
-    if (keywords.escuela.some((k) => queryLower.includes(k)))
+    const keywordsCaballos = keywords as typeof KEYWORDS.caballos;
+    if (keywordsCaballos.escuela.some((k) => queryLower.includes(k)))
       filters.tipo = "ESCUELA";
-    if (keywords.privado.some((k) => queryLower.includes(k)))
+    if (keywordsCaballos.privado.some((k) => queryLower.includes(k)))
       filters.tipo = "PRIVADO";
-    if (keywords.disponible.some((k) => queryLower.includes(k)))
+    if (keywordsCaballos.disponible.some((k) => queryLower.includes(k)))
       filters.disponible = true;
-    if (keywords.noDisponible.some((k) => queryLower.includes(k)))
+    if (keywordsCaballos.noDisponible.some((k) => queryLower.includes(k)))
       filters.disponible = false;
   } else if (entityType === "clases") {
-    if (keywords.programada.some((k) => queryLower.includes(k)))
+    const keywordsClases = keywords as typeof KEYWORDS.clases;
+    if (keywordsClases.programada.some((k) => queryLower.includes(k)))
       filters.estado = "PROGRAMADA";
-    if (keywords.completada.some((k) => queryLower.includes(k)))
+    if (keywordsClases.completada.some((k) => queryLower.includes(k)))
       filters.estado = "COMPLETADA";
-    if (keywords.cancelada.some((k) => queryLower.includes(k)))
+    if (keywordsClases.cancelada.some((k) => queryLower.includes(k)))
       filters.estado = "CANCELADA";
-    if (keywords.iniciada.some((k) => queryLower.includes(k)))
+    if (keywordsClases.iniciada.some((k) => queryLower.includes(k)))
       filters.estado = "INICIADA";
 
     const fecha = parseFecha(queryLower);

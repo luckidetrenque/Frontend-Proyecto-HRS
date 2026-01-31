@@ -93,8 +93,8 @@ export function DataTable<T extends { id?: number | string }>({
                   {column.cell
                     ? column.cell(row)
                     : column.accessorKey
-                    ? String(row[column.accessorKey] ?? "-")
-                    : "-"}
+                      ? String(row[column.accessorKey] ?? "-")
+                      : "-"}
                 </TableCell>
               ))}
             </TableRow>
