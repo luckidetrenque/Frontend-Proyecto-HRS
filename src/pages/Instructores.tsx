@@ -27,11 +27,28 @@ import {
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+const PRESET_COLORS = [
+  "#3B82F6", // blue
+  "#EF4444", // red
+  "#10B981", // green
+  "#F59E0B", // amber
+  "#8B5CF6", // purple
+  "#EC4899", // pink
+  "#14B8A6", // teal
+  "#F97316", // orange
+  "#6366F1", // indigo
+  "#84CC16", // lime
+];
+
 export default function InstructoresPage() {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(
     null,
+  );
+
+  const [instructorColor, setInstructorColor] = useState<string>(
+    PRESET_COLORS[0],
   );
 
   // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
@@ -217,6 +234,7 @@ export default function InstructoresPage() {
       telefono: formData.get("telefono") as string,
       email: formData.get("email") as string,
       activo: formData.get("activo") === "on",
+      color: instructorColor,
     };
 
     if (editingInstructor) {
@@ -225,6 +243,14 @@ export default function InstructoresPage() {
       createMutation.mutate(data);
     }
   };
+
+  useEffect(() => {
+    if (isOpen && editingInstructor) {
+      setInstructorColor(editingInstructor.color || PRESET_COLORS[0]);
+    } else if (!isOpen) {
+      setInstructorColor(PRESET_COLORS[0]);
+    }
+  }, [isOpen, editingInstructor]);
 
   const columns = [
     {
@@ -379,6 +405,37 @@ export default function InstructoresPage() {
                       />
                     </div>
                   </div>
+
+                  {/* ✅ AGREGAR ESTA SECCIÓN COMPLETA */}
+                  <div className="space-y-2">
+                    <Label>Color del Instructor</Label>
+                    <div className="flex gap-2 flex-wrap">
+                      {PRESET_COLORS.map((color) => (
+                        <button
+                          type="button"
+                          key={color}
+                          onClick={() => setInstructorColor(color)}
+                          className={`w-10 h-10 rounded-full border-2 transition-all ${
+                            instructorColor === color
+                              ? "border-primary ring-2 ring-primary/20 scale-110"
+                              : "border-gray-300 hover:scale-105"
+                          }`}
+                          style={{ backgroundColor: color }}
+                          title={color}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2 mt-2 p-2 border rounded-md bg-muted/30">
+                      <div
+                        className="w-6 h-6 rounded border-2 border-gray-300"
+                        style={{ backgroundColor: instructorColor }}
+                      />
+                      <span className="text-sm font-mono text-muted-foreground">
+                        {instructorColor}
+                      </span>
+                    </div>
+                  </div>
+
                   <div className="flex items-center gap-3">
                     <Switch
                       id="activo"

@@ -25,6 +25,7 @@ export interface Instructor {
   telefono: string;
   email: string;
   activo: boolean;
+  color: string;
 }
 
 export interface Caballo {

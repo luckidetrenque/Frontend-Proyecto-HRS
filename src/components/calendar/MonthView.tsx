@@ -19,10 +19,12 @@ interface MonthViewProps {
   onStatusChange: (claseId: number, newStatus: Clase["estado"]) => void;
   onEditClase: (clase: Clase) => void;
   onDeleteClase: (claseId: number) => void;
+  getAlumnoNombre: (id: number) => string;
   getAlumnoApellido: (id: number) => string;
   getAlumnoNombreCompleto: (id: number) => string;
   getInstructorNombre: (id: number) => string;
   getCaballoNombre: (id: number) => string;
+  getInstructorColor: (id: number) => string;
 }
 
 export function MonthView({
@@ -33,10 +35,12 @@ export function MonthView({
   onStatusChange,
   onEditClase,
   onDeleteClase,
+  getAlumnoNombre,
   getAlumnoApellido,
   getAlumnoNombreCompleto,
   getInstructorNombre,
   getCaballoNombre,
+  getInstructorColor,
 }: MonthViewProps) {
   const [popoverOpen, setPopoverOpen] = useState<string | null>(null);
   const maxClases = MAX_CLASES_POR_CELDA.month;
@@ -102,8 +106,11 @@ export function MonthView({
                         <div>
                           <ClaseBadge
                             clase={clase}
-                            alumnoNombre={getAlumnoApellido(clase.alumnoId)}
+                            alumnoNombre={getAlumnoNombre(clase.alumnoId)}
                             caballoNombre={getCaballoNombre(clase.caballoId)}
+                            instructorColor={getInstructorColor(
+                              clase.instructorId,
+                            )}
                             compact
                           />
                         </div>

@@ -493,6 +493,11 @@ export function useCalendar() {
     return caballo?.nombre || "-";
   };
 
+  const getInstructorColor = (id: number) => {
+    const instructor = instructores.find((i: Instructor) => i.id === id);
+    return instructor?.color || "#6B7280";
+  };
+
   return {
     // Estado
     currentDate,
@@ -551,5 +556,6 @@ export function useCalendar() {
     getAlumnoNombreCompleto,
     getInstructorNombre,
     getCaballoNombre,
+    getInstructorColor,
   };
 }

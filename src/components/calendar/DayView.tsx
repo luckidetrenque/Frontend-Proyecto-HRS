@@ -23,6 +23,7 @@ interface DayViewProps {
   getAlumnoNombreCompleto: (id: number) => string;
   getInstructorNombre: (id: number) => string;
   getCaballoNombre: (id: number) => string;
+  getInstructorColor: (id: number) => string;
 }
 
 export function DayView({
@@ -37,6 +38,7 @@ export function DayView({
   getAlumnoNombreCompleto,
   getInstructorNombre,
   getCaballoNombre,
+  getInstructorColor,
 }: DayViewProps) {
   const [popoverOpen, setPopoverOpen] = useState<string | null>(null);
 
@@ -140,6 +142,9 @@ export function DayView({
                             <ClaseBadge
                               clase={clase}
                               alumnoNombre={getAlumnoNombre(clase.alumnoId)}
+                              instructorColor={getInstructorColor(
+                                clase.instructorId,
+                              )}
                             />
                           </div>
                         }

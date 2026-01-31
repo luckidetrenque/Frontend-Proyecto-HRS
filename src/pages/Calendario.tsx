@@ -88,6 +88,7 @@ export default function CalendarioPage() {
     getAlumnoNombreCompleto,
     getInstructorNombre,
     getCaballoNombre,
+    getInstructorColor,
   } = useCalendar();
 
   // Estado para controlar la especialidad seleccionada y el alumno
@@ -214,6 +215,7 @@ export default function CalendarioPage() {
               getAlumnoNombreCompleto={getAlumnoNombreCompleto}
               getInstructorNombre={getInstructorNombre}
               getCaballoNombre={getCaballoNombre}
+              getInstructorColor={getInstructorColor}
             />
           </CardContent>
         </Card>
@@ -229,10 +231,12 @@ export default function CalendarioPage() {
                 onStatusChange={handleStatusChange}
                 onEditClase={handleEditClase}
                 onDeleteClase={handleDeleteClase}
+                getAlumnoNombre={getAlumnoNombre}
                 getAlumnoApellido={getAlumnoApellido}
                 getAlumnoNombreCompleto={getAlumnoNombreCompleto}
                 getInstructorNombre={getInstructorNombre}
                 getCaballoNombre={getCaballoNombre}
+                getInstructorColor={getInstructorColor}
               />
             ) : (
               <WeekView
@@ -242,10 +246,12 @@ export default function CalendarioPage() {
                 onStatusChange={handleStatusChange}
                 onEditClase={handleEditClase}
                 onDeleteClase={handleDeleteClase}
+                getAlumnoNombre={getAlumnoNombre}
                 getAlumnoApellido={getAlumnoApellido}
                 getAlumnoNombreCompleto={getAlumnoNombreCompleto}
                 getInstructorNombre={getInstructorNombre}
                 getCaballoNombre={getCaballoNombre}
+                getInstructorColor={getInstructorColor}
               />
             )}
           </CardContent>
@@ -253,7 +259,7 @@ export default function CalendarioPage() {
       )}
 
       {/* Leyenda */}
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
+      {/* <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded-full bg-warning/50" />
           <span className="text-sm text-muted-foreground">Programada</span>
@@ -278,6 +284,20 @@ export default function CalendarioPage() {
           <div className="h-3 w-3 rounded-full bg-cyan-500/50" />
           <span className="text-sm text-muted-foreground">ASA</span>
         </div>
+      </div> */}
+      {/* En Calendario.tsx, reemplazar la leyenda actual */}
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
+        {instructores.map((instructor) => (
+          <div key={instructor.id} className="flex items-center gap-2">
+            <div
+              className="h-3 w-3 rounded-full border"
+              style={{ backgroundColor: instructor.color }}
+            />
+            <span className="text-sm text-muted-foreground">
+              {instructor.nombre} {instructor.apellido}
+            </span>
+          </div>
+        ))}
       </div>
 
       {/* Diálogo Crear/Editar Clase */}

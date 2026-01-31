@@ -71,7 +71,9 @@ export function Layout({ children }: LayoutProps) {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
               <Landmark className="h-5 w-5 text-primary-foreground" />
             </div>
-            <div className="hidden sm:block">
+            <div className="hidden lg:block">
+              {" "}
+              {/* Cambiar de sm a lg */}
               <h1 className="font-display text-xl font-semibold text-foreground">
                 Escuela de Equitación
               </h1>
@@ -95,9 +97,10 @@ export function Layout({ children }: LayoutProps) {
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-secondary hover:text-foreground",
                   )}
+                  title={item.name}
                 >
-                  <item.icon className="h-4 w-4" />
-                  {item.name}
+                  <item.icon className="h-5 w-5" />
+                  <span className="hidden 2xl:inline">{item.name}</span>
                 </Link>
               );
             })}
@@ -107,7 +110,7 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex items-center gap-2">
             {/* Buscador Global */}
             {entityType && (
-              <div className="hidden lg:block flex-1 max-w-xl mx-4">
+              <div className="hidden lg:block flex-1 max-w-sm xl:max-w-xl mx-4">
                 <SmartSearch
                   entityType={entityType}
                   onSearch={handleGlobalSearch}

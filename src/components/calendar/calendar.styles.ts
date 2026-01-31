@@ -65,7 +65,7 @@ export const ESTADO_STYLES: Record<string, string> = {
   PROGRAMADA: "bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100",
   INICIADA: "bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100",
   COMPLETADA:
-    "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100",
+    "bg-emerald-50 text-emerald-700 border-emerald hover:bg-emerald-100",
   CANCELADA: "bg-red-50 text-red-700 border-red-300 hover:bg-red-100",
   ACA: "bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100",
   ASA: "bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100",
@@ -86,6 +86,8 @@ export const ESTADOS: Clase["estado"][] = [
   "ACA",
   "ASA",
 ];
+
+export const COLOR = "#FFFFFF";
 
 // Íconos por estado (para uso en badges o listas)
 export const ESTADO_ICONS: Record<string, string> = {
@@ -132,4 +134,24 @@ export const getClaseStyle = (estado: string, esPrueba?: boolean): string => {
   }
 
   return baseStyle;
+};
+
+/**
+ * Calcula el color de texto óptimo (blanco o negro) según el color de fondo
+ * para garantizar buen contraste y accesibilidad
+ */
+export const getContrastColor = (hexColor: string): string => {
+  // Remover el # si existe
+  const hex = hexColor.replace("#", "");
+
+  // Convertir a RGB
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+
+  // Calcular luminancia relativa (fórmula W3C)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+  // Retornar blanco para fondos oscuros, negro para fondos claros
+  return luminance > 0.5 ? "#000000" : "#FFFFFF";
 };

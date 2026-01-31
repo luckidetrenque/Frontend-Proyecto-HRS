@@ -1,18 +1,21 @@
 /**
  * ClaseBadge.tsx
- * Badge reutilizable para mostrar clases en el calendario
+ * Badge que muestra información de una clase
+ * ✅ Con color de instructor como fondo
+ * ✅ Texto contrastante automático
+ * ✅ Borde sólido según estado de la clase
  */
 
 import { Clase } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { ESTADO_STYLES } from "./calendar.styles";
+import { getContrastColor } from "./calendar.styles";
 
 interface ClaseBadgeProps {
   clase: Clase;
   alumnoNombre: string;
   caballoNombre?: string;
   compact?: boolean;
-  onClick?: () => void;
+  instructorColor?: string;
 }
 
 export function ClaseBadge({
@@ -20,38 +23,45 @@ export function ClaseBadge({
   alumnoNombre,
   caballoNombre,
   compact = false,
-  onClick,
+  instructorColor = "#6B7280", // gris por defecto
 }: ClaseBadgeProps) {
-  return (
-    <button
-      className={cn(
-        "w-full rounded-md px-2 py-1 text-left text-xs transition-all",
-        compact ? "py-1" : "py-1.5",
-        ESTADO_STYLES[clase.estado],
-        onClick && "cursor-pointer hover:scale-105",
-      )}
-      onClick={onClick}
-    >
-      <div className={cn("truncate", compact && "flex items-center gap-1")}>
-        {/* Indicadores visuales para ACA/ASA */}
-        {clase.estado === "ACA" && <span className="mr-1">🔵</span>}
-        {clase.estado === "ASA" && <span className="mr-1">🟡</span>}
+  // Calcular color de texto según el fondo del instructor
+  const textColor = getContrastColor(instructorColor);
 
-        {compact ? (
-          <>
-            <span className="font-medium">{clase.hora.slice(0, 5)}</span>
-            <span className="truncate">{alumnoNombre.split(" ")[0]}</span>
-            {caballoNombre && (
-              <>
-                <span>/</span>
-                <span className="truncate">{caballoNombre.split(" ")[0]}</span>
-              </>
-            )}
-          </>
-        ) : (
-          <span>{alumnoNombre}</span>
+  // Mapeo de estados a colores de borde
+  const borderColors: Record<string, string> = {
+    PROGRAMADA: "#F59E0B", // amber
+    INICIADA: "#3B82F6", // blue
+    COMPLETADA: "#10B981", // green
+    CANCELADA: "#EF4444", // red
+    ACA: "#8B5CF6", // purple
+    ASA: "#EC4899", // pink
+  };
+
+  const borderColor = borderColors[clase.estado] || "#D1D5DB"; // gris por defecto
+
+  return (
+    <div
+      className={cn(
+        "rounded-md px-2 py-1 text-xs font-medium transition-all cursor-pointer hover:shadow-md",
+        compact ? "text-[10px] px-1.5 py-0.5" : "text-xs",
+      )}
+      style={{
+        backgroundColor: instructorColor,
+        color: textColor,
+        borderLeft: `12px solid ${borderColor}`,
+        boxSizing: "border-box",
+      }}
+    >
+      <div className="truncate font-semibold text-[12px]">
+        <span>{alumnoNombre}</span>
+        {caballoNombre && (
+          <span title={`Clase ${clase.estado.toLowerCase()}`}>
+            {" / "}
+            {caballoNombre}
+          </span>
         )}
       </div>
-    </button>
+    </div>
   );
 }
