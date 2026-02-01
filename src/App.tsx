@@ -18,6 +18,9 @@ import ClasesPage from "./pages/Clases";
 import InstructoresPage from "./pages/Instructores";
 import Reportes from "./pages/Reportes";
 import AlumnoDetalle from "@/pages/AlumnoDetalle";
+import CaballoDetalle from "./pages/CaballoDetalle";
+import ClaseDetalle from "./pages/ClaseDetalle";
+import InstructorDetalle from "./pages/InstructorDetalle";
 
 const queryClient = new QueryClient();
 
@@ -101,6 +104,31 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AlumnoDetalle />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/caballos/:id"
+              element={
+                <ProtectedRoute>
+                  <CaballoDetalle />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/instructores/:id"
+              element={
+                <ProtectedRoute>
+                  <InstructorDetalle />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/clases/:id"
+              element={
+                <ProtectedRoute>
+                  <ClaseDetalle />
                 </ProtectedRoute>
               }
             />

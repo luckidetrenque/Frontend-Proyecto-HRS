@@ -1,7 +1,6 @@
-// src/pages/AlumnoDetalle.tsx
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
@@ -29,12 +28,78 @@ import {
   TrendingUp,
   AlertCircle,
 } from "lucide-react";
-import { alumnosApi, clasesApi, caballosApi, Clase, Caballo } from "@/lib/api";
+import {
+  alumnosApi,
+  clasesApi,
+  caballosApi,
+  Clase,
+  Caballo,
+  Alumno,
+} from "@/lib/api";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 export default function AlumnoDetalle() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const alumnoId = parseInt(id || "0");
+
+  const queryClient = useQueryClient();
+  const [isEditOpen, setIsEditOpen] = useState(false);
+
+  // Agregar mutation para actualizar
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<Alumno> }) =>
+      alumnosApi.actualizar(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alumno", alumnoId] });
+      queryClient.invalidateQueries({ queryKey: ["alumnos"] });
+      setIsEditOpen(false);
+      toast.success("Alumno actualizado correctamente");
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al actualizar el alumno"),
+  });
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      dni: formData.get("dni") as string,
+      nombre: formData.get("nombre") as string,
+      apellido: formData.get("apellido") as string,
+      fechaNacimiento: new Date(formData.get("fechaNacimiento") as string)
+        .toISOString()
+        .split("T")[0],
+      telefono: formData.get("telefono") as string,
+      email: formData.get("email") as string,
+      fechaInscripcion: new Date(formData.get("fechaInscripcion") as string)
+        .toISOString()
+        .split("T")[0],
+      cantidadClases: Number(formData.get("cantidadClases")),
+      propietario: formData.get("propietario") === "on",
+      activo: formData.get("activo") === "on",
+    };
+
+    updateMutation.mutate({ id: alumnoId, data });
+  };
 
   // Query para obtener el alumno
   const { data: alumno, isLoading: loadingAlumno } = useQuery({
@@ -180,7 +245,7 @@ export default function AlumnoDetalle() {
                 <MessageCircle className="mr-2 h-4 w-4" />
                 Contactar
               </Button>
-              <Button onClick={() => navigate(`/alumnos/${alumno.id}`)}>
+              <Button onClick={() => setIsEditOpen(true)}>
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
               </Button>
@@ -471,6 +536,151 @@ export default function AlumnoDetalle() {
             )}
           </CardContent>
         </Card>
+
+        {/* Dialog para Editar Alumno */}
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent className="sm:max-w-md">
+            <form onSubmit={handleSubmit}>
+              <DialogHeader>
+                <DialogTitle className="font-display">
+                  Editar Alumno
+                </DialogTitle>
+                <DialogDescription>
+                  Modifica los datos del alumno
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="nombre">Nombre/s</Label>
+                    <Input
+                      id="nombre"
+                      name="nombre"
+                      type="text"
+                      defaultValue={alumno?.nombre}
+                      placeholder="Nombre/s del alumno"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="apellido">Apellido/s</Label>
+                    <Input
+                      id="apellido"
+                      name="apellido"
+                      type="text"
+                      defaultValue={alumno?.apellido}
+                      placeholder="Apellido/s del alumno"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="dni">DNI</Label>
+                    <Input
+                      id="dni"
+                      name="dni"
+                      type="string"
+                      defaultValue={alumno?.dni}
+                      placeholder="Solo números sin puntos"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fechaNacimiento">Fecha de Nacimiento</Label>
+                    <Input
+                      id="fechaNacimiento"
+                      name="fechaNacimiento"
+                      type="date"
+                      defaultValue={alumno?.fechaNacimiento}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="telefono">Teléfono</Label>
+                    <Input
+                      id="telefono"
+                      name="telefono"
+                      type="tel"
+                      defaultValue={alumno?.telefono}
+                      placeholder="Sin el 0 ni el 15"
+                      pattern="\+?[0-9]*"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      defaultValue={alumno?.email}
+                      placeholder="alumno@correo.com"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="fechaInscripcion">
+                      Fecha de Inscripción
+                    </Label>
+                    <Input
+                      id="fechaInscripcion"
+                      name="fechaInscripcion"
+                      type="date"
+                      defaultValue={alumno?.fechaInscripcion}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cantidadClases">Clases por Mes</Label>
+                    <Select
+                      name="cantidadClases"
+                      defaultValue={String(alumno?.cantidadClases || 4)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="4">4 clases</SelectItem>
+                        <SelectItem value="8">8 clases</SelectItem>
+                        <SelectItem value="12">12 clases</SelectItem>
+                        <SelectItem value="16">16 clases</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      id="propietario"
+                      name="propietario"
+                      defaultChecked={alumno?.propietario}
+                    />
+                    <Label htmlFor="propietario">Tiene caballo propio</Label>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      id="activo"
+                      name="activo"
+                      defaultChecked={alumno?.activo}
+                    />
+                    <Label htmlFor="activo">Está activo</Label>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={updateMutation.isPending}>
+                  {updateMutation.isPending
+                    ? "Guardando..."
+                    : "Guardar Cambios"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

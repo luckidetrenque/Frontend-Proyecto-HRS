@@ -369,6 +369,12 @@ export const clasesApi = {
     const response = await apiFetch(`/clases/${id}`);
     return handleResponse<Clase>(response);
   },
+  obtenerDetallada: async (
+    id: number,
+  ): Promise<ClaseDetallada & { __successMessage?: string }> => {
+    const response = await apiFetch(`/clases/${id}/detalles`);
+    return handleResponse<ClaseDetallada>(response);
+  },
   obtenerPorAlumnoConDetalles: async (
     id: number,
   ): Promise<Clase & { __successMessage?: string }> => {
