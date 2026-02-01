@@ -21,7 +21,7 @@ import {
   subDays,
 } from "date-fns";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "@/utils/exportToExcel";
 import {
   clasesApi,
   alumnosApi,
@@ -379,64 +379,25 @@ export function useCalendar() {
   };
 
   // Exportar a Excel (para vista día)
-  const handleExportExcel = () => {
-    const dateKey = format(currentDate, "yyyy-MM-dd");
-
-    // Filtrar clases del día
-    const clasesDelDia = filteredClases.filter(
-      (clase) => clase.dia === dateKey,
-    );
-
-    // Crear mapa de clases por caballo y hora
-    const claseMap: Record<string, Clase> = {};
-    clasesDelDia.forEach((clase) => {
-      const horaKey = clase.hora.slice(0, 5);
-      const key = `${clase.caballoId}-${horaKey}`;
-      claseMap[key] = clase;
-    });
-
-    // Caballos ordenados
-    const caballosOrdenados = [...caballos].sort((a, b) =>
-      a.nombre.localeCompare(b.nombre),
-    );
-
-    // Crear matriz de datos
-    const headers = ["Hora", ...caballosOrdenados.map((c) => c.nombre)];
-    const rows = TIME_SLOTS.map((hora) => {
-      const row: string[] = [hora];
-      caballosOrdenados.forEach((caballo) => {
-        const key = `${caballo.id}-${hora}`;
-        const clase = claseMap[key];
-        if (clase) {
-          const alumnoName = getAlumnoNombreCompleto(clase.alumnoId);
-          const statusEmoji =
-            clase.estado === "ACA"
-              ? "🔵 "
-              : clase.estado === "ASA"
-                ? "🟡 "
-                : "";
-          row.push(`${statusEmoji}${alumnoName}`);
-        } else {
-          row.push("");
-        }
+  const handleExportExcel = async () => {
+    try {
+      await exportToExcel({
+        selectedDate: currentDate,
+        clases: filteredClases,
+        caballos: caballos,
+        instructores: instructores,
+        getAlumnoNombre,
+        getAlumnoNombreCompleto,
+        getInstructorNombre,
+        getInstructorColor,
+        getCaballoNombre,
       });
-      return row;
-    });
 
-    // Crear libro de Excel
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    const colWidths = headers.map((h, i) => ({
-      wch: i === 0 ? 8 : Math.max(18, h.length + 2),
-    }));
-    ws["!cols"] = colWidths;
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Clases");
-
-    // Descargar archivo
-    const fileName = `Clases_${dateKey}.xlsx`;
-    XLSX.writeFile(wb, fileName);
-    toast.success("Excel exportado correctamente");
+      toast.success("Excel exportado correctamente");
+    } catch (error) {
+      console.error("Error al exportar Excel:", error);
+      toast.error("Error al exportar el archivo Excel");
+    }
   };
 
   // Cancelar clases del día (para vista día)

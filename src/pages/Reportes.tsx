@@ -36,7 +36,7 @@ import {
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
-import * as XLSX from "xlsx";
+import { exportarExcel } from "@/utils/exportReportesToExcel";
 
 const COLORS = {
   primary: "hsl(150, 35%, 25%)",
@@ -230,121 +230,304 @@ export default function ReportesPage() {
   }, [clasesFiltradas, caballos]);
 
   // 📥 EXPORTAR A EXCEL CON FORMATO
-  const exportarExcel = (data: unknown[], nombreHoja: string) => {
-    const ws = XLSX.utils.json_to_sheet(data);
 
-    // Aplicar ancho de columnas
-    const maxWidth = 20;
-    const cols = Object.keys(data[0] || {}).map(() => ({ wch: maxWidth }));
-    ws["!cols"] = cols;
+  // ==========================================
+  // NUEVA FUNCIÓN exportarReporteCompleto
+  // Copiar y pegar completa desde aquí hasta el final
+  // ==========================================
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
-    XLSX.writeFile(
-      wb,
-      `Reporte_${nombreHoja}_${format(new Date(), "yyyy-MM-dd")}.xlsx`,
-    );
+  const exportarReporteCompleto = async () => {
+    try {
+      const ExcelJS = await import("exceljs");
+      const { saveAs } = await import("file-saver");
+      const workbook = new ExcelJS.Workbook();
+
+      // HOJA 1: ESTADÍSTICAS
+      const statsSheet = workbook.addWorksheet("Estadísticas");
+      statsSheet.addRow(["ESTADÍSTICAS GENERALES"]);
+      statsSheet.mergeCells("A1:B1");
+      statsSheet.getRow(1).font = {
+        size: 14,
+        bold: true,
+        color: { argb: "FFFFFFFF" },
+      };
+      statsSheet.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF4472C4" },
+      };
+      statsSheet.getRow(1).alignment = {
+        horizontal: "center",
+        vertical: "middle",
+      };
+      statsSheet.getRow(1).height = 25;
+
+      const statsHeader = statsSheet.addRow(["Métrica", "Valor"]);
+      statsHeader.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      statsHeader.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF5B9BD5" },
+      };
+
+      [
+        ["Alumnos Activos", estadisticasGenerales.alumnosActivos],
+        ["Alumnos Inactivos", estadisticasGenerales.alumnosInactivos],
+        ["Instructores Activos", estadisticasGenerales.totalInstructores],
+        ["Caballos Totales", estadisticasGenerales.totalCaballos],
+        ["Caballos Disponibles", estadisticasGenerales.caballosDisponibles],
+        ["Total Clases (Período)", estadisticasGenerales.totalClases],
+        ["Clases Completadas", estadisticasGenerales.clasesCompletadas],
+        ["Clases Canceladas", estadisticasGenerales.clasesCanceladas],
+        ["Tasa Completado (%)", estadisticasGenerales.tasaCompletado],
+        ["Ingresos Estimados ($)", estadisticasGenerales.ingresosEstimados],
+      ].forEach(([metrica, valor], idx) => {
+        const row = statsSheet.addRow([metrica, valor]);
+        if (idx % 2 === 0)
+          row.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFF8F9FA" },
+          };
+        row.getCell(2).alignment = { horizontal: "right" };
+      });
+
+      statsSheet.getColumn(1).width = 30;
+      statsSheet.getColumn(2).width = 20;
+
+      // HOJA 2: ALUMNOS
+      const alumnosSheet = workbook.addWorksheet("Alumnos");
+      alumnosSheet.addRow(["LISTA DE ALUMNOS"]);
+      alumnosSheet.mergeCells("A1:I1");
+      alumnosSheet.getRow(1).font = {
+        size: 14,
+        bold: true,
+        color: { argb: "FFFFFFFF" },
+      };
+      alumnosSheet.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF2E7D32" },
+      };
+      alumnosSheet.getRow(1).alignment = {
+        horizontal: "center",
+        vertical: "middle",
+      };
+      alumnosSheet.getRow(1).height = 25;
+
+      const alumnosHeader = alumnosSheet.addRow([
+        "Nombre",
+        "Apellido",
+        "DNI",
+        "Email",
+        "Teléfono",
+        "Clases/Mes",
+        "Propietario",
+        "Estado",
+        "Fecha Inscripción",
+      ]);
+      alumnosHeader.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      alumnosHeader.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF66BB6A" },
+      };
+
+      alumnos.forEach((a: Alumno, idx) => {
+        const row = alumnosSheet.addRow([
+          a.nombre,
+          a.apellido,
+          a.dni,
+          a.email,
+          a.telefono,
+          a.cantidadClases,
+          a.propietario ? "Sí" : "No",
+          a.activo ? "Activo" : "Inactivo",
+          a.fechaInscripcion,
+        ]);
+        if (idx % 2 === 0)
+          row.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFF8F9FA" },
+          };
+      });
+
+      alumnosSheet.columns.forEach((col) => {
+        col.width = 18;
+      });
+
+      // HOJA 3: CLASES
+      const clasesSheet = workbook.addWorksheet("Clases");
+      clasesSheet.addRow([
+        `CLASES - ${format(new Date(dateRange.inicio), "dd/MM/yyyy")} al ${format(new Date(dateRange.fin), "dd/MM/yyyy")}`,
+      ]);
+      clasesSheet.mergeCells("A1:G1");
+      clasesSheet.getRow(1).font = {
+        size: 14,
+        bold: true,
+        color: { argb: "FFFFFFFF" },
+      };
+      clasesSheet.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF4472C4" },
+      };
+      clasesSheet.getRow(1).alignment = {
+        horizontal: "center",
+        vertical: "middle",
+      };
+      clasesSheet.getRow(1).height = 25;
+
+      const clasesHeader = clasesSheet.addRow([
+        "Fecha",
+        "Hora",
+        "Especialidad",
+        "Estado",
+        "Alumno",
+        "Instructor",
+        "Caballo",
+      ]);
+      clasesHeader.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      clasesHeader.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF5B9BD5" },
+      };
+
+      clasesFiltradas.forEach((c: Clase, idx) => {
+        const row = clasesSheet.addRow([
+          c.dia,
+          c.hora,
+          c.especialidad,
+          c.estado,
+          alumnos.find((a: Alumno) => a.id === c.alumnoId)?.nombre || "",
+          instructores.find((i: Instructor) => i.id === c.instructorId)
+            ?.nombre || "",
+          caballos.find((cab: Caballo) => cab.id === c.caballoId)?.nombre || "",
+        ]);
+        if (idx % 2 === 0)
+          row.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFF8F9FA" },
+          };
+      });
+
+      clasesSheet.columns.forEach((col) => {
+        col.width = 18;
+      });
+
+      // HOJA 4: INSTRUCTORES
+      const instructoresSheet = workbook.addWorksheet("Instructores");
+      instructoresSheet.addRow(["CARGA DE INSTRUCTORES"]);
+      instructoresSheet.mergeCells("A1:E1");
+      instructoresSheet.getRow(1).font = {
+        size: 14,
+        bold: true,
+        color: { argb: "FFFFFFFF" },
+      };
+      instructoresSheet.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF7B1FA2" },
+      };
+      instructoresSheet.getRow(1).alignment = {
+        horizontal: "center",
+        vertical: "middle",
+      };
+      instructoresSheet.getRow(1).height = 25;
+
+      const instructoresHeader = instructoresSheet.addRow([
+        "Nombre",
+        "Total",
+        "Completadas",
+        "Canceladas",
+        "Eficiencia",
+      ]);
+      instructoresHeader.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      instructoresHeader.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF9C27B0" },
+      };
+
+      cargaInstructores.forEach((inst, idx) => {
+        const row = instructoresSheet.addRow([
+          inst.nombre,
+          inst.total,
+          inst.completadas,
+          inst.canceladas,
+          `${inst.eficiencia}%`,
+        ]);
+        if (idx % 2 === 0)
+          row.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFF8F9FA" },
+          };
+      });
+
+      instructoresSheet.columns.forEach((col) => {
+        col.width = 18;
+      });
+
+      // HOJA 5: CABALLOS
+      const caballosSheet = workbook.addWorksheet("Caballos");
+      caballosSheet.addRow(["USO DE CABALLOS"]);
+      caballosSheet.mergeCells("A1:C1");
+      caballosSheet.getRow(1).font = {
+        size: 14,
+        bold: true,
+        color: { argb: "FFFFFFFF" },
+      };
+      caballosSheet.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFD4A017" },
+      };
+      caballosSheet.getRow(1).alignment = {
+        horizontal: "center",
+        vertical: "middle",
+      };
+      caballosSheet.getRow(1).height = 25;
+
+      const caballosHeader = caballosSheet.addRow([
+        "Nombre",
+        "Tipo",
+        "Cantidad",
+      ]);
+      caballosHeader.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      caballosHeader.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE4B429" },
+      };
+
+      usoCaballos.forEach((cab, idx) => {
+        const row = caballosSheet.addRow([cab.nombre, cab.tipo, cab.cantidad]);
+        if (idx % 2 === 0)
+          row.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFF8F9FA" },
+          };
+      });
+
+      caballosSheet.columns.forEach((col) => {
+        col.width = 18;
+      });
+
+      // GENERAR Y DESCARGAR
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(blob, `Reporte_Completo_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+    } catch (error) {
+      console.error("Error al exportar reporte completo:", error);
+    }
   };
-
-  const exportarReporteCompleto = () => {
-    const wb = XLSX.utils.book_new();
-
-    // Hoja 1: Estadísticas Generales
-    const stats = [
-      {
-        Métrica: "Alumnos Activos",
-        Valor: estadisticasGenerales.alumnosActivos,
-      },
-      {
-        Métrica: "Alumnos Inactivos",
-        Valor: estadisticasGenerales.alumnosInactivos,
-      },
-      {
-        Métrica: "Instructores Activos",
-        Valor: estadisticasGenerales.totalInstructores,
-      },
-      {
-        Métrica: "Caballos Totales",
-        Valor: estadisticasGenerales.totalCaballos,
-      },
-      {
-        Métrica: "Caballos Disponibles",
-        Valor: estadisticasGenerales.caballosDisponibles,
-      },
-      {
-        Métrica: "Total Clases (Período)",
-        Valor: estadisticasGenerales.totalClases,
-      },
-      {
-        Métrica: "Clases Completadas",
-        Valor: estadisticasGenerales.clasesCompletadas,
-      },
-      {
-        Métrica: "Clases Canceladas",
-        Valor: estadisticasGenerales.clasesCanceladas,
-      },
-      {
-        Métrica: "Tasa Completado (%)",
-        Valor: estadisticasGenerales.tasaCompletado,
-      },
-      {
-        Métrica: "Ingresos Estimados ($)",
-        Valor: estadisticasGenerales.ingresosEstimados,
-      },
-    ];
-    const ws1 = XLSX.utils.json_to_sheet(stats);
-    ws1["!cols"] = [{ wch: 30 }, { wch: 20 }];
-    XLSX.utils.book_append_sheet(wb, ws1, "Estadísticas");
-
-    // Hoja 2: Alumnos
-    const alumnosExport = alumnos.map((a: Alumno) => ({
-      Nombre: a.nombre,
-      Apellido: a.apellido,
-      DNI: a.dni,
-      Email: a.email,
-      Teléfono: a.telefono,
-      "Clases/Mes": a.cantidadClases,
-      Propietario: a.propietario ? "Sí" : "No",
-      Estado: a.activo ? "Activo" : "Inactivo",
-      "Fecha Inscripción": a.fechaInscripcion,
-    }));
-    const ws2 = XLSX.utils.json_to_sheet(alumnosExport);
-    ws2["!cols"] = Array(9).fill({ wch: 18 });
-    XLSX.utils.book_append_sheet(wb, ws2, "Alumnos");
-
-    // Hoja 3: Clases
-    const clasesExport = clasesFiltradas.map((c: Clase) => ({
-      Fecha: c.dia,
-      Hora: c.hora,
-      Especialidad: c.especialidad,
-      Estado: c.estado,
-      Alumno: alumnos.find((a: Alumno) => a.id === c.alumnoId)?.nombre || "",
-      Instructor:
-        instructores.find((i: Instructor) => i.id === c.instructorId)?.nombre ||
-        "",
-      Caballo:
-        caballos.find((cab: Caballo) => cab.id === c.caballoId)?.nombre || "",
-    }));
-    const ws3 = XLSX.utils.json_to_sheet(clasesExport);
-    ws3["!cols"] = Array(7).fill({ wch: 18 });
-    XLSX.utils.book_append_sheet(wb, ws3, "Clases");
-
-    // Hoja 4: Instructores
-    const ws4 = XLSX.utils.json_to_sheet(cargaInstructores);
-    ws4["!cols"] = Array(5).fill({ wch: 18 });
-    XLSX.utils.book_append_sheet(wb, ws4, "Instructores");
-
-    // Hoja 5: Caballos
-    const ws5 = XLSX.utils.json_to_sheet(usoCaballos);
-    ws5["!cols"] = Array(3).fill({ wch: 18 });
-    XLSX.utils.book_append_sheet(wb, ws5, "Caballos");
-
-    XLSX.writeFile(
-      wb,
-      `Reporte_Completo_${format(new Date(), "yyyy-MM-dd")}.xlsx`,
-    );
-  };
-
   return (
     <Layout>
       <PageHeader
