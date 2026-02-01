@@ -146,43 +146,42 @@ export default function CalendarioPage() {
       <PageHeader
         title="Calendario de Clases"
         description="Vista interactiva de las clases programadas"
+        action={
+          <CalendarControls
+            currentDate={currentDate}
+            viewMode={viewMode}
+            onNavigate={navigate}
+            onToday={goToToday}
+            onViewModeChange={setViewMode}
+          />
+        }
       />
 
-      {/* Controles de navegación */}
-      <CalendarControls
-        currentDate={currentDate}
-        viewMode={viewMode}
-        onNavigate={navigate}
-        onToday={goToToday}
-        onViewModeChange={setViewMode}
-      />
-
-      {/* Barra de herramientas */}
-      <CalendarToolbar
-        isCopyOpen={isCopyOpen}
-        onCopyOpenChange={setIsCopyOpen}
-        onCopySubmit={handleCopySubmit}
-        copyPending={copyWeekMutation.isPending}
-        isDeleteOpen={isDeleteOpen}
-        onDeleteOpenChange={setIsDeleteOpen}
-        onDeleteSubmit={handleDeleteSubmit}
-        deletePending={deleteWeekMutation.isPending}
-        showExport={viewMode === "day"}
-        onExportExcel={handleExportExcel}
-        showCancelDay={viewMode === "day"}
-        onCancelDay={handleCancelDayClases}
-        cancelDayCount={getCancelableDayClases().length}
-        cancelDayDate={format(currentDate, "yyyy-MM-dd")}
-      />
-
-      {/* Filtros */}
-      <div className="mb-6">
+      <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 mb-6">
+        {/* Filtros */}
         <FilterBar
           filters={filterConfig}
           values={filters}
           onChange={handleFilterChange}
           onReset={handleResetFilters}
           isLoading={isLoading}
+        />
+        {/* Barra de herramientas */}
+        <CalendarToolbar
+          isCopyOpen={isCopyOpen}
+          onCopyOpenChange={setIsCopyOpen}
+          onCopySubmit={handleCopySubmit}
+          copyPending={copyWeekMutation.isPending}
+          isDeleteOpen={isDeleteOpen}
+          onDeleteOpenChange={setIsDeleteOpen}
+          onDeleteSubmit={handleDeleteSubmit}
+          deletePending={deleteWeekMutation.isPending}
+          showExport={viewMode === "day"}
+          onExportExcel={handleExportExcel}
+          showCancelDay={viewMode === "day"}
+          onCancelDay={handleCancelDayClases}
+          cancelDayCount={getCancelableDayClases().length}
+          cancelDayDate={format(currentDate, "yyyy-MM-dd")}
         />
       </div>
 

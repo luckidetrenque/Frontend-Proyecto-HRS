@@ -93,7 +93,7 @@ export function CalendarToolbar({
   };
 
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center sm:justify-end gap-2">
       {/* Exportar Excel */}
       {showExport && onExportExcel && (
         <Button variant="outline" size="sm" onClick={onExportExcel}>

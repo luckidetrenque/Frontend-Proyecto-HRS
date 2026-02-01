@@ -46,10 +46,10 @@ export function FilterBar({
 
   return (
     <details
-      className="group rounded-lg border border-border bg-secondary/30"
+      className="group rounded-lg border border-border bg-secondary/30 w-full sm:flex-1"
       open={defaultOpen}
     >
-      <summary className="flex cursor-pointer items-center justify-between p-4 list-none hover:bg-secondary/50 transition-colors rounded-lg">
+      <summary className="flex h-9 cursor-pointer items-center justify-between p-4 list-none hover:bg-secondary/50 transition-colors rounded-lg">
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-semibold">Filtros</span>
