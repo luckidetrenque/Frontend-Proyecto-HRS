@@ -3,13 +3,15 @@
  * Vista semanal del calendario
  */
 
-import { Clase } from "@/lib/api";
 import { format, isToday } from "date-fns";
+import { useState } from "react";
+
+import { Clase } from "@/lib/api";
 import { cn } from "@/lib/utils";
+
+import { DIAS_SEMANA, MAX_CLASES_POR_CELDA } from "./calendar.styles";
 import { ClaseBadge } from "./ClaseBadge";
 import { ClasePopover } from "./ClasePopover";
-import { DIAS_SEMANA, MAX_CLASES_POR_CELDA } from "./calendar.styles";
-import { useState } from "react";
 
 interface WeekViewProps {
   calendarDays: Date[];
@@ -18,6 +20,7 @@ interface WeekViewProps {
   onStatusChange: (claseId: number, newStatus: Clase["estado"]) => void;
   onEditClase: (clase: Clase) => void;
   onDeleteClase: (claseId: number) => void;
+  puedeEditarClase?: (clase: Clase) => boolean;
   getAlumnoNombre: (id: number) => string;
   getAlumnoApellido: (id: number) => string;
   getAlumnoNombreCompleto: (id: number) => string;
@@ -33,6 +36,7 @@ export function WeekView({
   onStatusChange,
   onEditClase,
   onDeleteClase,
+  puedeEditarClase,
   getAlumnoNombre,
   getAlumnoApellido,
   getAlumnoNombreCompleto,
@@ -116,6 +120,9 @@ export function WeekView({
                       onStatusChange={onStatusChange}
                       onEdit={onEditClase}
                       onDelete={onDeleteClase}
+                      puedeEditar={
+                        puedeEditarClase ? puedeEditarClase(clase) : true
+                      }
                       open={popoverOpen === key}
                       onOpenChange={(open) => setPopoverOpen(open ? key : null)}
                     />

@@ -1,26 +1,27 @@
+import {
+  BarChart,
+  CalendarDays,
+  ChevronRight,
+  Landmark,
+  Menu,
+  UserCheck,
+  Users,
+  X,
+} from "lucide-react";
 import { ReactNode, useCallback, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import {
-  Users,
-  UserCheck,
-  Landmark,
-  CalendarDays,
-  Menu,
-  X,
-  ChevronRight,
-  BarChart,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { UserDropdown } from "@/components/UserDropdown";
-import SmartSearch from "@/components/ui/smart-search";
+
 import {
   AlumnoIcon,
-  InstructorIcon,
   CaballoIcon,
-  ClaseIcon,
   CalendarioIcon,
+  ClaseIcon,
+  InstructorIcon,
 } from "@/components/icons";
+import { Button } from "@/components/ui/button";
+import SmartSearch from "@/components/ui/smart-search";
+import { UserDropdown } from "@/components/UserDropdown";
+import { cn } from "@/lib/utils";
 
 interface LayoutProps {
   children: ReactNode;

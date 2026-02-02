@@ -1,5 +1,8 @@
+import { Activity,Lock, Shield } from "lucide-react";
+
 import { Layout } from "@/components/Layout";
-import { PageHeader } from "@/components/ui/page-header";
+import { ChangePasswordDialog } from "@/components/profile/ChangePasswordDialog";
+import { ProfileInfo } from "@/components/profile/ProfileInfo";
 import {
   Card,
   CardContent,
@@ -7,10 +10,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ProfileInfo } from "@/components/profile/ProfileInfo";
-import { ChangePasswordDialog } from "@/components/profile/ChangePasswordDialog";
+import { PageHeader } from "@/components/ui/page-header";
 import { useAuth } from "@/contexts/AuthContext";
-import { Lock, Shield, Activity } from "lucide-react";
 import { updateProfile } from "@/services/authService";
 
 export default function Profile() {

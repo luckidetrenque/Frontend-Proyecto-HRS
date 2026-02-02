@@ -1,5 +1,20 @@
-import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { endOfMonth, format, parseISO,startOfMonth } from "date-fns";
+import { es } from "date-fns/locale";
+import {
+  Calendar,
+  DollarSign,
+  Download,
+  Landmark,
+  PieChart as PieIcon,
+  TrendingUp,
+  UserCheck,
+  Users,
+} from "lucide-react";
+import { useMemo,useState } from "react";
+
+import { Layout } from "@/components/Layout";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -7,35 +22,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Download,
-  TrendingUp,
-  Users,
-  DollarSign,
-  UserCheck,
-  Calendar,
-  Landmark,
-  PieChart as PieIcon,
-} from "lucide-react";
-import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
-import {
-  alumnosApi,
-  clasesApi,
-  instructoresApi,
-  caballosApi,
-  Alumno,
-  Clase,
-  Instructor,
-  Caballo,
-} from "@/lib/api";
-import { Layout } from "@/components/Layout";
+import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Alumno,
+  alumnosApi,
+  Caballo,
+  caballosApi,
+  Clase,
+  clasesApi,
+  Instructor,
+  instructoresApi,
+} from "@/lib/api";
 import { exportarExcel } from "@/utils/exportReportesToExcel";
 
 const COLORS = {

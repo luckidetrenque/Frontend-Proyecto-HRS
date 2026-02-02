@@ -4,25 +4,28 @@
  * ✅ Con soporte para clases de prueba
  */
 
-import { Clase } from "@/lib/api";
+import {
+  CalendarDays,
+  Clock,
+  Edit,
+  GraduationCap,
+  Landmark,
+  Pencil,
+  Trash2,
+  User,
+  UserCheck,
+} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Clock,
-  User,
-  UserCheck,
-  Landmark,
-  CalendarDays,
-  Edit,
-  Trash2,
-  GraduationCap,
-} from "lucide-react";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Clase } from "@/lib/api";
+
 import { ESTADO_COLORS, ESTADOS } from "./calendar.styles";
 
 interface ClasePopoverProps {
@@ -34,6 +37,7 @@ interface ClasePopoverProps {
   onStatusChange: (claseId: number, newStatus: Clase["estado"]) => void;
   onEdit: (clase: Clase) => void;
   onDelete: (claseId: number) => void;
+  puedeEditar?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
@@ -47,6 +51,7 @@ export function ClasePopover({
   onStatusChange,
   onEdit,
   onDelete,
+  puedeEditar = true,
   open,
   onOpenChange,
 }: ClasePopoverProps) {
@@ -135,22 +140,50 @@ export function ClasePopover({
           {/* Botones de Acción */}
           <div className="mt-4 border-t border-border pt-4 space-y-3">
             <div className="flex gap-2">
+              {/* Botón Editar */}
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="flex-1"
-                onClick={handleEdit}
+                onClick={() => {
+                  onEdit(clase);
+                  onOpenChange?.(false);
+                }}
+                disabled={!puedeEditar} // ✅ AGREGAR disabled
+                className={!puedeEditar ? "opacity-50 cursor-not-allowed" : ""} // ✅ AGREGAR className
+                title={
+                  !puedeEditar
+                    ? "No se puede editar una clase finalizada"
+                    : "Editar clase"
+                } // ✅ AGREGAR title
               >
-                <Edit className="h-3 w-3 mr-1" />
-                Editar Clase
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
               </Button>
+
+              {/* Botón Eliminar */}
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="border-destructive/40 text-destructive hover:bg-destructive/10"
-                onClick={handleDelete}
+                onClick={() => {
+                  if (confirm("¿Eliminar esta clase?")) {
+                    onDelete(clase.id);
+                    onOpenChange?.(false);
+                  }
+                }}
+                disabled={!puedeEditar} // ✅ AGREGAR disabled
+                className={
+                  !puedeEditar
+                    ? "opacity-50 cursor-not-allowed text-muted"
+                    : "text-destructive"
+                } // ✅ MODIFICAR className
+                title={
+                  !puedeEditar
+                    ? "No se puede eliminar una clase finalizada"
+                    : "Eliminar clase"
+                } // ✅ AGREGAR title
               >
-                <Trash2 className="h-3 w-3" />
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar
               </Button>
             </div>
 

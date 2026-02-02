@@ -7,12 +7,13 @@
  * npm install --save-dev @types/file-saver
  */
 
-import ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Clase, Caballo } from "@/lib/api";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
+
 import { TIME_SLOTS } from "@/components/calendar/calendar.styles";
+import { Caballo,Clase } from "@/lib/api";
 
 interface ExportToExcelParams {
   selectedDate: Date;

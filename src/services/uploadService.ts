@@ -1,4 +1,4 @@
-import { getStoredCredentials, API_BASE_URL } from "./authService";
+import { API_BASE_URL,getStoredCredentials } from "./authService";
 
 export const uploadAvatar = async (file: File): Promise<string> => {
   // Validar tamaño (max 2MB)

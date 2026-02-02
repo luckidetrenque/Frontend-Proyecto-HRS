@@ -1,12 +1,12 @@
+import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-import { MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 
 interface Props<T> {

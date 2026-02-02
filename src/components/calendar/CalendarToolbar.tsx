@@ -4,10 +4,16 @@
  * Incluye: Exportar Excel, Cancelar Día, Copiar Clases, Eliminar Clases
  */
 
+import {
+  AlertCircle,
+  ClipboardCopy,
+  Download,
+  Eraser,
+  XCircle,
+} from "lucide-react";
+import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +22,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -23,14 +31,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  ClipboardCopy,
-  Eraser,
-  Download,
-  XCircle,
-  AlertCircle,
-} from "lucide-react";
-import { useState } from "react";
+import { Textarea } from "@/components/ui/textarea";
+
 import { MOTIVOS_CANCELACION } from "./calendar.styles";
 
 interface CalendarToolbarProps {

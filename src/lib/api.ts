@@ -64,6 +64,7 @@ export interface ClaseDetallada extends Clase {
 }
 
 export interface AlumnoSearchFilters {
+  dni?: string;
   nombre?: string;
   apellido?: string;
   activo?: boolean;

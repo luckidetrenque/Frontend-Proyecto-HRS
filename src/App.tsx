@@ -1,26 +1,28 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { BrowserRouter, Route,Routes } from "react-router-dom";
+
 import IdleHandler from "@/components/auth/IdleHandler";
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Profile from "./pages/Profile";
-import NotFound from "./pages/NotFound";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/contexts/AuthContext";
+import AlumnoDetalle from "@/pages/AlumnoDetalle";
+
 import AlumnosPage from "./pages/Alumnos";
+import CaballoDetalle from "./pages/CaballoDetalle";
 import CaballosPage from "./pages/Caballos";
 import CalendarioPage from "./pages/Calendario";
-import ClasesPage from "./pages/Clases";
-import InstructoresPage from "./pages/Instructores";
-import Reportes from "./pages/Reportes";
-import AlumnoDetalle from "@/pages/AlumnoDetalle";
-import CaballoDetalle from "./pages/CaballoDetalle";
 import ClaseDetalle from "./pages/ClaseDetalle";
+import ClasesPage from "./pages/Clases";
+import Index from "./pages/Index";
 import InstructorDetalle from "./pages/InstructorDetalle";
+import InstructoresPage from "./pages/Instructores";
+import Login from "./pages/Login";
+import NotFound from "./pages/NotFound";
+import Profile from "./pages/Profile";
+import Register from "./pages/Register";
+import Reportes from "./pages/Reportes";
 
 const queryClient = new QueryClient();
 

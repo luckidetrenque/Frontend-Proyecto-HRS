@@ -1,11 +1,23 @@
 // src/pages/ClaseDetalle.tsx
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Accessibility,
+  AlertCircle,
+  ArrowLeft,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Edit,
+  GraduationCap,
+  Info,
+  User,
+} from "lucide-react";
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate,useParams } from "react-router-dom";
+import { toast } from "sonner";
+
 import { Layout } from "@/components/Layout";
-import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Card,
   CardContent,
@@ -13,36 +25,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  ArrowLeft,
-  Calendar,
-  Clock,
-  Edit,
-  User,
-  Accessibility,
-  GraduationCap,
-  AlertCircle,
-  Info,
-  CheckCircle2,
-} from "lucide-react";
-import {
-  clasesApi,
-  alumnosApi,
-  instructoresApi,
-  caballosApi,
-  Clase,
-  Alumno,
-  Caballo,
-  Instructor,
-} from "@/lib/api";
-import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -53,7 +35,26 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Switch } from "@/components/ui/switch";
+import {
+  Alumno,
+  alumnosApi,
+  Caballo,
+  caballosApi,
+  Clase,
+  clasesApi,
+  Instructor,
+  instructoresApi,
+} from "@/lib/api";
 
 const estadoColors: Record<
   string,

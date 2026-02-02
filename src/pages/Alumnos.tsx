@@ -1,17 +1,21 @@
-import { useState, useMemo, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Layout } from "@/components/Layout";
-import { PageHeader } from "@/components/ui/page-header";
-import { DataTable } from "@/components/ui/data-table";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { FilterBar } from "@/components/ui/filter-bar";
-import { PaginationControls } from "@/components/ui/pagination-controls";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Mail,
+  MessageCircleMore,
+  Pencil,
+  Plus,
+  Trash2,
+  Voicemail,
+} from "lucide-react";
+import { useEffect,useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+
 import { GenericCard } from "@/components/cards/GenericCard";
 import { GenericCardSkeleton } from "@/components/cards/GenericCardSkeleton";
+import { Layout } from "@/components/Layout";
+import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/data-table";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +25,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { ProtectedData } from "@/components/ui/protected-data";
 import {
   Select,
   SelectContent,
@@ -28,26 +38,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { alumnosApi, Alumno, AlumnoSearchFilters } from "@/lib/api";
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  MessageCircleMore,
-  Voicemail,
-  Mail,
-} from "lucide-react";
-import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
-import { ProtectedData } from "@/components/ui/protected-data";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Switch } from "@/components/ui/switch";
+import { useValidarDniDuplicado } from "@/hooks/useValidarDniDuplicado";
+import { Alumno, alumnosApi, AlumnoSearchFilters } from "@/lib/api";
 
 export default function AlumnosPage() {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [editingAlumno, setEditingAlumno] = useState<Alumno | null>(null);
   const [alumnoToDelete, setAlumnoToDelete] = useState<Alumno | null>(null);
+  const [dniInput, setDniInput] = useState("");
 
   const navigate = useNavigate();
+
+  const { data: validacionDni } = useValidarDniDuplicado(
+    "alumnos",
+    dniInput,
+    editingAlumno?.id,
+  );
 
   // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
   const [searchFilters, setSearchFilters] = useState<AlumnoSearchFilters>({});
@@ -99,6 +108,14 @@ export default function AlumnosPage() {
       );
     };
   }, []);
+
+  useEffect(() => {
+    if (isOpen && editingAlumno) {
+      setDniInput(editingAlumno.dni);
+    } else if (!isOpen) {
+      setDniInput("");
+    }
+  }, [isOpen, editingAlumno]);
 
   // Query original (puedes mantenerlo como fallback)
   const { data: allAlumnos = [], isLoading: isLoadingAll } = useQuery({
@@ -473,10 +490,19 @@ export default function AlumnosPage() {
                           id="dni"
                           name="dni"
                           type="string"
-                          defaultValue={editingAlumno?.dni}
+                          value={dniInput}
+                          onChange={(e) => setDniInput(e.target.value)}
                           placeholder="Solo números sin puntos"
+                          className={
+                            validacionDni?.duplicado ? "border-red-500" : ""
+                          }
                           required
                         />
+                        {validacionDni?.duplicado && (
+                          <p className="text-sm text-red-500 mt-1">
+                            {validacionDni.mensaje}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="fechaNacimiento">
@@ -577,7 +603,9 @@ export default function AlumnosPage() {
                     <Button
                       type="submit"
                       disabled={
-                        createMutation.isPending || updateMutation.isPending
+                        createMutation.isPending ||
+                        updateMutation.isPending ||
+                        validacionDni?.duplicado
                       }
                     >
                       {editingAlumno ? "Guardar Cambios" : "Crear Alumno"}

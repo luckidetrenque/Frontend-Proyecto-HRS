@@ -3,13 +3,25 @@
  * Página principal del calendario - Solo UI y composición
  */
 
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { AlertCircle,AlertTriangle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+
+import {
+  ALUMNO_COMODIN_ID,
+  ESPECIALIDADES,
+  ESTADOS,
+} from "@/components/calendar/calendar.styles";
+import { CalendarControls } from "@/components/calendar/CalendarControls";
+import { CalendarToolbar } from "@/components/calendar/CalendarToolbar";
+import { DayView } from "@/components/calendar/DayView";
+import { MonthView } from "@/components/calendar/MonthView";
+import { WeekView } from "@/components/calendar/WeekView";
 import { Layout } from "@/components/Layout";
-import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FilterBar } from "@/components/ui/filter-bar";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +30,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Select,
   SelectContent,
@@ -25,21 +41,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { useCalendar } from "@/hooks/useCalendar";
-import { CalendarControls } from "@/components/calendar/CalendarControls";
-import { CalendarToolbar } from "@/components/calendar/CalendarToolbar";
-import { MonthView } from "@/components/calendar/MonthView";
-import { WeekView } from "@/components/calendar/WeekView";
-import { DayView } from "@/components/calendar/DayView";
+import { useClasesRestantes } from "@/hooks/useClasesRestantes";
+import { Alumno, Caballo,Instructor } from "@/lib/api";
 import {
-  ESPECIALIDADES,
-  ESTADOS,
-  ALUMNO_COMODIN_ID,
-} from "@/components/calendar/calendar.styles";
-import { Alumno, Instructor, Caballo } from "@/lib/api";
-import { useEffect, useState } from "react";
+  filtrarCaballosDisponibles,
+  puedeEditarClase,
+  verificarConflictoHorario,
+} from "@/utils/validacionesClases";
 
 export default function CalendarioPage() {
   const {
@@ -95,6 +104,24 @@ export default function CalendarioPage() {
   const [especialidadSeleccionada, setEspecialidadSeleccionada] =
     useState<string>("");
   const [alumnoIdSeleccionado, setAlumnoIdSeleccionado] = useState<string>("");
+
+  // Filtrar caballos según alumno seleccionado
+  const caballosDisponibles = useMemo(() => {
+    if (!alumnoIdSeleccionado) return caballos.filter((c) => c.disponible);
+    return filtrarCaballosDisponibles(caballos, Number(alumnoIdSeleccionado));
+  }, [caballos, alumnoIdSeleccionado]);
+
+  // Verificar clases restantes del alumno
+  const {
+    clasesRestantes,
+    estaAgotado,
+    cercaDelLimite,
+    clasesTomadas,
+    clasesContratadas,
+  } = useClasesRestantes(
+    alumnoIdSeleccionado ? Number(alumnoIdSeleccionado) : 0,
+    currentDate,
+  );
 
   // Efecto para resetear los estados cuando se abre/cierra el diálogo
   useEffect(() => {
@@ -363,11 +390,22 @@ export default function CalendarioPage() {
                       <SelectValue placeholder="Seleccionar alumno" />
                     </SelectTrigger>
                     <SelectContent>
-                      {alumnos.map((alumno: Alumno) => (
-                        <SelectItem key={alumno.id} value={String(alumno.id)}>
-                          {alumno.nombre} {alumno.apellido}
-                        </SelectItem>
-                      ))}
+                      {alumnos
+                        .filter(
+                          (alumno: Alumno) =>
+                            alumno.activo ||
+                            alumno.id === claseToEdit?.alumnoId,
+                        )
+                        .map((alumno: Alumno) => (
+                          <SelectItem key={alumno.id} value={String(alumno.id)}>
+                            {alumno.nombre} {alumno.apellido}
+                            {!alumno.activo && (
+                              <span className="text-muted-foreground ml-2">
+                                (Inactivo)
+                              </span>
+                            )}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -499,6 +537,31 @@ export default function CalendarioPage() {
                   </div>
                 )}
               </div>
+              {/* Alertas de clases restantes */}
+              {alumnoIdSeleccionado && Number(alumnoIdSeleccionado) > 0 && (
+                <div className="col-span-2">
+                  {estaAgotado && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTitle>Plan mensual agotado</AlertTitle>
+                      <AlertDescription>
+                        El alumno ya consumió sus {clasesContratadas} clases del
+                        mes ({clasesTomadas} tomadas). Se facturará como clase
+                        adicional.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  {cercaDelLimite && !estaAgotado && (
+                    <Alert className="border-yellow-500 bg-yellow-50">
+                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <AlertDescription className="text-yellow-800">
+                        Quedan {clasesRestantes} de {clasesContratadas} clases
+                        disponibles en el plan mensual.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button

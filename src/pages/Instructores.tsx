@@ -1,17 +1,14 @@
-import { useState, useMemo, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Layout } from "@/components/Layout";
-import { PageHeader } from "@/components/ui/page-header";
-import { DataTable } from "@/components/ui/data-table";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { FilterBar } from "@/components/ui/filter-bar";
-import { PaginationControls } from "@/components/ui/pagination-controls";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+import { useEffect,useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+
 import { GenericCard } from "@/components/cards/GenericCard";
 import { GenericCardSkeleton } from "@/components/cards/GenericCardSkeleton";
+import { Layout } from "@/components/Layout";
+import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/data-table";
 import {
   Dialog,
   DialogContent,
@@ -21,14 +18,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Switch } from "@/components/ui/switch";
+import { useValidarDniDuplicado } from "@/hooks/useValidarDniDuplicado";
 import {
-  instructoresApi,
   Instructor,
+  instructoresApi,
   InstructorSearchFilters,
 } from "@/lib/api";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 
 const PRESET_COLORS = [
   "#3B82F6", // blue
@@ -51,8 +53,15 @@ export default function InstructoresPage() {
   );
   const [instructorToDelete, setInstructorToDelete] =
     useState<Instructor | null>(null);
+  const [dniInput, setDniInput] = useState("");
 
   const navigate = useNavigate();
+
+  const { data: validacionDni } = useValidarDniDuplicado(
+    "instructores",
+    dniInput,
+    editingInstructor?.id,
+  );
 
   const [instructorColor, setInstructorColor] = useState<string>(
     PRESET_COLORS[0],
@@ -259,6 +268,14 @@ export default function InstructoresPage() {
     }
   }, [isOpen, editingInstructor]);
 
+  useEffect(() => {
+    if (isOpen && editingInstructor) {
+      setDniInput(editingInstructor.dni);
+    } else if (!isOpen) {
+      setDniInput("");
+    }
+  }, [isOpen, editingInstructor]);
+
   const columns = [
     {
       header: "Nombre y Apellido",
@@ -389,10 +406,19 @@ export default function InstructoresPage() {
                           id="dni"
                           name="dni"
                           type="string"
-                          defaultValue={editingInstructor?.dni}
+                          value={dniInput}
+                          onChange={(e) => setDniInput(e.target.value)}
                           placeholder="Solo números sin puntos"
+                          className={
+                            validacionDni?.duplicado ? "border-red-500" : ""
+                          }
                           required
                         />
+                        {validacionDni?.duplicado && (
+                          <p className="text-sm text-red-500 mt-1">
+                            {validacionDni.mensaje}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="fechaNacimiento">
@@ -475,7 +501,9 @@ export default function InstructoresPage() {
                     <Button
                       type="submit"
                       disabled={
-                        createMutation.isPending || updateMutation.isPending
+                        createMutation.isPending ||
+                        updateMutation.isPending ||
+                        validacionDni?.duplicado
                       }
                     >
                       {editingInstructor

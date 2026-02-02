@@ -3,36 +3,38 @@
  * Hook personalizado que maneja toda la lógica del calendario
  */
 
-import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  isSameMonth,
-  addMonths,
-  subMonths,
-  startOfWeek,
-  endOfWeek,
-  addWeeks,
-  subWeeks,
   addDays,
+  addMonths,
+  addWeeks,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isSameMonth,
+  startOfMonth,
+  startOfWeek,
   subDays,
+  subMonths,
+  subWeeks,
 } from "date-fns";
+import { useMemo,useState } from "react";
 import { toast } from "sonner";
-import { exportToExcel } from "@/utils/exportToExcel";
+
+import { TIME_SLOTS,ViewMode } from "@/components/calendar/calendar.styles";
 import {
-  clasesApi,
+  Alumno,
   alumnosApi,
-  instructoresApi,
+  Caballo,
   caballosApi,
   Clase,
-  Alumno,
+  clasesApi,
   Instructor,
-  Caballo,
+  instructoresApi,
 } from "@/lib/api";
-import { ViewMode, TIME_SLOTS } from "@/components/calendar/calendar.styles";
+import { exportToExcel } from "@/utils/exportToExcel";
+import { verificarConflictoHorario } from "@/utils/validacionesClases";
 
 export function useCalendar() {
   const queryClient = useQueryClient();
@@ -280,7 +282,30 @@ export function useCalendar() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    // ✅ Validación de clase de prueba
+    const dia = new Date(formData.get("dia") as string)
+      .toISOString()
+      .split("T")[0];
+
+    const hora = formData.get("hora") as string;
+    const caballoId = Number(formData.get("caballoId"));
+    const instructorId = Number(formData.get("instructorId"));
+
+    // ✅ VALIDACIÓN CONFLICTO HORARIO
+    const { tieneConflicto, mensaje } = verificarConflictoHorario(
+      clases,
+      dia,
+      hora,
+      caballoId,
+      instructorId,
+      claseToEdit?.id,
+    );
+
+    if (tieneConflicto) {
+      toast.error(mensaje);
+      return;
+    }
+
+    // ✅ VALIDACIÓN CLASE DE PRUEBA
     const esPrueba = formData.get("esPrueba") === "on";
     const alumnoId = Number(formData.get("alumnoId"));
 
@@ -295,35 +320,39 @@ export function useCalendar() {
       }
     }
 
+    // ======================
+    // CREAR / EDITAR
+    // ======================
+
     if (claseToEdit) {
-      // Modo edición
       const data = {
         alumnoId: Number(formData.get("alumnoId")),
-        instructorId: Number(formData.get("instructorId")),
-        caballoId: Number(formData.get("caballoId")),
+        instructorId,
+        caballoId,
         especialidad: formData.get("especialidad") as
           | "ADIESTRAMIENTO"
           | "EQUINOTERAPIA"
           | "EQUITACION",
-        hora: formData.get("hora") as string,
+        hora,
         estado: formData.get("estado") as Clase["estado"],
       };
+
       updateMutation.mutate({ id: claseToEdit.id, data });
     } else {
-      // Modo creación
       const data = {
-        alumnoId: Number(formData.get("alumnoId")),
-        instructorId: Number(formData.get("instructorId")),
-        caballoId: Number(formData.get("caballoId")),
+        alumnoId,
+        instructorId,
+        caballoId,
         especialidad: formData.get("especialidad") as
           | "ADIESTRAMIENTO"
           | "EQUINOTERAPIA"
           | "EQUITACION",
-        dia: format(currentDate, "yyyy-MM-dd"),
-        hora: formData.get("hora") as string,
+        dia,
+        hora,
         estado: "PROGRAMADA" as const,
-        esPrueba: formData.get("esPrueba") === "on",
+        esPrueba,
       };
+
       createMutation.mutate(data);
     }
   };

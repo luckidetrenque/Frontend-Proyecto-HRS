@@ -1,11 +1,24 @@
 // src/pages/CaballoDetalle.tsx
-import { useParams, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Accessibility,
+  AlertCircle,
+  ArrowLeft,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Edit,
+  Info,
+  TrendingUp,
+  User,
+  XCircle,
+} from "lucide-react";
+import { useState } from "react";
+import { useNavigate,useParams } from "react-router-dom";
+import { toast } from "sonner";
+
 import { Layout } from "@/components/Layout";
-import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { DataTable } from "@/components/ui/data-table";
 import {
   Card,
   CardContent,
@@ -13,21 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ArrowLeft,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  Edit,
-  User,
-  XCircle,
-  Accessibility,
-  TrendingUp,
-  AlertCircle,
-  Info,
-} from "lucide-react";
-import { caballosApi, clasesApi, alumnosApi, Clase, Caballo } from "@/lib/api";
-import { toast } from "sonner";
+import { DataTable } from "@/components/ui/data-table";
 import {
   Dialog,
   DialogContent,
@@ -38,7 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Select,
   SelectContent,
@@ -46,7 +45,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Switch } from "@/components/ui/switch";
+import { alumnosApi, Caballo,caballosApi, Clase, clasesApi } from "@/lib/api";
 
 export default function CaballoDetalle() {
   const { id } = useParams<{ id: string }>();

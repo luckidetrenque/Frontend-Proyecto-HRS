@@ -1,13 +1,15 @@
-import { Link } from "react-router-dom";
 import {
-  Users,
-  UserCheck,
-  Landmark,
-  CalendarDays,
-  Calendar,
   ArrowRight,
   BarChart,
+  Calendar,
+  CalendarDays,
+  Landmark,
+  UserCheck,
+  Users,
 } from "lucide-react";
+import { Link } from "react-router-dom";
+
+import { Layout } from "@/components/Layout";
 import {
   Card,
   CardContent,
@@ -15,7 +17,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Layout } from "@/components/Layout";
 
 const modules = [
   {

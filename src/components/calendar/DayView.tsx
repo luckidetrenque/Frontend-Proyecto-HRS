@@ -5,11 +5,13 @@
  */
 
 import { useMemo, useState } from "react";
+
+import { Caballo,Clase } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { Clase, Caballo } from "@/lib/api";
-import { ClasePopover } from "./ClasePopover";
+
+import { getClaseStyle,TIME_SLOTS } from "./calendar.styles";
 import { ClaseBadge } from "./ClaseBadge";
-import { TIME_SLOTS, getClaseStyle } from "./calendar.styles";
+import { ClasePopover } from "./ClasePopover";
 
 interface DayViewProps {
   selectedDate: Date;
@@ -19,6 +21,7 @@ interface DayViewProps {
   onCellClick?: (caballo: Caballo, hora: string) => void;
   onEditClase?: (clase: Clase) => void;
   onDeleteClase?: (claseId: number) => void;
+  puedeEditarClase?: (clase: Clase) => boolean;
   getAlumnoNombre: (id: number) => string;
   getAlumnoNombreCompleto: (id: number) => string;
   getInstructorNombre: (id: number) => string;
@@ -34,6 +37,7 @@ export function DayView({
   onCellClick,
   onEditClase,
   onDeleteClase,
+  puedeEditarClase,
   getAlumnoNombre,
   getAlumnoNombreCompleto,
   getInstructorNombre,
@@ -156,6 +160,9 @@ export function DayView({
                         onStatusChange={onStatusChange}
                         onEdit={onEditClase!}
                         onDelete={onDeleteClase!}
+                        puedeEditar={
+                          puedeEditarClase ? puedeEditarClase(clase) : true
+                        }
                         open={popoverOpen === key}
                         onOpenChange={(open) =>
                           setPopoverOpen(open ? key : null)

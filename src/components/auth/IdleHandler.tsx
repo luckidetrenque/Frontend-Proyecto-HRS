@@ -1,7 +1,8 @@
-import { useEffect, useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { clearCredentials, getStoredCredentials } from "@/services/authService";
 import { toast } from "sonner";
+
+import { clearCredentials, getStoredCredentials } from "@/services/authService";
 
 const IdleHandler = () => {
   const navigate = useNavigate();

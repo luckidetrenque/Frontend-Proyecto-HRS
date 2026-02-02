@@ -5,11 +5,12 @@
  * Reemplazo de las funciones exportarExcel del archivo Reportes.tsx
  */
 
-import ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Clase, Alumno, Instructor, Caballo } from "@/lib/api";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
+
+import { Alumno, Caballo,Clase, Instructor } from "@/lib/api";
 
 /**
  * Convierte un color hex a formato ARGB para Excel

@@ -1,11 +1,11 @@
+import { Filter, Loader2, Search, TrendingUp,X } from "lucide-react";
 import React, {
-  useState,
-  useEffect,
   useCallback,
-  useRef,
+  useEffect,
   useMemo,
+  useRef,
+  useState,
 } from "react";
-import { Search, X, Loader2, Filter, TrendingUp } from "lucide-react";
 
 // Tipos de entidades
 type EntityType = "alumnos" | "instructores" | "caballos" | "clases";

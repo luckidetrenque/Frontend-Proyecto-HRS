@@ -3,10 +3,12 @@
  * Barra de navegación del calendario (← Hoy →, selector de vista)
  */
 
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+
 import { ViewMode } from "./calendar.styles";
 
 interface CalendarControlsProps {

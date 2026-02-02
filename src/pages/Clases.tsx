@@ -1,14 +1,17 @@
-import { useState, useMemo, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+import { AlertCircle,AlertTriangle } from "lucide-react";
+import { useEffect,useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+
+import { ALUMNO_COMODIN_ID } from "@/components/calendar/calendar.styles";
+import { GenericCard } from "@/components/cards/GenericCard";
+import { GenericCardSkeleton } from "@/components/cards/GenericCardSkeleton";
 import { Layout } from "@/components/Layout";
-import { PageHeader } from "@/components/ui/page-header";
-import { DataTable } from "@/components/ui/data-table";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { FilterBar } from "@/components/ui/filter-bar";
-import { PaginationControls } from "@/components/ui/pagination-controls";
+import { DataTable } from "@/components/ui/data-table";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +21,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import {
   Select,
   SelectContent,
@@ -25,24 +33,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { useClasesRestantes } from "@/hooks/useClasesRestantes";
 import {
-  clasesApi,
+  Alumno,
   alumnosApi,
-  instructoresApi,
+  Caballo,
   caballosApi,
   Clase,
-  Alumno,
-  Instructor,
-  Caballo,
   ClaseDetallada,
+  clasesApi,
   ClaseSearchFilters,
+  Instructor,
+  instructoresApi,
 } from "@/lib/api";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import { toast } from "sonner";
-import { ALUMNO_COMODIN_ID } from "@/components/calendar/calendar.styles";
-import { useNavigate } from "react-router-dom";
-import { GenericCardSkeleton } from "@/components/cards/GenericCardSkeleton";
-import { GenericCard } from "@/components/cards/GenericCard";
+import {
+  filtrarCaballosDisponibles,
+  puedeEditarClase,
+  verificarConflictoHorario,
+} from "@/utils/validacionesClases";
 
 const estadoColors: Record<
   string,
@@ -172,6 +181,25 @@ export default function ClasesPage() {
     queryKey: ["caballos"],
     queryFn: caballosApi.listar,
   });
+
+  // Filtrar caballos según alumno seleccionado
+  const caballosDisponibles = useMemo(() => {
+    if (!alumnoIdSeleccionado) return caballos.filter((c) => c.disponible);
+    return filtrarCaballosDisponibles(caballos, Number(alumnoIdSeleccionado));
+  }, [caballos, alumnoIdSeleccionado]);
+
+  // Verificar clases restantes del alumno
+  const hoy = new Date();
+  const {
+    clasesRestantes,
+    estaAgotado,
+    cercaDelLimite,
+    clasesTomadas,
+    clasesContratadas,
+  } = useClasesRestantes(
+    alumnoIdSeleccionado ? Number(alumnoIdSeleccionado) : 0,
+    hoy,
+  );
 
   // Filtrar datos
   const filteredData = useMemo(() => {
@@ -384,9 +412,72 @@ export default function ClasesPage() {
       toast.error(error.message || "Error al eliminar la clase"),
   });
 
+  // const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  //   e.preventDefault();
+  //   const formData = new FormData(e.currentTarget);
+
+  //   const data = {
+  //     especialidad: formData.get("especialidad") as
+  //       | "ADIESTRAMIENTO"
+  //       | "EQUINOTERAPIA"
+  //       | "EQUITACION"
+  //       | "MONTA",
+  //     dia: new Date(formData.get("dia") as string).toISOString().split("T")[0],
+  //     hora: new Date(`1970-01-01T${formData.get("hora") as string}`)
+  //       .toISOString()
+  //       .split("T")[1]
+  //       .substring(0, 5),
+  //     duracion: 60,
+  //     estado: formData.get("estado") as
+  //       | "PROGRAMADA"
+  //       | "INICIADA"
+  //       | "COMPLETADA"
+  //       | "CANCELADA"
+  //       | "ACA"
+  //       | "ASA",
+  //     observaciones: "",
+  //     alumnoId: Number(formData.get("alumnoId")),
+  //     instructorId: Number(formData.get("instructorId")),
+  //     caballoId: Number(formData.get("caballoId")),
+  //     diaHoraCompleto: "",
+  //     esPrueba: formData.get("esPrueba") === "on",
+  //   };
+
+  //   if (editingClase) {
+  //     updateMutation.mutate({ id: editingClase.id, data });
+  //   } else {
+  //     createMutation.mutate(data);
+  //   }
+  // };
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+
+    const dia = new Date(formData.get("dia") as string)
+      .toISOString()
+      .split("T")[0];
+    const hora = new Date(`1970-01-01T${formData.get("hora") as string}`)
+      .toISOString()
+      .split("T")[1]
+      .substring(0, 5);
+    const caballoId = Number(formData.get("caballoId"));
+    const instructorId = Number(formData.get("instructorId"));
+
+    // Validar conflictos de horario
+    const { tieneConflicto, mensaje } = verificarConflictoHorario(
+      clases,
+      dia,
+      hora,
+      caballoId,
+      instructorId,
+      editingClase?.id,
+    );
+
+    if (tieneConflicto) {
+      toast.error(mensaje);
+      return;
+    }
 
     const data = {
       especialidad: formData.get("especialidad") as
@@ -394,11 +485,8 @@ export default function ClasesPage() {
         | "EQUINOTERAPIA"
         | "EQUITACION"
         | "MONTA",
-      dia: new Date(formData.get("dia") as string).toISOString().split("T")[0],
-      hora: new Date(`1970-01-01T${formData.get("hora") as string}`)
-        .toISOString()
-        .split("T")[1]
-        .substring(0, 5),
+      dia,
+      hora,
       duracion: 60,
       estado: formData.get("estado") as
         | "PROGRAMADA"
@@ -409,8 +497,8 @@ export default function ClasesPage() {
         | "ASA",
       observaciones: "",
       alumnoId: Number(formData.get("alumnoId")),
-      instructorId: Number(formData.get("instructorId")),
-      caballoId: Number(formData.get("caballoId")),
+      instructorId,
+      caballoId,
       diaHoraCompleto: "",
       esPrueba: formData.get("esPrueba") === "on",
     };
@@ -462,8 +550,6 @@ export default function ClasesPage() {
       })
       .replace(":", ":"); // Asegura que use el separador estándar
   };
-
-  const hoy = new Date();
 
   const columns = [
     {
@@ -517,6 +603,15 @@ export default function ClasesPage() {
               setEditingClase(row);
               setIsOpen(true);
             }}
+            disabled={!puedeEditarClase(row)}
+            className={
+              !puedeEditarClase(row) ? "opacity-50 cursor-not-allowed" : ""
+            }
+            title={
+              !puedeEditarClase(row)
+                ? "No se puede editar una clase finalizada"
+                : "Editar clase"
+            }
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -529,6 +624,15 @@ export default function ClasesPage() {
                 deleteMutation.mutate(row.id);
               }
             }}
+            disabled={!puedeEditarClase(row)}
+            className={
+              !puedeEditarClase(row) ? "opacity-50 cursor-not-allowed" : ""
+            }
+            title={
+              !puedeEditarClase(row)
+                ? "No se puede eliminar una clase finalizada"
+                : "Eliminar clase"
+            }
           >
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
@@ -660,14 +764,25 @@ export default function ClasesPage() {
                             <SelectValue placeholder="Seleccionar alumno" />
                           </SelectTrigger>
                           <SelectContent>
-                            {alumnos.map((alumno: Alumno) => (
-                              <SelectItem
-                                key={alumno.id}
-                                value={String(alumno.id)}
-                              >
-                                {alumno.nombre} {alumno.apellido}
-                              </SelectItem>
-                            ))}
+                            {alumnos
+                              .filter(
+                                (alumno: Alumno) =>
+                                  alumno.activo ||
+                                  alumno.id === editingClase?.alumnoId,
+                              )
+                              .map((alumno: Alumno) => (
+                                <SelectItem
+                                  key={alumno.id}
+                                  value={String(alumno.id)}
+                                >
+                                  {alumno.nombre} {alumno.apellido}
+                                  {!alumno.activo && (
+                                    <span className="text-muted-foreground ml-2">
+                                      (Inactivo)
+                                    </span>
+                                  )}
+                                </SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -681,20 +796,18 @@ export default function ClasesPage() {
                             <SelectValue placeholder="Seleccionar caballo" />
                           </SelectTrigger>
                           <SelectContent>
-                            {caballos
-                              .filter((c: Caballo) => c.disponible)
-                              .map((caballo: Caballo) => (
-                                <SelectItem
-                                  key={caballo.id}
-                                  value={String(caballo.id)}
-                                >
-                                  {caballo.nombre} (
-                                  {caballo.tipo === "ESCUELA"
-                                    ? "Escuela"
-                                    : "Privado"}
-                                  )
-                                </SelectItem>
-                              ))}
+                            {caballosDisponibles.map((caballo: Caballo) => (
+                              <SelectItem
+                                key={caballo.id}
+                                value={String(caballo.id)}
+                              >
+                                {caballo.nombre} (
+                                {caballo.tipo === "ESCUELA"
+                                  ? "Escuela"
+                                  : "Privado"}
+                                )
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -783,6 +896,34 @@ export default function ClasesPage() {
                     {/* ✅ NUEVO: Checkbox para clase de prueba */}
                     {!editingClase && (
                       <div className="flex items-center gap-3 rounded-md border border-orange-300 bg-orange-50 p-3">
+                        {/* Alertas de clases restantes */}
+                        {alumnoIdSeleccionado &&
+                          Number(alumnoIdSeleccionado) > 0 && (
+                            <div className="col-span-2">
+                              {estaAgotado && (
+                                <Alert variant="destructive">
+                                  <AlertTriangle className="h-4 w-4" />
+                                  <AlertTitle>Plan mensual agotado</AlertTitle>
+                                  <AlertDescription>
+                                    El alumno ya consumió sus{" "}
+                                    {clasesContratadas} clases del mes (
+                                    {clasesTomadas} tomadas). Se facturará como
+                                    clase adicional.
+                                  </AlertDescription>
+                                </Alert>
+                              )}
+                              {cercaDelLimite && !estaAgotado && (
+                                <Alert className="border-yellow-500 bg-yellow-50">
+                                  <AlertCircle className="h-4 w-4 text-yellow-600" />
+                                  <AlertDescription className="text-yellow-800">
+                                    Quedan {clasesRestantes} de{" "}
+                                    {clasesContratadas} clases disponibles en el
+                                    plan mensual.
+                                  </AlertDescription>
+                                </Alert>
+                              )}
+                            </div>
+                          )}
                         <input
                           type="checkbox"
                           id="esPrueba"
@@ -886,10 +1027,20 @@ export default function ClasesPage() {
                 ]}
                 onClick={() => navigate(`/clases/${clase.id}`)}
                 onEdit={() => {
-                  setEditingClase(clase);
-                  setIsOpen(true);
+                  if (puedeEditarClase(clase)) {
+                    setEditingClase(clase);
+                    setIsOpen(true);
+                  } else {
+                    toast.error("No se puede editar una clase finalizada");
+                  }
                 }}
-                onDelete={() => setClaseToDelete(clase)}
+                onDelete={() => {
+                  if (puedeEditarClase(clase)) {
+                    setClaseToDelete(clase);
+                  } else {
+                    toast.error("No se puede eliminar una clase finalizada");
+                  }
+                }}
               />
             ))}
           </div>
