@@ -11,6 +11,7 @@ import {
 import { ReactNode, useCallback, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
+import { HelpSystem } from "@/components/HelpSystem";
 import {
   AlumnoIcon,
   CaballoIcon,
@@ -167,6 +168,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Main Content */}
       <main className="container py-6 md:py-8">{children}</main>
+      <HelpSystem />
     </div>
   );
 }
