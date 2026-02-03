@@ -14,6 +14,7 @@ export interface Alumno {
   cantidadClases: number;
   propietario: boolean;
   activo: boolean;
+  caballoId?: number | null;
 }
 
 export interface Instructor {
@@ -111,6 +112,15 @@ interface SearchResponse<T> {
   clases?: T[];
 }
 
+export interface ApiErrorResponse {
+  timestamp: string;
+  status: number;
+  error: string;
+  mensaje: string;
+  path: string;
+  errores?: Record<string, string>; // Aquí vienen los mensajes de validación
+}
+
 // Helper function to make API requests with authentication
 async function apiFetch(endpoint: string, options: RequestInit = {}) {
   const credentials = sessionStorage.getItem("authCredentials");
@@ -141,7 +151,14 @@ async function handleResponse<T>(response: Response): Promise<T> {
   }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
+    const errorData: ApiErrorResponse = await response.json().catch(() => ({}));
+    // Si hay errores de validación (como el del teléfono), los unimos en un solo string
+    if (errorData.errores) {
+      const mensajesValidacion = Object.values(errorData.errores).join(". ");
+      throw new Error(mensajesValidacion);
+    }
+
+    // Si no hay errores específicos, usamos el mensaje general o el estado
     const errorMessage =
       errorData.mensaje || errorData.error || `Error ${response.status}`;
     throw new Error(errorMessage);

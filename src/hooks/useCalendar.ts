@@ -19,10 +19,10 @@ import {
   subMonths,
   subWeeks,
 } from "date-fns";
-import { useMemo,useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { TIME_SLOTS,ViewMode } from "@/components/calendar/calendar.styles";
+import { TIME_SLOTS, ViewMode } from "@/components/calendar/calendar.styles";
 import {
   Alumno,
   alumnosApi,
@@ -127,6 +127,17 @@ export function useCalendar() {
     });
     return grouped;
   }, [filteredClases]);
+
+  const conflictSet = useMemo(() => {
+    const set = new Set<string>();
+
+    clases.forEach((clase) => {
+      const key = `${clase.dia}|${clase.hora.slice(0, 5)}|${clase.caballoId}`;
+      set.add(key);
+    });
+
+    return set;
+  }, [clases]);
 
   // Mutations
   const createMutation = useMutation({
@@ -282,81 +293,86 @@ export function useCalendar() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    const dia = new Date(formData.get("dia") as string)
-      .toISOString()
-      .split("T")[0];
-
-    const hora = formData.get("hora") as string;
-    const caballoId = Number(formData.get("caballoId"));
-    const instructorId = Number(formData.get("instructorId"));
-
-    // ✅ VALIDACIÓN CONFLICTO HORARIO
-    const { tieneConflicto, mensaje } = verificarConflictoHorario(
-      clases,
-      dia,
-      hora,
-      caballoId,
-      instructorId,
-      claseToEdit?.id,
-    );
-
-    if (tieneConflicto) {
-      toast.error(mensaje);
-      return;
-    }
-
-    // ✅ VALIDACIÓN CLASE DE PRUEBA
-    const esPrueba = formData.get("esPrueba") === "on";
     const alumnoId = Number(formData.get("alumnoId"));
+    const alumno = alumnos.find((a: Alumno) => a.id === alumnoId);
 
-    if (esPrueba) {
-      const alumno = alumnos.find((a: Alumno) => a.id === alumnoId);
+    // ✅ PRESERVAR: Validación de especialidad duplicada
+    const especialidad = formData.get("especialidad") as string;
+    if (!claseToEdit && alumno) {
+      const yaTomoEspecialidad = clases.some(
+        (c) =>
+          c.alumnoId === alumno.id &&
+          c.especialidad === especialidad &&
+          (c.estado === "PROGRAMADA" ||
+            c.estado === "INICIADA" ||
+            c.estado === "COMPLETADA"),
+      );
 
-      if (alumno && alumno.activo) {
+      if (yaTomoEspecialidad) {
         toast.error(
-          "Las clases de prueba solo pueden asignarse a alumnos inactivos",
+          `${alumno.nombre} ${alumno.apellido} ya tiene una clase de ${especialidad} programada o completada`,
         );
         return;
       }
     }
 
-    // ======================
-    // CREAR / EDITAR
-    // ======================
+    // ✅ PRESERVAR: Validación de clase de prueba
+    const esPrueba = formData.get("esPrueba") === "on";
+    if (esPrueba && alumno) {
+      // Verificar que el alumno esté inactivo
+      if (alumno.activo) {
+        toast.error(
+          "Las clases de prueba solo pueden asignarse a alumnos inactivos",
+        );
+        return;
+      }
+
+      // Verificar que no haya tomado clase de prueba antes
+      const yaTomoClaseDePrueba = clases.some(
+        (c) => c.alumnoId === alumno.id && c.esPrueba,
+      );
+
+      if (yaTomoClaseDePrueba) {
+        toast.error(
+          `${alumno.nombre} ${alumno.apellido} ya ha tomado una clase de prueba anteriormente`,
+        );
+        return;
+      }
+    }
+
+    // ✅ NUEVO: Usar caballo propio si existe y no se especificó otro
+    const caballoIdForm = formData.get("caballoId");
+    const caballoId = caballoIdForm
+      ? Number(caballoIdForm)
+      : alumno?.caballoId || null;
+
+    if (!caballoId) {
+      toast.error("Debe seleccionar un caballo");
+      return;
+    }
+
+    const data = {
+      especialidad: especialidad as
+        | "ADIESTRAMIENTO"
+        | "EQUINOTERAPIA"
+        | "EQUITACION"
+        | "MONTA",
+      dia: format(currentDate, "yyyy-MM-dd"),
+      hora: formData.get("hora") as string,
+      estado: claseToEdit?.estado || "PROGRAMADA",
+      observaciones: "",
+      alumnoId: alumnoId,
+      instructorId: Number(formData.get("instructorId")),
+      caballoId: caballoId,
+      esPrueba: esPrueba,
+    };
 
     if (claseToEdit) {
-      const data = {
-        alumnoId: Number(formData.get("alumnoId")),
-        instructorId,
-        caballoId,
-        especialidad: formData.get("especialidad") as
-          | "ADIESTRAMIENTO"
-          | "EQUINOTERAPIA"
-          | "EQUITACION",
-        hora,
-        estado: formData.get("estado") as Clase["estado"],
-      };
-
       updateMutation.mutate({ id: claseToEdit.id, data });
     } else {
-      const data = {
-        alumnoId,
-        instructorId,
-        caballoId,
-        especialidad: formData.get("especialidad") as
-          | "ADIESTRAMIENTO"
-          | "EQUINOTERAPIA"
-          | "EQUITACION",
-        dia,
-        hora,
-        estado: "PROGRAMADA" as const,
-        esPrueba,
-      };
-
       createMutation.mutate(data);
     }
   };
-
   const handleStatusChange = (claseId: number, newStatus: Clase["estado"]) => {
     updateMutation.mutate({ id: claseId, data: { estado: newStatus } });
   };
@@ -512,6 +528,7 @@ export function useCalendar() {
     isLoading,
     calendarDays,
     clasesByDate,
+    conflictSet,
 
     // Mutations
     createMutation,

@@ -7,12 +7,13 @@ import {
   Trash2,
   Voicemail,
 } from "lucide-react";
-import { useEffect,useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { GenericCard } from "@/components/cards/GenericCard";
 import { GenericCardSkeleton } from "@/components/cards/GenericCardSkeleton";
+import { CommonTooltips, HelpTooltip } from "@/components/HelpTooltip";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -41,22 +42,39 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Switch } from "@/components/ui/switch";
 import { useValidarDniDuplicado } from "@/hooks/useValidarDniDuplicado";
-import { Alumno, alumnosApi, AlumnoSearchFilters } from "@/lib/api";
+import {
+  Alumno,
+  alumnosApi,
+  AlumnoSearchFilters,
+  Caballo,
+  caballosApi,
+} from "@/lib/api";
 
 export default function AlumnosPage() {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [editingAlumno, setEditingAlumno] = useState<Alumno | null>(null);
   const [alumnoToDelete, setAlumnoToDelete] = useState<Alumno | null>(null);
-  const [dniInput, setDniInput] = useState("");
-
-  const navigate = useNavigate();
+  const [dniInput, setDniInput] = useState(editingAlumno?.dni || "");
+  const [validacionHabilitada, setValidacionHabilitada] = useState(false);
 
   const { data: validacionDni } = useValidarDniDuplicado(
     "alumnos",
     dniInput,
     editingAlumno?.id,
   );
+
+  // Deshabilitar validación si no está habilitada O si el DNI es muy corto
+  const validacionActiva =
+    validacionHabilitada && dniInput.length >= 9
+      ? validacionDni
+      : { duplicado: false, mensaje: "" };
+
+  const [caballoIdSeleccionado, setCaballoIdSeleccionado] =
+    useState<string>("");
+  const [propietarioSeleccionado, setPropietarioSeleccionado] = useState(false);
+
+  const navigate = useNavigate();
 
   // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
   const [searchFilters, setSearchFilters] = useState<AlumnoSearchFilters>({});
@@ -110,18 +128,27 @@ export default function AlumnosPage() {
   }, []);
 
   useEffect(() => {
-    if (isOpen && editingAlumno) {
+    if (editingAlumno) {
+      // Al abrir para editar, cargar DNI y DESHABILITAR validación
       setDniInput(editingAlumno.dni);
-    } else if (!isOpen) {
+      setValidacionHabilitada(false);
+    } else {
+      // Al abrir para crear, limpiar y HABILITAR validación
       setDniInput("");
+      setValidacionHabilitada(true);
     }
-  }, [isOpen, editingAlumno]);
+  }, [editingAlumno]);
 
   // Query original (puedes mantenerlo como fallback)
   const { data: allAlumnos = [], isLoading: isLoadingAll } = useQuery({
     queryKey: ["alumnos"],
     queryFn: alumnosApi.listar,
     enabled: !isSearchActive, // Solo cargar si no hay búsqueda activa
+  });
+
+  const { data: caballos = [] } = useQuery({
+    queryKey: ["caballos"],
+    queryFn: caballosApi.listar,
   });
 
   // Usar resultados de búsqueda o todos los alumnos
@@ -383,7 +410,14 @@ export default function AlumnosPage() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (validacionActiva?.duplicado) {
+      toast.error("No se puede guardar: Ya existe un alumno con este DNI");
+      return;
+    }
     const formData = new FormData(e.currentTarget);
+    const propietario = formData.get("propietario") === "on";
+    const caballoId = formData.get("caballoId") as string;
     const data = {
       dni: formData.get("dni") as string,
       nombre: formData.get("nombre") as string,
@@ -397,8 +431,9 @@ export default function AlumnosPage() {
         .toISOString()
         .split("T")[0],
       cantidadClases: Number(formData.get("cantidadClases")),
-      propietario: formData.get("propietario") === "on",
+      propietario: propietario,
       activo: formData.get("activo") === "on",
+      caballoId: propietario && caballoId ? Number(caballoId) : null,
     };
 
     if (editingAlumno) {
@@ -407,6 +442,18 @@ export default function AlumnosPage() {
       createMutation.mutate(data);
     }
   };
+
+  useEffect(() => {
+    if (isOpen && editingAlumno) {
+      setPropietarioSeleccionado(editingAlumno.propietario);
+      setCaballoIdSeleccionado(
+        editingAlumno.caballoId ? String(editingAlumno.caballoId) : "",
+      );
+    } else if (!isOpen) {
+      setPropietarioSeleccionado(false);
+      setCaballoIdSeleccionado("");
+    }
+  }, [isOpen, editingAlumno]);
 
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
 
@@ -485,13 +532,19 @@ export default function AlumnosPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="dni">DNI</Label>
+                        <Label htmlFor="dni">
+                          DNI
+                          <HelpTooltip content={CommonTooltips.alumno.dni} />
+                        </Label>
                         <Input
                           id="dni"
                           name="dni"
                           type="string"
                           value={dniInput}
-                          onChange={(e) => setDniInput(e.target.value)}
+                          onChange={(e) => {
+                            setDniInput(e.target.value);
+                            setValidacionHabilitada(true);
+                          }}
                           placeholder="Solo números sin puntos"
                           className={
                             validacionDni?.duplicado ? "border-red-500" : ""
@@ -507,6 +560,9 @@ export default function AlumnosPage() {
                       <div className="space-y-2">
                         <Label htmlFor="fechaNacimiento">
                           Fecha de Nacimiento
+                          <HelpTooltip
+                            content={CommonTooltips.alumno.fechaNacimiento}
+                          />
                         </Label>
                         <Input
                           id="fechaNacimiento"
@@ -519,7 +575,12 @@ export default function AlumnosPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="telefono">Teléfono</Label>
+                        <Label htmlFor="telefono">
+                          Teléfono
+                          <HelpTooltip
+                            content={CommonTooltips.alumno.telefono}
+                          />
+                        </Label>
                         <Input
                           id="telefono"
                           name="telefono"
@@ -531,7 +592,10 @@ export default function AlumnosPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
+                        <Label htmlFor="email">
+                          Email
+                          <HelpTooltip content={CommonTooltips.alumno.email} />
+                        </Label>
                         <Input
                           id="email"
                           name="email"
@@ -545,6 +609,9 @@ export default function AlumnosPage() {
                       <div className="space-y-2">
                         <Label htmlFor="fechaInscripcion">
                           Fecha de Inscripcion
+                          <HelpTooltip
+                            content={CommonTooltips.alumno.fechaInscripcion}
+                          />
                         </Label>
                         <Input
                           id="fechaInscripcion"
@@ -558,7 +625,12 @@ export default function AlumnosPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="cantidadClases">Clases por Mes</Label>
+                        <Label htmlFor="cantidadClases">
+                          Clases por Mes
+                          <HelpTooltip
+                            content={CommonTooltips.alumno.cantidadClases}
+                          />
+                        </Label>
                         <Select
                           name="cantidadClases"
                           defaultValue={String(
@@ -584,9 +656,13 @@ export default function AlumnosPage() {
                           id="propietario"
                           name="propietario"
                           defaultChecked={editingAlumno?.propietario}
+                          onCheckedChange={setPropietarioSeleccionado}
                         />
                         <Label htmlFor="propietario">
                           Tiene caballo propio
+                          <HelpTooltip
+                            content={CommonTooltips.alumno.propietario}
+                          />
                         </Label>
                       </div>
                       <div className="flex items-center gap-3">
@@ -595,9 +671,43 @@ export default function AlumnosPage() {
                           name="activo"
                           defaultChecked={editingAlumno?.activo ?? true}
                         />
-                        <Label htmlFor="activo">Esta activo</Label>
+                        <Label htmlFor="activo">
+                          Esta activo
+                          <HelpTooltip content={CommonTooltips.alumno.activo} />
+                        </Label>
                       </div>
                     </div>
+                    {propietarioSeleccionado && (
+                      <div className="space-y-2">
+                        <Label htmlFor="caballoId">Caballo Propio *</Label>
+                        <Select
+                          name="caballoId"
+                          value={caballoIdSeleccionado}
+                          onValueChange={setCaballoIdSeleccionado}
+                          required={propietarioSeleccionado}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar caballo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {caballos
+                              .filter((c: Caballo) => c.disponible)
+                              .map((caballo: Caballo) => (
+                                <SelectItem
+                                  key={caballo.id}
+                                  value={String(caballo.id)}
+                                >
+                                  {caballo.nombre} (
+                                  {caballo.tipo === "ESCUELA"
+                                    ? "Escuela"
+                                    : "Privado"}
+                                  )
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                   <DialogFooter>
                     <Button
@@ -605,7 +715,7 @@ export default function AlumnosPage() {
                       disabled={
                         createMutation.isPending ||
                         updateMutation.isPending ||
-                        validacionDni?.duplicado
+                        validacionActiva?.duplicado
                       }
                     >
                       {editingAlumno ? "Guardar Cambios" : "Crear Alumno"}

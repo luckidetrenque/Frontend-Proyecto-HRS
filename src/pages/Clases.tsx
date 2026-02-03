@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
-import { AlertCircle,AlertTriangle } from "lucide-react";
-import { useEffect,useMemo, useState } from "react";
+import { AlertCircle, AlertTriangle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -412,81 +412,78 @@ export default function ClasesPage() {
       toast.error(error.message || "Error al eliminar la clase"),
   });
 
-  // const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-  //   e.preventDefault();
-  //   const formData = new FormData(e.currentTarget);
-
-  //   const data = {
-  //     especialidad: formData.get("especialidad") as
-  //       | "ADIESTRAMIENTO"
-  //       | "EQUINOTERAPIA"
-  //       | "EQUITACION"
-  //       | "MONTA",
-  //     dia: new Date(formData.get("dia") as string).toISOString().split("T")[0],
-  //     hora: new Date(`1970-01-01T${formData.get("hora") as string}`)
-  //       .toISOString()
-  //       .split("T")[1]
-  //       .substring(0, 5),
-  //     duracion: 60,
-  //     estado: formData.get("estado") as
-  //       | "PROGRAMADA"
-  //       | "INICIADA"
-  //       | "COMPLETADA"
-  //       | "CANCELADA"
-  //       | "ACA"
-  //       | "ASA",
-  //     observaciones: "",
-  //     alumnoId: Number(formData.get("alumnoId")),
-  //     instructorId: Number(formData.get("instructorId")),
-  //     caballoId: Number(formData.get("caballoId")),
-  //     diaHoraCompleto: "",
-  //     esPrueba: formData.get("esPrueba") === "on",
-  //   };
-
-  //   if (editingClase) {
-  //     updateMutation.mutate({ id: editingClase.id, data });
-  //   } else {
-  //     createMutation.mutate(data);
-  //   }
-  // };
-
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    const dia = new Date(formData.get("dia") as string)
-      .toISOString()
-      .split("T")[0];
-    const hora = new Date(`1970-01-01T${formData.get("hora") as string}`)
-      .toISOString()
-      .split("T")[1]
-      .substring(0, 5);
-    const caballoId = Number(formData.get("caballoId"));
-    const instructorId = Number(formData.get("instructorId"));
+    const alumnoId = Number(formData.get("alumnoId"));
+    const alumno = alumnos.find((a: Alumno) => a.id === alumnoId);
 
-    // Validar conflictos de horario
-    const { tieneConflicto, mensaje } = verificarConflictoHorario(
-      clases,
-      dia,
-      hora,
-      caballoId,
-      instructorId,
-      editingClase?.id,
-    );
+    // ✅ PRESERVAR: Validación de especialidad duplicada
+    const especialidad = formData.get("especialidad") as
+      | "ADIESTRAMIENTO"
+      | "EQUINOTERAPIA"
+      | "EQUITACION"
+      | "MONTA";
 
-    if (tieneConflicto) {
-      toast.error(mensaje);
+    if (!editingClase && alumno) {
+      const yaTomoEspecialidad = clases.some(
+        (c) =>
+          c.alumnoId === alumno.id &&
+          c.especialidad === especialidad &&
+          (c.estado === "PROGRAMADA" ||
+            c.estado === "INICIADA" ||
+            c.estado === "COMPLETADA"),
+      );
+
+      if (yaTomoEspecialidad) {
+        toast.error(
+          `${alumno.nombre} ${alumno.apellido} ya tiene una clase de ${especialidad} programada o completada`,
+        );
+        return;
+      }
+    }
+
+    // ✅ PRESERVAR: Validación de clase de prueba
+    const esPrueba = formData.get("esPrueba") === "on";
+    if (esPrueba && alumno) {
+      if (alumno.activo) {
+        toast.error(
+          "Las clases de prueba solo pueden asignarse a alumnos inactivos",
+        );
+        return;
+      }
+
+      const yaTomoClaseDePrueba = clases.some(
+        (c) => c.alumnoId === alumno.id && c.esPrueba,
+      );
+
+      if (yaTomoClaseDePrueba) {
+        toast.error(
+          `${alumno.nombre} ${alumno.apellido} ya ha tomado una clase de prueba anteriormente`,
+        );
+        return;
+      }
+    }
+
+    // ✅ NUEVO: Usar caballo propio si no se especifica otro
+    const caballoIdForm = formData.get("caballoId");
+    const caballoId = caballoIdForm
+      ? Number(caballoIdForm)
+      : alumno?.caballoId || null;
+
+    if (!caballoId) {
+      toast.error("Debe seleccionar un caballo");
       return;
     }
 
     const data = {
-      especialidad: formData.get("especialidad") as
-        | "ADIESTRAMIENTO"
-        | "EQUINOTERAPIA"
-        | "EQUITACION"
-        | "MONTA",
-      dia,
-      hora,
+      especialidad: especialidad,
+      dia: new Date(formData.get("dia") as string).toISOString().split("T")[0],
+      hora: new Date(`1970-01-01T${formData.get("hora") as string}`)
+        .toISOString()
+        .split("T")[1]
+        .substring(0, 5),
       duracion: 60,
       estado: formData.get("estado") as
         | "PROGRAMADA"
@@ -496,11 +493,11 @@ export default function ClasesPage() {
         | "ACA"
         | "ASA",
       observaciones: "",
-      alumnoId: Number(formData.get("alumnoId")),
-      instructorId,
-      caballoId,
+      alumnoId: alumnoId,
+      instructorId: Number(formData.get("instructorId")),
+      caballoId: caballoId,
       diaHoraCompleto: "",
-      esPrueba: formData.get("esPrueba") === "on",
+      esPrueba: esPrueba,
     };
 
     if (editingClase) {
@@ -692,9 +689,10 @@ export default function ClasesPage() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
+                    {/* ✅ FILA 1: Día - Hora */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="dia">Dia</Label>
+                        <Label htmlFor="dia">Día</Label>
                         <Input
                           id="dia"
                           name="dia"
@@ -703,10 +701,9 @@ export default function ClasesPage() {
                             editingClase?.dia ||
                             hoy.getFullYear() +
                               "-" +
-                              hoy.getMonth() +
-                              1 +
+                              String(hoy.getMonth() + 1).padStart(2, "0") +
                               "-" +
-                              hoy.getDate()
+                              String(hoy.getDate()).padStart(2, "0")
                           }
                           required
                         />
@@ -724,15 +721,15 @@ export default function ClasesPage() {
                                 )
                               : "09:00"
                           }
-                          // defaultValue={editingClase?.hora}
                           required
                         />
                       </div>
                     </div>
+
+                    {/* ✅ FILA 2: Alumno - Caballo */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="alumnoId">
-                          {" "}
                           Alumno
                           {especialidadSeleccionada === "MONTA" && (
                             <span className="ml-2 text-xs text-muted-foreground">
@@ -740,7 +737,6 @@ export default function ClasesPage() {
                             </span>
                           )}
                         </Label>
-                        {/* Campo oculto para enviar el alumnoId cuando el select está deshabilitado */}
                         {especialidadSeleccionada === "MONTA" && (
                           <input
                             type="hidden"
@@ -764,59 +760,85 @@ export default function ClasesPage() {
                             <SelectValue placeholder="Seleccionar alumno" />
                           </SelectTrigger>
                           <SelectContent>
-                            {alumnos
-                              .filter(
-                                (alumno: Alumno) =>
-                                  alumno.activo ||
-                                  alumno.id === editingClase?.alumnoId,
-                              )
-                              .map((alumno: Alumno) => (
-                                <SelectItem
-                                  key={alumno.id}
-                                  value={String(alumno.id)}
-                                >
-                                  {alumno.nombre} {alumno.apellido}
-                                  {!alumno.activo && (
-                                    <span className="text-muted-foreground ml-2">
-                                      (Inactivo)
-                                    </span>
-                                  )}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="caballoId">Caballo</Label>
-                        <Select
-                          name="caballoId"
-                          defaultValue={String(editingClase?.caballoId || "")}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar caballo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {caballosDisponibles.map((caballo: Caballo) => (
+                            {alumnos.map((alumno: Alumno) => (
                               <SelectItem
-                                key={caballo.id}
-                                value={String(caballo.id)}
+                                key={alumno.id}
+                                value={String(alumno.id)}
                               >
-                                {caballo.nombre} (
-                                {caballo.tipo === "ESCUELA"
-                                  ? "Escuela"
-                                  : "Privado"}
-                                )
+                                {alumno.nombre} {alumno.apellido}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="caballoId">
+                          Caballo
+                          {/* Mostrar caballo predeterminado */}
+                          {(() => {
+                            const alumno = alumnos.find(
+                              (a: Alumno) =>
+                                a.id === Number(alumnoIdSeleccionado),
+                            );
+                            if (alumno?.caballoId) {
+                              const caballo = caballos.find(
+                                (c: Caballo) => c.id === alumno.caballoId,
+                              );
+                              return caballo ? (
+                                <span className="ml-2 text-xs font-medium text-success">
+                                  ✓ Predeterminado: {caballo.nombre}
+                                </span>
+                              ) : null;
+                            }
+                            return null;
+                          })()}
+                        </Label>
+                        <Select
+                          name="caballoId"
+                          defaultValue={
+                            editingClase
+                              ? String(editingClase.caballoId)
+                              : (() => {
+                                  const alumno = alumnos.find(
+                                    (a: Alumno) =>
+                                      a.id === Number(alumnoIdSeleccionado),
+                                  );
+                                  return alumno?.caballoId
+                                    ? String(alumno.caballoId)
+                                    : "";
+                                })()
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar caballo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {caballos
+                              .filter((c: Caballo) => c.disponible)
+                              .map((caballo: Caballo) => (
+                                <SelectItem
+                                  key={caballo.id}
+                                  value={String(caballo.id)}
+                                >
+                                  {caballo.nombre} (
+                                  {caballo.tipo === "ESCUELA"
+                                    ? "Escuela"
+                                    : "Privado"}
+                                  )
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
+
+                    {/* ✅ FILA 3: Instructor - Especialidad */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="instructorId">Instructor</Label>
                         <Select
                           name="instructorId"
+                          required
                           defaultValue={String(
                             editingClase?.instructorId || "",
                           )}
@@ -842,6 +864,7 @@ export default function ClasesPage() {
                         <Label htmlFor="especialidad">Especialidad</Label>
                         <Select
                           name="especialidad"
+                          required
                           value={especialidadSeleccionada}
                           onValueChange={handleEspecialidadChange}
                           defaultValue={editingClase?.especialidad || ""}
@@ -859,11 +882,14 @@ export default function ClasesPage() {
                         </Select>
                       </div>
                     </div>
+
+                    {/* ✅ FILA 4: Estado - Checkbox/Observaciones */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="estado">Estado</Label>
                         <Select
                           name="estado"
+                          required
                           defaultValue={editingClase?.estado || "PROGRAMADA"}
                         >
                           <SelectTrigger>
@@ -883,63 +909,40 @@ export default function ClasesPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="observaciones">Observaciones</Label>
-                        <Input
-                          id="observaciones"
-                          name="observaciones"
-                          defaultValue={editingClase?.observaciones || ""}
-                          placeholder="Ej. Lluvia, Feriado, etc"
-                        />
-                      </div>
+
+                      {/* ✅ Checkbox Clase de Prueba (solo al crear) */}
+                      {!editingClase ? (
+                        <div className="space-y-2">
+                          <Label className="text-sm text-muted-foreground">
+                            Tipo de Clase
+                          </Label>
+                          <div className="flex items-center gap-3 rounded-md border border-orange-300 bg-orange-50 p-2.5 h-10">
+                            <input
+                              type="checkbox"
+                              id="esPrueba"
+                              name="esPrueba"
+                              className="h-4 w-4 rounded border-orange-400 text-orange-600 focus:ring-orange-500"
+                            />
+                            <Label
+                              htmlFor="esPrueba"
+                              className="text-sm font-medium text-orange-800 cursor-pointer"
+                            >
+                              Clase de Prueba
+                            </Label>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Label htmlFor="observaciones">Observaciones</Label>
+                          <Input
+                            id="observaciones"
+                            name="observaciones"
+                            defaultValue={editingClase?.observaciones || ""}
+                            placeholder="Ej. Lluvia, Feriado, etc"
+                          />
+                        </div>
+                      )}
                     </div>
-                    {/* ✅ NUEVO: Checkbox para clase de prueba */}
-                    {!editingClase && (
-                      <div className="flex items-center gap-3 rounded-md border border-orange-300 bg-orange-50 p-3">
-                        {/* Alertas de clases restantes */}
-                        {alumnoIdSeleccionado &&
-                          Number(alumnoIdSeleccionado) > 0 && (
-                            <div className="col-span-2">
-                              {estaAgotado && (
-                                <Alert variant="destructive">
-                                  <AlertTriangle className="h-4 w-4" />
-                                  <AlertTitle>Plan mensual agotado</AlertTitle>
-                                  <AlertDescription>
-                                    El alumno ya consumió sus{" "}
-                                    {clasesContratadas} clases del mes (
-                                    {clasesTomadas} tomadas). Se facturará como
-                                    clase adicional.
-                                  </AlertDescription>
-                                </Alert>
-                              )}
-                              {cercaDelLimite && !estaAgotado && (
-                                <Alert className="border-yellow-500 bg-yellow-50">
-                                  <AlertCircle className="h-4 w-4 text-yellow-600" />
-                                  <AlertDescription className="text-yellow-800">
-                                    Quedan {clasesRestantes} de{" "}
-                                    {clasesContratadas} clases disponibles en el
-                                    plan mensual.
-                                  </AlertDescription>
-                                </Alert>
-                              )}
-                            </div>
-                          )}
-                        <input
-                          type="checkbox"
-                          id="esPrueba"
-                          name="esPrueba"
-                          className="h-4 w-4 rounded border-orange-400 text-orange-600 focus:ring-orange-500"
-                        />
-                        <Label htmlFor="esPrueba" className="text-sm">
-                          <span className="font-semibold text-orange-800">
-                            Clase de Prueba
-                          </span>
-                          <span className="ml-2 text-xs text-orange-600">
-                            (El alumno debe estar inactivo)
-                          </span>
-                        </Label>
-                      </div>
-                    )}
                   </div>
                   <DialogFooter>
                     <Button

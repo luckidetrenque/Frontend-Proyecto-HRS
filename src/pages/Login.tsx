@@ -1,6 +1,6 @@
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import React, { useState } from "react";
-import { Link, useLocation,useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,8 @@ const Login: React.FC = () => {
         description: errorMessage,
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

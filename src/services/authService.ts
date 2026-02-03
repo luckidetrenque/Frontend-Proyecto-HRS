@@ -90,8 +90,8 @@ export const login = async (credentials: LoginCredentials): Promise<User> => {
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || "Credenciales incorrectas");
+    const error = await response.json();
+    throw new Error(error.error || "Credenciales incorrectas");
   }
 
   const user = await response.json();

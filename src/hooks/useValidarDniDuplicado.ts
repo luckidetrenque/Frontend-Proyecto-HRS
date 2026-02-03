@@ -10,7 +10,7 @@ export const useValidarDniDuplicado = (
   return useQuery({
     queryKey: [`${entidad}-validar-dni`, dni, idActual],
     queryFn: async () => {
-      if (!dni || dni.length < 7) {
+      if (!dni || dni.length < 9) {
         return { duplicado: false, mensaje: "" };
       }
 
@@ -26,7 +26,7 @@ export const useValidarDniDuplicado = (
           : "",
       };
     },
-    enabled: dni.length >= 7,
+    enabled: dni.length >= 9,
     staleTime: 10000,
   });
 };

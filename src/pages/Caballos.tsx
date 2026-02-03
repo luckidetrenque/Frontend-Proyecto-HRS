@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
-import { useEffect,useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -225,6 +225,17 @@ export default function CaballosPage() {
       tipo: formData.get("tipo") as "ESCUELA" | "PRIVADO",
       disponible: formData.get("disponible") === "on",
     };
+
+    const nombreDuplicado = caballos.some(
+      (c) =>
+        c.nombre.toLowerCase() === data.nombre.toLowerCase() &&
+        c.id !== editingCaballo?.id,
+    );
+
+    if (nombreDuplicado) {
+      toast.error("Ya existe un caballo con ese nombre");
+      return;
+    }
 
     if (editingCaballo) {
       updateMutation.mutate({ id: editingCaballo.id, data });

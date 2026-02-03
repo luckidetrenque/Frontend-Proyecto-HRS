@@ -24,6 +24,8 @@ import SmartSearch from "@/components/ui/smart-search";
 import { UserDropdown } from "@/components/UserDropdown";
 import { cn } from "@/lib/utils";
 
+import { OnboardingTour } from "./OnboardingTour";
+
 interface LayoutProps {
   children: ReactNode;
 }
@@ -169,6 +171,7 @@ export function Layout({ children }: LayoutProps) {
       {/* Main Content */}
       <main className="container py-6 md:py-8">{children}</main>
       <HelpSystem />
+      <OnboardingTour />
     </div>
   );
 }

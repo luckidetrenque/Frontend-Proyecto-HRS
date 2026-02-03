@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
-import { useEffect,useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -53,15 +53,21 @@ export default function InstructoresPage() {
   );
   const [instructorToDelete, setInstructorToDelete] =
     useState<Instructor | null>(null);
-  const [dniInput, setDniInput] = useState("");
-
-  const navigate = useNavigate();
+  const [dniInput, setDniInput] = useState(editingInstructor?.dni || "");
+  const [validacionHabilitada, setValidacionHabilitada] = useState(false);
 
   const { data: validacionDni } = useValidarDniDuplicado(
     "instructores",
     dniInput,
     editingInstructor?.id,
   );
+
+  const validacionActiva =
+    validacionHabilitada && dniInput.length >= 9
+      ? validacionDni
+      : { duplicado: false, mensaje: "" };
+
+  const navigate = useNavigate();
 
   const [instructorColor, setInstructorColor] = useState<string>(
     PRESET_COLORS[0],
@@ -239,6 +245,11 @@ export default function InstructoresPage() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (validacionActiva?.duplicado) {
+      toast.error("No se puede guardar: Ya existe un instructor con este DNI");
+      return;
+    }
     const formData = new FormData(e.currentTarget);
     const data = {
       dni: formData.get("dni") as string,
@@ -261,18 +272,18 @@ export default function InstructoresPage() {
   };
 
   useEffect(() => {
-    if (isOpen && editingInstructor) {
-      setInstructorColor(editingInstructor.color || PRESET_COLORS[0]);
-    } else if (!isOpen) {
-      setInstructorColor(PRESET_COLORS[0]);
+    if (editingInstructor) {
+      setDniInput(editingInstructor.dni);
+      setValidacionHabilitada(false);
+    } else {
+      setDniInput("");
+      setValidacionHabilitada(true);
     }
-  }, [isOpen, editingInstructor]);
+  }, [editingInstructor]);
 
   useEffect(() => {
-    if (isOpen && editingInstructor) {
-      setDniInput(editingInstructor.dni);
-    } else if (!isOpen) {
-      setDniInput("");
+    if (isOpen) {
+      setDniInput(editingInstructor?.dni || "");
     }
   }, [isOpen, editingInstructor]);
 
@@ -407,7 +418,10 @@ export default function InstructoresPage() {
                           name="dni"
                           type="string"
                           value={dniInput}
-                          onChange={(e) => setDniInput(e.target.value)}
+                          onChange={(e) => {
+                            setDniInput(e.target.value);
+                            setValidacionHabilitada(true);
+                          }}
                           placeholder="Solo números sin puntos"
                           className={
                             validacionDni?.duplicado ? "border-red-500" : ""
@@ -503,7 +517,7 @@ export default function InstructoresPage() {
                       disabled={
                         createMutation.isPending ||
                         updateMutation.isPending ||
-                        validacionDni?.duplicado
+                        validacionActiva?.duplicado
                       }
                     >
                       {editingInstructor

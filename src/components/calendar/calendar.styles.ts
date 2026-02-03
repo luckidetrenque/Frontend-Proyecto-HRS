@@ -73,7 +73,7 @@ export const ESTADO_STYLES: Record<string, string> = {
 
 // Estilos específicos para clases de prueba
 export const CLASE_PRUEBA_STYLE =
-  "bg-orange-100 border-orange-400 text-orange-800";
+  "bg-orange-50 border-orange-400 border-l-4 text-orange-900";
 export const CLASE_PRUEBA_BADGE =
   "bg-orange-500/20 text-orange-700 border-orange-400";
 
@@ -125,15 +125,17 @@ export const MAX_CLASES_POR_CELDA = {
 // Este ID debe coincidir con el alumno "Escuela - Comodín" en tu base de datos
 export const ALUMNO_COMODIN_ID = 1; // Ajusta este ID según tu BD
 
-// Función auxiliar para obtener el estilo según estado y tipo
+/**
+ * Obtiene el estilo de una clase según su estado y si es de prueba
+ */
 export const getClaseStyle = (estado: string, esPrueba?: boolean): string => {
-  const baseStyle = ESTADO_STYLES[estado] || ESTADO_STYLES["PROGRAMADA"];
-
+  // Si es clase de prueba, usar estilo naranja con borde izquierdo destacado
   if (esPrueba) {
-    return `${CLASE_PRUEBA_STYLE} border-l-4`; // Borde izquierdo naranja grueso
+    return CLASE_PRUEBA_STYLE;
   }
 
-  return baseStyle;
+  // Si no es de prueba, usar el estilo normal del estado
+  return ESTADO_STYLES[estado] || ESTADO_STYLES["PROGRAMADA"];
 };
 
 /**

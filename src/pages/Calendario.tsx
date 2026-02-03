@@ -5,7 +5,7 @@
 
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { AlertCircle,AlertTriangle } from "lucide-react";
+import { AlertCircle, AlertTriangle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/select";
 import { useCalendar } from "@/hooks/useCalendar";
 import { useClasesRestantes } from "@/hooks/useClasesRestantes";
-import { Alumno, Caballo,Instructor } from "@/lib/api";
+import { Alumno, Caballo, Instructor } from "@/lib/api";
 import {
   filtrarCaballosDisponibles,
   puedeEditarClase,
@@ -98,6 +98,7 @@ export default function CalendarioPage() {
     getInstructorNombre,
     getCaballoNombre,
     getInstructorColor,
+    conflictSet,
   } = useCalendar();
 
   // Estado para controlar la especialidad seleccionada y el alumno
@@ -142,6 +143,22 @@ export default function CalendarioPage() {
     if (value === "MONTA") {
       setAlumnoIdSeleccionado(String(ALUMNO_COMODIN_ID));
     }
+  };
+
+  // ✅ AGREGAR ESTA FUNCIÓN COMPLETA AQUÍ
+  const onSubmitWithValidation = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    // Validar clases agotadas solo al crear
+    if (estaAgotado && !claseToEdit) {
+      const confirmar = window.confirm(
+        `El alumno agotó su plan mensual (${clasesContratadas} clases). ¿Desea programar esta clase adicional?`,
+      );
+      if (!confirmar) return;
+    }
+
+    // Llamar al handleSubmit del hook
+    handleSubmit(e);
   };
 
   // Configuración de filtros
@@ -237,11 +254,13 @@ export default function CalendarioPage() {
               onCellClick={handleCellClick}
               onEditClase={handleEditClase}
               onDeleteClase={handleDeleteClase}
+              puedeEditarClase={puedeEditarClase}
               getAlumnoNombre={getAlumnoNombre}
               getAlumnoNombreCompleto={getAlumnoNombreCompleto}
               getInstructorNombre={getInstructorNombre}
               getCaballoNombre={getCaballoNombre}
               getInstructorColor={getInstructorColor}
+              conflictSet={conflictSet}
             />
           </CardContent>
         </Card>
@@ -257,6 +276,7 @@ export default function CalendarioPage() {
                 onStatusChange={handleStatusChange}
                 onEditClase={handleEditClase}
                 onDeleteClase={handleDeleteClase}
+                puedeEditarClase={puedeEditarClase}
                 getAlumnoNombre={getAlumnoNombre}
                 getAlumnoApellido={getAlumnoApellido}
                 getAlumnoNombreCompleto={getAlumnoNombreCompleto}
@@ -272,6 +292,7 @@ export default function CalendarioPage() {
                 onStatusChange={handleStatusChange}
                 onEditClase={handleEditClase}
                 onDeleteClase={handleDeleteClase}
+                puedeEditarClase={puedeEditarClase}
                 getAlumnoNombre={getAlumnoNombre}
                 getAlumnoApellido={getAlumnoApellido}
                 getAlumnoNombreCompleto={getAlumnoNombreCompleto}
@@ -329,7 +350,7 @@ export default function CalendarioPage() {
       {/* Diálogo Crear/Editar Clase */}
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
         <DialogContent className="sm:max-w-lg">
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={onSubmitWithValidation}>
             <DialogHeader>
               <DialogTitle className="font-display">
                 {claseToEdit ? "Editar Clase" : "Nueva Clase"}
@@ -341,6 +362,7 @@ export default function CalendarioPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              {/* ✅ FILA 1: Hora de Inicio - Alumno */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="hora">Hora de Inicio</Label>
@@ -358,7 +380,6 @@ export default function CalendarioPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="alumnoId">
-                    {" "}
                     Alumno
                     {especialidadSeleccionada === "MONTA" && (
                       <span className="ml-2 text-xs text-muted-foreground">
@@ -366,7 +387,6 @@ export default function CalendarioPage() {
                       </span>
                     )}
                   </Label>
-                  {/* Campo oculto para enviar el alumnoId cuando el select está deshabilitado */}
                   {especialidadSeleccionada === "MONTA" && (
                     <input
                       type="hidden"
@@ -390,27 +410,17 @@ export default function CalendarioPage() {
                       <SelectValue placeholder="Seleccionar alumno" />
                     </SelectTrigger>
                     <SelectContent>
-                      {alumnos
-                        .filter(
-                          (alumno: Alumno) =>
-                            alumno.activo ||
-                            alumno.id === claseToEdit?.alumnoId,
-                        )
-                        .map((alumno: Alumno) => (
-                          <SelectItem key={alumno.id} value={String(alumno.id)}>
-                            {alumno.nombre} {alumno.apellido}
-                            {!alumno.activo && (
-                              <span className="text-muted-foreground ml-2">
-                                (Inactivo)
-                              </span>
-                            )}
-                          </SelectItem>
-                        ))}
+                      {alumnos.map((alumno: Alumno) => (
+                        <SelectItem key={alumno.id} value={String(alumno.id)}>
+                          {alumno.nombre} {alumno.apellido}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
+              {/* ✅ FILA 2: Instructor - Caballo */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="instructorId">Instructor</Label>
@@ -439,7 +449,26 @@ export default function CalendarioPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="caballoId">Caballo</Label>
+                  <Label htmlFor="caballoId">
+                    Caballo
+                    {/* Mostrar si tiene caballo predeterminado */}
+                    {(() => {
+                      const alumno = alumnos.find(
+                        (a: Alumno) => a.id === Number(alumnoIdSeleccionado),
+                      );
+                      if (alumno?.caballoId) {
+                        const caballo = caballos.find(
+                          (c: Caballo) => c.id === alumno.caballoId,
+                        );
+                        return caballo ? (
+                          <span className="ml-2 text-xs font-medium text-success">
+                            ✓ Predeterminado: {caballo.nombre}
+                          </span>
+                        ) : null;
+                      }
+                      return null;
+                    })()}
+                  </Label>
                   <Select
                     name="caballoId"
                     required
@@ -448,7 +477,15 @@ export default function CalendarioPage() {
                         ? String(claseToEdit.caballoId)
                         : prefilledCaballoId
                           ? String(prefilledCaballoId)
-                          : undefined
+                          : (() => {
+                              const alumno = alumnos.find(
+                                (a: Alumno) =>
+                                  a.id === Number(alumnoIdSeleccionado),
+                              );
+                              return alumno?.caballoId
+                                ? String(alumno.caballoId)
+                                : undefined;
+                            })()
                     }
                   >
                     <SelectTrigger>
@@ -472,6 +509,7 @@ export default function CalendarioPage() {
                 </div>
               </div>
 
+              {/* ✅ FILA 3: Especialidad - Estado/Checkbox */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="especialidad">Especialidad</Label>
@@ -496,7 +534,29 @@ export default function CalendarioPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                {claseToEdit && (
+
+                {/* ✅ Checkbox Clase de Prueba (solo al crear) */}
+                {!claseToEdit ? (
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">
+                      Tipo de Clase
+                    </Label>
+                    <div className="flex items-center gap-3 rounded-md border border-orange-300 bg-orange-50 p-2.5 h-10">
+                      <input
+                        type="checkbox"
+                        id="esPrueba"
+                        name="esPrueba"
+                        className="h-4 w-4 rounded border-orange-400 text-orange-600 focus:ring-orange-500"
+                      />
+                      <Label
+                        htmlFor="esPrueba"
+                        className="text-sm font-medium text-orange-800 cursor-pointer"
+                      >
+                        Clase de Prueba
+                      </Label>
+                    </div>
+                  </div>
+                ) : (
                   <div className="space-y-2">
                     <Label htmlFor="estado">Estado</Label>
                     <Select
@@ -517,51 +577,7 @@ export default function CalendarioPage() {
                     </Select>
                   </div>
                 )}
-                {/* ✅ NUEVO: Checkbox para clase de prueba */}
-                {!claseToEdit && ( // Solo al crear, no al editar
-                  <div className="flex items-center gap-3 rounded-md border border-orange-300 bg-orange-50 p-3">
-                    <input
-                      type="checkbox"
-                      id="esPrueba"
-                      name="esPrueba"
-                      className="h-4 w-4 rounded border-orange-400 text-orange-600 focus:ring-orange-500"
-                    />
-                    <Label htmlFor="esPrueba" className="text-sm">
-                      <span className="font-semibold text-orange-800">
-                        Clase de Prueba
-                      </span>
-                      <span className="ml-2 text-xs text-orange-600">
-                        (El alumno debe estar inactivo)
-                      </span>
-                    </Label>
-                  </div>
-                )}
               </div>
-              {/* Alertas de clases restantes */}
-              {alumnoIdSeleccionado && Number(alumnoIdSeleccionado) > 0 && (
-                <div className="col-span-2">
-                  {estaAgotado && (
-                    <Alert variant="destructive">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertTitle>Plan mensual agotado</AlertTitle>
-                      <AlertDescription>
-                        El alumno ya consumió sus {clasesContratadas} clases del
-                        mes ({clasesTomadas} tomadas). Se facturará como clase
-                        adicional.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  {cercaDelLimite && !estaAgotado && (
-                    <Alert className="border-yellow-500 bg-yellow-50">
-                      <AlertCircle className="h-4 w-4 text-yellow-600" />
-                      <AlertDescription className="text-yellow-800">
-                        Quedan {clasesRestantes} de {clasesContratadas} clases
-                        disponibles en el plan mensual.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-              )}
             </div>
             <DialogFooter>
               <Button

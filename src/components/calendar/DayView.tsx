@@ -6,10 +6,10 @@
 
 import { useMemo, useState } from "react";
 
-import { Caballo,Clase } from "@/lib/api";
+import { Caballo, Clase } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { getClaseStyle,TIME_SLOTS } from "./calendar.styles";
+import { getClaseStyle, TIME_SLOTS } from "./calendar.styles";
 import { ClaseBadge } from "./ClaseBadge";
 import { ClasePopover } from "./ClasePopover";
 
@@ -27,6 +27,7 @@ interface DayViewProps {
   getInstructorNombre: (id: number) => string;
   getCaballoNombre: (id: number) => string;
   getInstructorColor: (id: number) => string;
+  conflictSet: Set<string>;
 }
 
 export function DayView({
@@ -43,6 +44,7 @@ export function DayView({
   getInstructorNombre,
   getCaballoNombre,
   getInstructorColor,
+  conflictSet,
 }: DayViewProps) {
   const [popoverOpen, setPopoverOpen] = useState<string | null>(null);
 
@@ -114,12 +116,23 @@ export function DayView({
                 const key = `${caballo.id}-${hora}`;
                 const clase = claseMap[key];
 
+                const conflictKey = `${dateKey}|${hora}|${caballo.id}`;
+                const hasConflict = conflictSet.has(conflictKey);
+
                 return (
                   <td
                     key={key}
                     className={cn(
                       "border border-border p-1 text-center transition-colors relative",
+
+                      // Conflicto
                       !clase &&
+                        hasConflict &&
+                        "bg-red-100 border-red-400 hover:bg-red-200",
+
+                      // Libre
+                      !clase &&
+                        !hasConflict &&
                         onCellClick &&
                         "cursor-pointer hover:bg-primary/10",
                     )}
@@ -129,6 +142,15 @@ export function DayView({
                       }
                     }}
                   >
+                    {/* ⚠ Tooltip visual */}
+                    {!clase && hasConflict && (
+                      <span
+                        className="absolute top-1 right-1 text-[10px] text-red-600"
+                        title="Conflicto de horario"
+                      >
+                        ⚠
+                      </span>
+                    )}
                     {clase ? (
                       <ClasePopover
                         clase={clase}

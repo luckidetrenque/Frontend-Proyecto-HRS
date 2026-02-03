@@ -9,7 +9,7 @@ interface PageHeaderProps {
 // page-header.tsx
 export function PageHeader({ title, description, action }: PageHeaderProps) {
   return (
-    <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+    <div className="w-full mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div className="space-y-1">
         <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
           {title}
