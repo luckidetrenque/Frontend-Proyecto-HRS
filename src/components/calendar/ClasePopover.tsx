@@ -26,7 +26,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Clase } from "@/lib/api";
 
-import { ESTADO_COLORS, ESTADOS } from "./calendar.styles";
+import { ESTADO_COLORS, ESTADO_STYLES, ESTADOS } from "./calendar.styles";
 
 interface ClasePopoverProps {
   clase: Clase;
@@ -114,10 +114,12 @@ export function ClasePopover({
               <Clock className="h-4 w-4 text-muted-foreground" />
               <span>{clase.hora.slice(0, 5)}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span>{alumnoNombre}</span>
-            </div>
+            {clase.alumnoId !== 1 && (
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span>{alumnoNombre}</span>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <UserCheck className="h-4 w-4 text-muted-foreground" />
               <span>{instructorNombre}</span>
@@ -193,11 +195,25 @@ export function ClasePopover({
               </Label>
               <div className="flex flex-wrap gap-1">
                 {ESTADOS.map((estado) => (
+                  // <Button
+                  //   key={estado}
+                  //   variant={clase.estado === estado ? "default" : "outline"}
+                  //   size="sm"
+                  //   className="text-xs"
+                  //   onClick={() => handleStatusClick(estado)}
+                  // >
+                  //   {estado}
+                  // </Button>
                   <Button
                     key={estado}
-                    variant={clase.estado === estado ? "default" : "outline"}
+                    // Mantenemos "outline" para que respete la estructura de bordes base de Shadcn
+                    variant="outline"
                     size="sm"
-                    className="text-xs"
+                    className={`text-xs transition-colors ${
+                      clase.estado === estado
+                        ? ESTADO_STYLES[estado] // Aplica tus colores personalizados
+                        : "text-muted-foreground opacity-50" // Estilo para botones no seleccionados
+                    }`}
                     onClick={() => handleStatusClick(estado)}
                   >
                     {estado}

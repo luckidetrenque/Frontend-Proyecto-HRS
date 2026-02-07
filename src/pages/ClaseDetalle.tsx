@@ -13,7 +13,7 @@ import {
   User,
 } from "lucide-react";
 import { useState } from "react";
-import { useNavigate,useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Layout } from "@/components/Layout";
@@ -33,6 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { InfoField } from "@/components/ui/InfoField";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
@@ -277,52 +278,45 @@ export default function ClaseDetalle() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-6 md:grid-cols-3">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Fecha</p>
-                <div className="flex items-center gap-2">
+            <div className="grid gap-6 md:grid-cols-3 text-center">
+              <InfoField label="Fecha">
+                <div className="flex items-center justify-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <p className="font-medium">
+                  <span>
                     {new Date(clase.dia).toLocaleDateString("es-AR", {
                       weekday: "long",
-                      year: "numeric",
-                      month: "long",
                       day: "numeric",
+                      month: "long",
                     })}
-                  </p>
+                  </span>
                 </div>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Hora</p>
-                <div className="flex items-center gap-2">
+              </InfoField>
+
+              <InfoField label="Hora">
+                <div className="flex items-center justify-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  <p className="font-medium">
-                    {formatearConZona(clase.diaHoraCompleto)}
-                  </p>
+                  <span>{formatearConZona(clase.diaHoraCompleto)}</span>
                 </div>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">
-                  Especialidad
-                </p>
-                <p className="font-medium text-lg">{clase.especialidad}</p>
-              </div>
+              </InfoField>
+
+              <InfoField label="Especialidad">
+                <span className="text-lg">{clase.especialidad}</span>
+              </InfoField>
             </div>
 
             {clase.observaciones && (
               <div className="mt-6 pt-6 border-t">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Observaciones
-                </p>
-                <div className="rounded-lg bg-muted/50 p-4">
-                  <p className="text-sm">{clase.observaciones}</p>
-                </div>
+                <InfoField label="Observaciones">
+                  <div className="rounded-lg bg-muted/50 p-4 text-left font-normal mt-2">
+                    <p className="text-sm">{clase.observaciones}</p>
+                  </div>
+                </InfoField>
               </div>
             )}
 
             {clase.esPrueba && (
               <div className="mt-6 pt-6 border-t">
-                <div className="rounded-lg border border-orange-300 bg-orange-50 p-4">
+                <div className="rounded-lg border border-orange-300 bg-orange-50 p-4 text-left">
                   <div className="flex items-start gap-3">
                     <Info className="h-5 w-5 text-orange-600 mt-0.5" />
                     <div>
@@ -330,8 +324,7 @@ export default function ClaseDetalle() {
                         Clase de Prueba
                       </p>
                       <p className="text-sm text-orange-700">
-                        Esta es una clase de prueba para un alumno nuevo. El
-                        alumno aún no está activo en el sistema.
+                        Esta es una clase de prueba para un alumno nuevo.
                       </p>
                     </div>
                   </div>
@@ -345,52 +338,37 @@ export default function ClaseDetalle() {
         <div className="grid gap-6 md:grid-cols-3">
           {/* Card del Alumno */}
           <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <User className="h-5 w-5 text-primary" />
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <User className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Alumno</CardTitle>
+                    <CardDescription>Participante</CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-lg">Alumno</CardTitle>
-                  <CardDescription>Participante</CardDescription>
-                </div>
+                {alumno && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(`/alumnos/${alumno.id}`)}
+                    className="h-8 px-2 text-xs"
+                  >
+                    Ver Perfil
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
               {alumno ? (
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Nombre</p>
-                    <p className="font-medium">
-                      {alumno.nombre} {alumno.apellido}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">DNI</p>
-                    <p className="font-medium">{alumno.dni}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Teléfono
-                    </p>
-                    <p className="font-medium">{alumno.telefono}</p>
-                  </div>
-                  <div className="pt-3 border-t">
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => navigate(`/alumnos/${alumno.id}`)}
-                    >
-                      Ver Perfil
-                    </Button>
-                  </div>
-                </div>
+                <InfoField label="Nombre">
+                  {alumno.nombre} {alumno.apellido}
+                </InfoField>
               ) : (
-                <div className="text-center py-8">
-                  <User className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Cargando información...
-                  </p>
+                <div className="text-center py-4 text-sm text-muted-foreground">
+                  Cargando...
                 </div>
               )}
             </CardContent>
@@ -398,63 +376,37 @@ export default function ClaseDetalle() {
 
           {/* Card del Instructor */}
           <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
-                  <GraduationCap className="h-5 w-5 text-accent" />
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
+                    <GraduationCap className="h-5 w-5 text-accent" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Instructor</CardTitle>
+                    <CardDescription>A cargo</CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-lg">Instructor</CardTitle>
-                  <CardDescription>A cargo</CardDescription>
-                </div>
+                {instructor && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(`/instructores/${instructor.id}`)}
+                    className="h-8 px-2 text-xs"
+                  >
+                    Ver Perfil
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
               {instructor ? (
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Nombre</p>
-                    <p className="font-medium">
-                      {instructor.nombre} {instructor.apellido}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">DNI</p>
-                    <p className="font-medium">{instructor.dni}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Teléfono
-                    </p>
-                    <p className="font-medium">{instructor.telefono}</p>
-                  </div>
-                  {instructor.color && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Color
-                      </p>
-                      <div
-                        className="w-full h-8 rounded-md border-2 border-gray-300"
-                        style={{ backgroundColor: instructor.color }}
-                      />
-                    </div>
-                  )}
-                  <div className="pt-3 border-t">
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => navigate(`/instructores/${instructor.id}`)}
-                    >
-                      Ver Perfil
-                    </Button>
-                  </div>
-                </div>
+                <InfoField label="Nombre">
+                  {instructor.nombre} {instructor.apellido}
+                </InfoField>
               ) : (
-                <div className="text-center py-8">
-                  <GraduationCap className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Cargando información...
-                  </p>
+                <div className="text-center py-4 text-sm text-muted-foreground">
+                  Cargando...
                 </div>
               )}
             </CardContent>
@@ -462,147 +414,41 @@ export default function ClaseDetalle() {
 
           {/* Card del Caballo */}
           <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
-                  <Accessibility className="h-5 w-5 text-success" />
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
+                    <Accessibility className="h-5 w-5 text-success" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Caballo</CardTitle>
+                    <CardDescription>Asignado</CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-lg">Caballo</CardTitle>
-                  <CardDescription>Asignado</CardDescription>
-                </div>
+                {caballo && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(`/caballos/${caballo.id}`)}
+                    className="h-8 px-2 text-xs"
+                  >
+                    Ver Perfil
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
               {caballo ? (
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Nombre</p>
-                    <p className="font-medium text-lg">{caballo.nombre}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">Tipo</p>
-                    <StatusBadge
-                      status={caballo.tipo === "ESCUELA" ? "info" : "warning"}
-                    >
-                      {caballo.tipo === "ESCUELA" ? "Escuela" : "Privado"}
-                    </StatusBadge>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Disponibilidad
-                    </p>
-                    <StatusBadge
-                      status={caballo.disponible ? "success" : "error"}
-                    >
-                      {caballo.disponible ? "Disponible" : "No Disponible"}
-                    </StatusBadge>
-                  </div>
-                  <div className="pt-3 border-t">
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => navigate(`/caballos/${caballo.id}`)}
-                    >
-                      Ver Perfil
-                    </Button>
-                  </div>
-                </div>
+                <InfoField label="Nombre">{caballo.nombre}</InfoField>
               ) : (
-                <div className="text-center py-8">
-                  <Accessibility className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Cargando información...
-                  </p>
+                <div className="text-center py-4 text-sm text-muted-foreground">
+                  Cargando...
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Cambio de Estado */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
-                <CheckCircle2 className="h-5 w-5 text-warning" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Cambiar Estado</CardTitle>
-                <CardDescription>
-                  Actualiza el estado de la clase según su progreso
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
-              <div className="flex-1 w-full space-y-2">
-                <label className="text-sm font-medium">Nuevo Estado</label>
-                <Select
-                  value={nuevoEstado || clase.estado}
-                  onValueChange={(value) =>
-                    setNuevoEstado(value as Clase["estado"])
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PROGRAMADA">Programada</SelectItem>
-                    <SelectItem value="INICIADA">Iniciada</SelectItem>
-                    <SelectItem value="COMPLETADA">Completada</SelectItem>
-                    <SelectItem value="CANCELADA">Cancelada</SelectItem>
-                    <SelectItem value="ACA">ACA (Ausente con Aviso)</SelectItem>
-                    <SelectItem value="ASA">ASA (Ausente sin Aviso)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                onClick={handleCambiarEstado}
-                disabled={
-                  !nuevoEstado ||
-                  nuevoEstado === clase.estado ||
-                  cambiarEstadoMutation.isPending
-                }
-                className="w-full sm:w-auto"
-              >
-                {cambiarEstadoMutation.isPending
-                  ? "Actualizando..."
-                  : "Actualizar Estado"}
-              </Button>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2">
-              <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-3">
-                <p className="text-xs text-yellow-700 mb-1">PROGRAMADA</p>
-                <p className="text-xs text-yellow-600">Clase agendada</p>
-              </div>
-              <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
-                <p className="text-xs text-blue-700 mb-1">INICIADA</p>
-                <p className="text-xs text-blue-600">En progreso</p>
-              </div>
-              <div className="rounded-lg bg-green-50 border border-green-200 p-3">
-                <p className="text-xs text-green-700 mb-1">COMPLETADA</p>
-                <p className="text-xs text-green-600">
-                  Finalizada exitosamente
-                </p>
-              </div>
-              <div className="rounded-lg bg-red-50 border border-red-200 p-3">
-                <p className="text-xs text-red-700 mb-1">CANCELADA</p>
-                <p className="text-xs text-red-600">Clase cancelada</p>
-              </div>
-              <div className="rounded-lg bg-purple-50 border border-purple-200 p-3">
-                <p className="text-xs text-purple-700 mb-1">ACA</p>
-                <p className="text-xs text-purple-600">Ausente con aviso</p>
-              </div>
-              <div className="rounded-lg bg-orange-50 border border-orange-200 p-3">
-                <p className="text-xs text-orange-700 mb-1">ASA</p>
-                <p className="text-xs text-orange-600">Ausente sin aviso</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
         {/* Cambio de Estado */}
         <Card>
           <CardHeader>

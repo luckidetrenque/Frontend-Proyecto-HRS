@@ -1,12 +1,13 @@
-import { BaseIcon } from "./BaseIcon";
-
-export function AlumnoIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <BaseIcon viewBox="0 0 512 512" {...props}>
-      {
-        <path
-          data-name="alumno"
-          d="M127.92,2.34c3.4,0,5.1,0.6,6.9,2.5c1.4,1.3,2.5,2.9,2.5,3.5c0,0.5,1.2,1,2.6,1c4.7,0,14.7,3.1,22.4,6.8
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 24.0.2, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 260 296" style="enable-background:new 0 0 260 296;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:none;stroke:#000000;stroke-width:4;stroke-miterlimit:10;}
+	.st1{fill:none;stroke:#000000;stroke-width:2;stroke-miterlimit:10;}
+</style>
+<g id="alumno_1_">
+	<path class="st0" d="M127.92,2.34c3.4,0,5.1,0.6,6.9,2.5c1.4,1.3,2.5,2.9,2.5,3.5c0,0.5,1.2,1,2.6,1c4.7,0,14.7,3.1,22.4,6.8
 		c5.3,2.6,9.5,5.7,14.5,10.7c14,14,20.4,31.1,20.8,54.9l0.2,13l-3.3,2.2c-1.8,1.2-5,2.5-7.1,2.9l-3.9,0.6l-0.6,6.7
 		c-1.9,19.6-1.9,17.9,0.1,15.5c1-1.1,2.79-7.19,7.3-9.7C192,112,194.7,113,195,113c0.4,0,3,4,3,6c1.5,12-5.08,18.24-14.78,24.84
 		c-7.9,5.4-11.6,17.7-8.3,28.1c2.3,7.5,10.5,16.5,16.5,18.3c6.4,1.9,26.3,11.5,34.5,16.7c13.9,8.6,22.9,22,27.8,41.6
@@ -25,9 +26,14 @@ export function AlumnoIcon(props: React.SVGProps<SVGSVGElement>) {
 		c3.9-7.8,7.7-24.6,8.5-37.6l0.6-10.3l-8,0.7c-4.4,0.4-21.4,0.7-37.9,0.8C111.32,102.64,94.12,102.34,89.52,101.94z M151.32,180.34
 		c-13.9,7.7-35.3,7.9-46.7,0.5c-1.2-0.8-2.5-1.5-2.9-1.5c-1.5,0,0.6,12.2,2.9,17.4c1.4,3,6.1,10,10.5,15.5
 		c4.5,5.6,9.1,11.9,10.3,14.1c1.3,2.2,2.6,4,2.9,4s1.3-1.5,2.2-3.3c0.8-1.7,4.4-7,7.9-11.6c3.5-4.6,8.1-10.7,10.2-13.4
-		c3.7-5,6-11.1,7.1-19.5C156.42,177.74,156.22,177.64,151.32,180.34z"
-        />
-      }
-    </BaseIcon>
-  );
-}
+		c3.7-5,6-11.1,7.1-19.5C156.42,177.74,156.22,177.64,151.32,180.34z"/>
+</g>
+<g id="profesor">
+</g>
+<g id="caballo_1_">
+</g>
+<g id="clase_2_">
+</g>
+<g id="calendario_5_">
+</g>
+</svg>

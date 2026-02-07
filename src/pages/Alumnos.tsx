@@ -78,8 +78,23 @@ export default function AlumnosPage() {
 
   // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
   const [searchFilters, setSearchFilters] = useState<AlumnoSearchFilters>({});
-  const [isSearchActive, setIsSearchActive] = useState(false);
 
+  // 🔍 QUERY UNIFICADA - reemplaza las dos queries anteriores
+  const { data: alumnos = [], isLoading } = useQuery({
+    queryKey: ["alumnos", searchFilters],
+    queryFn: () => {
+      // Si hay filtros de búsqueda, usar endpoint de búsqueda
+      if (Object.keys(searchFilters).length > 0) {
+        return alumnosApi.buscar(searchFilters);
+      }
+      // Si no hay filtros, listar todos
+      return alumnosApi.listar();
+    },
+    enabled: true,
+  });
+
+  // Determinar si hay búsqueda activa (derivado, no estado)
+  const isSearchActive = Object.keys(searchFilters).length > 0;
   // Estados de filtros
   const [filters, setFilters] = useState({
     cantidadClases: "all",
@@ -92,20 +107,20 @@ export default function AlumnosPage() {
   const [pageSize, setPageSize] = useState(20);
 
   // 🔍 QUERY PARA BÚSQUEDA INTELIGENTE
-  const { data: searchResults, isLoading: isSearching } = useQuery({
-    queryKey: ["alumnos-search", searchFilters],
-    queryFn: () => {
-      // Si hay filtros de búsqueda, usar endpoint de búsqueda
-      if (Object.keys(searchFilters).length > 0) {
-        setIsSearchActive(true);
-        return alumnosApi.buscar(searchFilters);
-      }
-      // Si no hay filtros, listar todos
-      setIsSearchActive(false);
-      return alumnosApi.listar();
-    },
-    enabled: true,
-  });
+  // const { data: searchResults, isLoading: isSearching } = useQuery({
+  //   queryKey: ["alumnos-search", searchFilters],
+  //   queryFn: () => {
+  //     // Si hay filtros de búsqueda, usar endpoint de búsqueda
+  //     if (Object.keys(searchFilters).length > 0) {
+  //       setIsSearchActive(true);
+  //       return alumnosApi.buscar(searchFilters);
+  //     }
+  //     // Si no hay filtros, listar todos
+  //     setIsSearchActive(false);
+  //     return alumnosApi.listar();
+  //   },
+  //   enabled: true,
+  // });
 
   useEffect(() => {
     const handleGlobalSearchEvent = (e: CustomEvent) => {
@@ -140,11 +155,11 @@ export default function AlumnosPage() {
   }, [editingAlumno]);
 
   // Query original (puedes mantenerlo como fallback)
-  const { data: allAlumnos = [], isLoading: isLoadingAll } = useQuery({
-    queryKey: ["alumnos"],
-    queryFn: alumnosApi.listar,
-    enabled: !isSearchActive, // Solo cargar si no hay búsqueda activa
-  });
+  // const { data: allAlumnos = [], isLoading: isLoadingAll } = useQuery({
+  //   queryKey: ["alumnos"],
+  //   queryFn: alumnosApi.listar,
+  //   enabled: !isSearchActive, // Solo cargar si no hay búsqueda activa
+  // });
 
   const { data: caballos = [] } = useQuery({
     queryKey: ["caballos"],
@@ -152,8 +167,8 @@ export default function AlumnosPage() {
   });
 
   // Usar resultados de búsqueda o todos los alumnos
-  const alumnos = searchResults || allAlumnos;
-  const isLoading = isSearching || isLoadingAll;
+  // const alumnos = searchResults || allAlumnos;
+  // const isLoading = isSearching || isLoadingAll;
 
   // 🔍 HANDLER PARA BÚSQUEDA INTELIGENTE
   const handleSmartSearch = (filters: Record<string, unknown>) => {
@@ -174,9 +189,19 @@ export default function AlumnosPage() {
     setCurrentPage(1); // Reset a página 1 al buscar
   };
 
-  // Filtrar datos
+  // Filtrar datos - agregando validación de objetos válidos
   const filteredData = useMemo(() => {
-    return alumnos.filter((alumno: Alumno) => {
+    // Primero filtrar solo objetos válidos de Alumno
+    const validAlumnos = alumnos.filter((alumno: unknown): alumno is Alumno => {
+      return (
+        typeof alumno === "object" &&
+        alumno !== null &&
+        "id" in alumno &&
+        "nombre" in alumno
+      );
+    });
+
+    return validAlumnos.filter((alumno: Alumno) => {
       if (
         filters.cantidadClases !== "all" &&
         String(alumno.cantidadClases) !== filters.cantidadClases
@@ -316,10 +341,11 @@ export default function AlumnosPage() {
     { header: "Email", accessorKey: "email" as keyof Alumno },
     {
       header: "Inscripción",
-      cell: (row: Alumno) =>
-        `${row.fechaInscripcion.split("-")[2]}/${
-          row.fechaInscripcion.split("-")[1]
-        }/${row.fechaInscripcion.split("-")[0]}`,
+      cell: (row: Alumno) => {
+        if (!row?.fechaInscripcion) return "-";
+        const [year, month, day] = row.fechaInscripcion.split("-");
+        return `${day}/${month}/${year}`;
+      },
     },
     {
       header: "Clases/Mes",
@@ -447,7 +473,7 @@ export default function AlumnosPage() {
     if (isOpen && editingAlumno) {
       setPropietarioSeleccionado(editingAlumno.propietario);
       setCaballoIdSeleccionado(
-        editingAlumno.caballoId ? String(editingAlumno.caballoId) : "",
+        editingAlumno?.caballoPropio ? String(editingAlumno.caballoPropio) : "",
       );
     } else if (!isOpen) {
       setPropietarioSeleccionado(false);
@@ -665,49 +691,61 @@ export default function AlumnosPage() {
                           />
                         </Label>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Switch
-                          id="activo"
-                          name="activo"
-                          defaultChecked={editingAlumno?.activo ?? true}
-                        />
-                        <Label htmlFor="activo">
-                          Esta activo
-                          <HelpTooltip content={CommonTooltips.alumno.activo} />
-                        </Label>
-                      </div>
+                      {propietarioSeleccionado && (
+                        <div className="space-y-2">
+                          <Label htmlFor="caballoId">
+                            Caballo Propio
+                            <HelpTooltip
+                              content={CommonTooltips.alumno.caballoPropio}
+                            />
+                          </Label>
+                          <Select
+                            name="caballoId"
+                            value={caballoIdSeleccionado}
+                            onValueChange={setCaballoIdSeleccionado}
+                            required={propietarioSeleccionado}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar caballo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {caballos
+                                .filter((c: Caballo) => c.disponible)
+                                .map((caballo: Caballo) => (
+                                  <SelectItem
+                                    key={caballo.id}
+                                    value={String(caballo.id)}
+                                  >
+                                    {caballo.nombre} (
+                                    {caballo.tipo === "ESCUELA"
+                                      ? "Escuela"
+                                      : "Privado"}
+                                    )
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      {editingAlumno && (
+                        <div className="flex items-center gap-3 py-2">
+                          <Switch
+                            id="activo"
+                            name="activo"
+                            defaultChecked={editingAlumno.activo ?? true}
+                          />
+                          <Label
+                            htmlFor="activo"
+                            className="flex items-center gap-1"
+                          >
+                            Está activo
+                            <HelpTooltip
+                              content={CommonTooltips.alumno.activo}
+                            />
+                          </Label>
+                        </div>
+                      )}
                     </div>
-                    {propietarioSeleccionado && (
-                      <div className="space-y-2">
-                        <Label htmlFor="caballoId">Caballo Propio *</Label>
-                        <Select
-                          name="caballoId"
-                          value={caballoIdSeleccionado}
-                          onValueChange={setCaballoIdSeleccionado}
-                          required={propietarioSeleccionado}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar caballo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {caballos
-                              .filter((c: Caballo) => c.disponible)
-                              .map((caballo: Caballo) => (
-                                <SelectItem
-                                  key={caballo.id}
-                                  value={String(caballo.id)}
-                                >
-                                  {caballo.nombre} (
-                                  {caballo.tipo === "ESCUELA"
-                                    ? "Escuela"
-                                    : "Privado"}
-                                  )
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
                   </div>
                   <DialogFooter>
                     <Button

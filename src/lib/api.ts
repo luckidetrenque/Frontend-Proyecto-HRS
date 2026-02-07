@@ -14,7 +14,7 @@ export interface Alumno {
   cantidadClases: number;
   propietario: boolean;
   activo: boolean;
-  caballoId?: number | null;
+  caballoPropio?: number | Caballo;
 }
 
 export interface Instructor {
@@ -34,7 +34,7 @@ export interface Caballo {
   nombre: string;
   tipo: "ESCUELA" | "PRIVADO";
   disponible: boolean;
-  alumnoId?: number;
+  propietarios?: Alumno[];
 }
 
 export interface Clase {
@@ -85,6 +85,7 @@ export interface CaballoSearchFilters {
   nombre?: string;
   tipo?: "ESCUELA" | "PRIVADO";
   disponible?: boolean;
+  propietarios?: Alumno[];
 }
 
 export interface ClaseSearchFilters {
@@ -393,12 +394,6 @@ export const clasesApi = {
     const response = await apiFetch(`/clases/${id}/detalles`);
     return handleResponse<ClaseDetallada>(response);
   },
-  obtenerPorAlumnoConDetalles: async (
-    id: number,
-  ): Promise<Clase & { __successMessage?: string }> => {
-    const response = await apiFetch(`/clases/alumno/${id}/detalles`);
-    return handleResponse<Clase>(response);
-  },
   crear: async (
     clase: Omit<Clase, "id">,
   ): Promise<Clase & { __successMessage?: string }> => {
@@ -446,6 +441,39 @@ export const clasesApi = {
     }
     return data.clases || [];
   },
+
+  buscarPorAlumno: async (alumnoId: number): Promise<Clase[]> => {
+    // Realiza la petición usando el ID directamente en la URL
+    const response = await apiFetch(`/clases/alumno/${alumnoId}/detalles`);
+
+    // Maneja la respuesta (ajusta el tipo si ClaseResponseDto es distinto a Clase)
+    const data = await handleResponse<Clase[]>(response);
+
+    return data || [];
+  },
+
+  buscarPorInstructor: async (cinstructorId: number): Promise<Clase[]> => {
+    // Realiza la petición usando el ID directamente en la URL
+    const response = await apiFetch(
+      `/clases/cinstructor/${cinstructorId}/detalles`,
+    );
+
+    // Maneja la respuesta (ajusta el tipo si ClaseResponseDto es distinto a Clase)
+    const data = await handleResponse<Clase[]>(response);
+
+    return data || [];
+  },
+
+  buscarPorCaballo: async (caballoId: number): Promise<Clase[]> => {
+    // Realiza la petición usando el ID directamente en la URL
+    const response = await apiFetch(`/clases/caballo/${caballoId}/detalles`);
+
+    // Maneja la respuesta (ajusta el tipo si ClaseResponseDto es distinto a Clase)
+    const data = await handleResponse<Clase[]>(response);
+
+    return data || [];
+  },
+
   cambiarEstado: async (
     id: number,
     estado: Clase["estado"],

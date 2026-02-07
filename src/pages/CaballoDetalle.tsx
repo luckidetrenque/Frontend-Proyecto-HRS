@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Calendar,
   CheckCircle2,
+  ChevronRight,
   Clock,
   Edit,
   Info,
@@ -14,7 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
-import { useNavigate,useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Layout } from "@/components/Layout";
@@ -35,6 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { InfoField } from "@/components/ui/InfoField";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
@@ -47,7 +49,14 @@ import {
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Switch } from "@/components/ui/switch";
-import { alumnosApi, Caballo,caballosApi, Clase, clasesApi } from "@/lib/api";
+import {
+  Alumno,
+  alumnosApi,
+  Caballo,
+  caballosApi,
+  Clase,
+  clasesApi,
+} from "@/lib/api";
 
 export default function CaballoDetalle() {
   const { id } = useParams<{ id: string }>();
@@ -89,18 +98,33 @@ export default function CaballoDetalle() {
     enabled: !!caballoId,
   });
 
+  // TODO Query para obtener las clases del caballo (METODO BUSCAR EN CONTROLADOR DE CLASES)
+  // const { data: clasesCaballo = [], isLoading: loadingClases } = useQuery({
+  //   queryKey: ["clases-caballo", caballoId],
+  //   queryFn: () => clasesApi.buscar({ caballoId }),
+  //   enabled: !!caballoId,
+  // });
+
   // Query para obtener las clases del caballo
   const { data: clasesCaballo = [], isLoading: loadingClases } = useQuery({
     queryKey: ["clases-caballo", caballoId],
-    queryFn: () => clasesApi.buscar({ caballoId }),
+    // Pasa el ID directamente, no como objeto
+    queryFn: () => clasesApi.buscarPorCaballo(caballoId!),
     enabled: !!caballoId,
   });
 
   // Query para obtener el alumno propietario (si es privado)
   const { data: alumnoPropietario, isLoading: loadingAlumno } = useQuery({
-    queryKey: ["alumno-propietario", caballo?.alumnoId],
-    queryFn: () => alumnosApi.obtener(caballo!.alumnoId!),
-    enabled: !!caballo?.alumnoId && caballo.tipo === "PRIVADO",
+    queryKey: ["alumno-propietario", caballo?.propietarios],
+    queryFn: () => {
+      const primerPropietario = caballo!.propietarios![0];
+      const propietarioId =
+        typeof primerPropietario === "number"
+          ? primerPropietario
+          : primerPropietario.id;
+      return alumnosApi.obtener(propietarioId);
+    },
+    enabled: !!caballo?.propietarios && caballo.tipo === "PRIVADO",
   });
 
   // Calcular estadísticas
@@ -110,6 +134,8 @@ export default function CaballoDetalle() {
     programadas: clasesCaballo.filter((c) => c.estado === "PROGRAMADA").length,
     iniciada: clasesCaballo.filter((c) => c.estado === "INICIADA").length,
     canceladas: clasesCaballo.filter((c) => c.estado === "CANCELADA").length,
+    aca: clasesCaballo.filter((c) => c.estado === "ACA").length,
+    asa: clasesCaballo.filter((c) => c.estado === "ASA").length,
   };
 
   const porcentajeCompletadas =
@@ -235,24 +261,24 @@ export default function CaballoDetalle() {
                 <p className="font-medium text-2xl">{caballo.nombre}</p>
               </div>
 
-              <div className="pt-4 border-t">
-                <p className="text-sm text-muted-foreground mb-2">Tipo</p>
-                <StatusBadge
-                  status={caballo.tipo === "ESCUELA" ? "info" : "warning"}
-                >
-                  {caballo.tipo === "ESCUELA"
-                    ? "Caballo de la Escuela"
-                    : "Caballo Privado"}
-                </StatusBadge>
-              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <InfoField label="Tipo de Caballo">
+                  <StatusBadge
+                    status={caballo.tipo === "ESCUELA" ? "info" : "warning"}
+                  >
+                    {caballo.tipo === "ESCUELA"
+                      ? "Caballo de la Escuela"
+                      : "Caballo Privado"}
+                  </StatusBadge>
+                </InfoField>
 
-              <div className="pt-4 border-t">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Disponibilidad
-                </p>
-                <StatusBadge status={caballo.disponible ? "success" : "error"}>
-                  {caballo.disponible ? "Disponible" : "No Disponible"}
-                </StatusBadge>
+                <InfoField label="Disponibilidad">
+                  <StatusBadge
+                    status={caballo.disponible ? "success" : "error"}
+                  >
+                    {caballo.disponible ? "Disponible" : "No disponible"}
+                  </StatusBadge>
+                </InfoField>
               </div>
 
               {caballo.tipo === "ESCUELA" && (
@@ -284,10 +310,10 @@ export default function CaballoDetalle() {
                   <User className="h-5 w-5 text-accent" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Propietario</CardTitle>
+                  <CardTitle className="text-lg">Propietarios</CardTitle>
                   <CardDescription>
                     {caballo.tipo === "PRIVADO"
-                      ? "Información del dueño"
+                      ? "Detalle de los dueños"
                       : "Caballo de la escuela"}
                   </CardDescription>
                 </div>
@@ -299,49 +325,59 @@ export default function CaballoDetalle() {
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   </div>
-                ) : alumnoPropietario ? (
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Nombre Completo
-                      </p>
-                      <p className="font-medium text-lg">
-                        {alumnoPropietario.nombre} {alumnoPropietario.apellido}
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">
-                          DNI
-                        </p>
-                        <p className="font-medium">{alumnoPropietario.dni}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">
-                          Teléfono
-                        </p>
-                        <p className="font-medium">
-                          {alumnoPropietario.telefono}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="pt-4 border-t">
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={() =>
-                          navigate(`/alumnos/${alumnoPropietario.id}`)
-                        }
-                      >
-                        Ver Perfil del Alumno
-                      </Button>
-                    </div>
+                ) : caballo.propietarios && caballo.propietarios.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <tbody className="divide-y">
+                        // DESPUÉS (CORRECTO - filtra solo objetos completos):
+                        {caballo.propietarios
+                          .filter(
+                            (p): p is Alumno =>
+                              typeof p === "object" && p !== null,
+                          )
+                          .map((p) => (
+                            <tr
+                              key={p.id}
+                              className="hover:bg-muted/30 transition-colors"
+                            >
+                              <td className="p-3">
+                                <InfoField label="Nombre Completo">
+                                  {p.nombre} {p.apellido}
+                                </InfoField>
+                              </td>
+                              <td className="p-3">
+                                <InfoField label="DNI">{p.dni}</InfoField>
+                              </td>
+                              <td className="p-3">
+                                <InfoField label="Email">
+                                  {p.email || "-"}
+                                </InfoField>
+                              </td>
+                              <td className="p-3">
+                                <InfoField label="Teléfono">
+                                  {p.telefono}
+                                </InfoField>
+                              </td>
+                              <td className="p-3 text-right align-bottom">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => navigate(`/alumnos/${p.id}`)}
+                                >
+                                  <ChevronRight className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
                   <div className="text-center py-8">
                     <User className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                     <p className="text-sm text-muted-foreground">
-                      No se encontró información del propietario
+                      No se encontró información
                     </p>
                   </div>
                 )
@@ -350,10 +386,7 @@ export default function CaballoDetalle() {
                   <div className="rounded-lg bg-muted/50 p-6">
                     <Accessibility className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                     <p className="font-medium mb-1">Caballo de la Escuela</p>
-                    <p className="text-sm text-muted-foreground">
-                      Este caballo pertenece a la escuela y no tiene un
-                      propietario específico
-                    </p>
+                    <p className="text-sm text-muted-foreground">Uso general</p>
                   </div>
                 </div>
               )}

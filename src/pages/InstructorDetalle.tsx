@@ -15,8 +15,8 @@ import {
   User,
   XCircle,
 } from "lucide-react";
-import { useEffect,useState } from "react";
-import { useNavigate,useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Layout } from "@/components/Layout";
@@ -37,12 +37,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { InfoField } from "@/components/ui/InfoField";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Switch } from "@/components/ui/switch";
-import { Clase, clasesApi, Instructor,instructoresApi } from "@/lib/api";
+import { Clase, clasesApi, Instructor, instructoresApi } from "@/lib/api";
 
 const PRESET_COLORS = [
   "#3B82F6",
@@ -281,85 +282,68 @@ export default function InstructorDetalle() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Primera fila: Nombre y DNI */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Nombre Completo
-                    </p>
-                    <p className="font-medium">
-                      {instructor.nombre} {instructor.apellido}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">DNI</p>
-                    <p className="font-medium">{instructor.dni}</p>
-                  </div>
+                  <InfoField label="Nombre Completo">
+                    {instructor.nombre} {instructor.apellido}
+                  </InfoField>
+                  <InfoField label="DNI">{instructor.dni}</InfoField>
                 </div>
 
+                {/* Segunda fila: Fecha y Edad */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Fecha de Nacimiento
-                    </p>
-                    <p className="font-medium">
-                      {new Date(instructor.fechaNacimiento).toLocaleDateString(
-                        "es-AR",
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Edad</p>
-                    <p className="font-medium">
-                      {new Date().getFullYear() -
-                        new Date(instructor.fechaNacimiento).getFullYear()}{" "}
-                      años
-                    </p>
-                  </div>
+                  <InfoField label="Fecha de Nacimiento">
+                    {new Date(instructor.fechaNacimiento).toLocaleDateString(
+                      "es-AR",
+                    )}
+                  </InfoField>
+                  <InfoField label="Edad">
+                    {new Date().getFullYear() -
+                      new Date(instructor.fechaNacimiento).getFullYear()}{" "}
+                    años
+                  </InfoField>
                 </div>
 
-                <div className="pt-4 border-t">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">Teléfono</p>
-                  </div>
-                  <p className="font-medium">{instructor.telefono}</p>
-                </div>
-
-                <div className="pt-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">Email</p>
-                  </div>
-                  <p className="font-medium">
-                    {instructor.email || "No especificado"}
-                  </p>
-                </div>
-
-                <div className="pt-4 border-t">
-                  <p className="text-sm text-muted-foreground mb-2">Estado</p>
-                  <StatusBadge
-                    status={instructor.activo ? "success" : "default"}
-                  >
-                    {instructor.activo ? "Activo" : "Inactivo"}
-                  </StatusBadge>
-                </div>
-
-                {instructor.color && (
-                  <div className="pt-4 border-t">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Color Asignado
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-lg border-2 border-gray-300"
-                        style={{ backgroundColor: instructor.color }}
-                      />
-                      <span className="font-mono text-sm text-muted-foreground">
-                        {instructor.color}
-                      </span>
+                {/* Tercera fila: Teléfono y Email */}
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                  <InfoField label="Teléfono">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{instructor.telefono}</span>
                     </div>
-                  </div>
-                )}
+                  </InfoField>
+                  <InfoField label="Email">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span>{instructor.email || "No especificado"}</span>
+                    </div>
+                  </InfoField>
+                </div>
+
+                {/* Cuarta fila: Estado y Color */}
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                  <InfoField label="Estado">
+                    <StatusBadge
+                      status={instructor.activo ? "success" : "default"}
+                    >
+                      {instructor.activo ? "Activo" : "Inactivo"}
+                    </StatusBadge>
+                  </InfoField>
+
+                  {instructor.color && (
+                    <InfoField label="Color Asignado">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-8 h-8 rounded-md border border-gray-300"
+                          style={{ backgroundColor: instructor.color }}
+                        />
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {instructor.color}
+                        </span>
+                      </div>
+                    </InfoField>
+                  )}
+                </div>
               </CardContent>
             </Card>
 

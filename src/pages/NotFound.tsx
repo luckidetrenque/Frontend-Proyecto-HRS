@@ -1,7 +1,10 @@
 import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
-const NotFound = () => {
+import { Layout } from "@/components/Layout";
+import { PageHeader } from "@/components/ui/page-header";
+
+export default function NotFound() {
   const location = useLocation();
 
   useEffect(() => {
@@ -12,18 +15,21 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">404</h1>
-        <p className="mb-4 text-xl text-muted-foreground">
-          Oops! Page not found
-        </p>
-        <a href="/" className="text-primary underline hover:text-primary/90">
-          Return to Home
-        </a>
-      </div>
-    </div>
+    <Layout>
+      <PageHeader
+        title="404"
+        description="Oops! Página no encontreada"
+        action={
+          <div className="flex items-center gap-2">
+            <a
+              href="/"
+              className="text-primary underline hover:text-primary/90"
+            >
+              Volver al inicio
+            </a>
+          </div>
+        }
+      />
+    </Layout>
   );
-};
-
-export default NotFound;
+}

@@ -342,9 +342,18 @@ export function useCalendar() {
 
     // ✅ NUEVO: Usar caballo propio si existe y no se especificó otro
     const caballoIdForm = formData.get("caballoId");
-    const caballoId = caballoIdForm
-      ? Number(caballoIdForm)
-      : alumno?.caballoId || null;
+    let caballoId: number;
+
+    if (caballoIdForm) {
+      caballoId = Number(caballoIdForm);
+    } else if (
+      alumno?.caballoPropio &&
+      typeof alumno.caballoPropio === "object"
+    ) {
+      caballoId = alumno.caballoPropio.id;
+    } else {
+      caballoId = 0;
+    }
 
     if (!caballoId) {
       toast.error("Debe seleccionar un caballo");

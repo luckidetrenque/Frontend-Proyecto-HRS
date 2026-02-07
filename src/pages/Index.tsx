@@ -120,14 +120,10 @@ const Index = () => {
           </div>
           <div>
             <h2 className="font-display text-xl font-semibold text-foreground">
-              API REST Spring Boot
+              Escuela de Equitación
             </h2>
             <p className="mt-1 text-muted-foreground">
-              Este frontend está conectado a una API REST desarrollada en Java
-              Spring Boot. Asegúrate de que el servidor esté ejecutándose en{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">
-                http://localhost:5173
-              </code>
+              2026 - Todos los derechos reservados.
             </p>
           </div>
         </div>

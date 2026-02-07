@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Calendar,
   CheckCircle2,
+  ChevronRight,
   Clock,
   Edit,
   Mail,
@@ -15,7 +16,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
-import { useNavigate,useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Layout } from "@/components/Layout";
@@ -36,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { InfoField } from "@/components/ui/InfoField";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
@@ -110,25 +112,25 @@ export default function AlumnoDetalle() {
   });
 
   // Query para obtener las clases del alumno
-  const { data: clasesAlumnoData = [], isLoading: loadingClases } = useQuery({
+  const { data: clasesAlumnoData = [], isLoading: loadingData } = useQuery({
     queryKey: ["clases-alumno", alumnoId],
-    queryFn: () => clasesApi.obtenerPorAlumnoConDetalles(alumnoId),
+    queryFn: () => clasesApi.buscarPorAlumno(alumnoId),
     enabled: !!alumnoId,
   });
 
   const clasesAlumno = Array.isArray(clasesAlumnoData) ? clasesAlumnoData : [];
 
   // Query para obtener todos los caballos (solo si es propietario)
-  const { data: todosCaballos = [], isLoading: loadingCaballo } = useQuery({
-    queryKey: ["caballos"],
-    queryFn: caballosApi.listar,
-    enabled: !!alumno?.propietario,
-  });
+  // const { data: todosCaballos = [], isLoading: loadingData } = useQuery({
+  //   queryKey: ["caballos"],
+  //   queryFn: caballosApi.listar,
+  //   enabled: !!alumno?.propietario,
+  // });
 
   // Filtrar el caballo privado de este alumno
-  const caballoPrivado = todosCaballos.find(
-    (c) => c.tipo === "PRIVADO" && c.alumnoId === alumnoId,
-  );
+  // const caballoPrivado = todosCaballos.find(
+  //   (c) => c.tipo === "PRIVADO" && c.alumnoId === alumnoId,
+  // );
 
   // Calcular estadísticas
   const estadisticas = {
@@ -227,6 +229,15 @@ export default function AlumnoDetalle() {
     );
   };
 
+  const handleContactWEmail = () => {
+    window.open(
+      encodeURI(
+        `mailto:${alumno.email}?subject=${encodeURIComponent(`Contacto para ${alumno.nombre} ${alumno.apellido}`)}`,
+      ),
+      "_blank",
+    );
+  };
+
   return (
     <Layout>
       <div className="flex items-center gap-3 mb-6">
@@ -245,6 +256,10 @@ export default function AlumnoDetalle() {
               <Button variant="outline" onClick={handleContactWhatsApp}>
                 <MessageCircle className="mr-2 h-4 w-4" />
                 Contactar
+              </Button>
+              <Button variant="outline" onClick={handleContactWEmail}>
+                <Mail className="mr-2 h-4 w-4" />
+                Contactar por Email
               </Button>
               <Button onClick={() => setIsEditOpen(true)}>
                 <Edit className="mr-2 h-4 w-4" />
@@ -273,92 +288,51 @@ export default function AlumnoDetalle() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+
+            <CardContent className="space-y-6">
+              {" "}
+              {/* Aumento el espacio entre secciones principales */}
+              {/* Sección 1: Datos Principales (Grid 2x2) */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Nombre Completo
-                  </p>
-                  <p className="font-medium">
-                    {alumno.nombre} {alumno.apellido}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">DNI</p>
-                  <p className="font-medium">{alumno.dni}</p>
-                </div>
+                <InfoField label="Nombre Completo">
+                  {alumno.nombre} {alumno.apellido}
+                </InfoField>
+                <InfoField label="DNI">{alumno.dni}</InfoField>
+                <InfoField label="Fecha de Nacimiento">
+                  {new Date(alumno.fechaNacimiento).toLocaleDateString("es-AR")}
+                </InfoField>
+                <InfoField label="Edad">
+                  {new Date().getFullYear() -
+                    new Date(alumno.fechaNacimiento).getFullYear()}{" "}
+                  años
+                </InfoField>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Fecha de Nacimiento
-                  </p>
-                  <p className="font-medium">
-                    {new Date(alumno.fechaNacimiento).toLocaleDateString(
-                      "es-AR",
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Edad</p>
-                  <p className="font-medium">
-                    {new Date().getFullYear() -
-                      new Date(alumno.fechaNacimiento).getFullYear()}{" "}
-                    años
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <div className="flex items-center gap-2 mb-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Teléfono</p>
-                </div>
-                <p className="font-medium">{alumno.telefono}</p>
-              </div>
-
-              <div className="pt-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Email</p>
-                </div>
-                <p className="font-medium">
+              {/* Sección 2: Contacto y Email (Grid 2x2) */}
+              <div className="pt-4 border-t grid grid-cols-2 gap-4">
+                <InfoField label="Teléfono">{alumno.telefono}</InfoField>
+                <InfoField label="Email">
                   {alumno.email || "No especificado"}
-                </p>
+                </InfoField>
               </div>
-
-              <div className="pt-4 border-t">
-                <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    Fecha de Inscripción
-                  </p>
-                </div>
-                <p className="font-medium">
+              {/* Sección 3: Clases e Inscripción (Grid 2x2) */}
+              <div className="pt-4 border-t grid grid-cols-2 gap-4">
+                <InfoField label="Fecha de Inscripción">
                   {new Date(alumno.fechaInscripcion).toLocaleDateString(
                     "es-AR",
                   )}
-                </p>
-              </div>
-
-              <div className="pt-2 grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Clases por Mes
-                  </p>
-                  <p className="font-medium text-lg">{alumno.cantidadClases}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Estado</p>
+                </InfoField>
+                <InfoField label="Clases por Mes">
+                  <span className="text-lg">{alumno.cantidadClases}</span>
+                </InfoField>
+                {/* Muevo el estado aquí para que encaje en la cuadrícula */}
+                <InfoField label="Estado">
                   <StatusBadge status={alumno.activo ? "success" : "default"}>
                     {alumno.activo ? "Activo" : "Inactivo"}
                   </StatusBadge>
-                </div>
+                </InfoField>
               </div>
             </CardContent>
           </Card>
-
           {/* Card de Caballo Privado */}
           <Card>
             <CardHeader>
@@ -377,47 +351,7 @@ export default function AlumnoDetalle() {
               </div>
             </CardHeader>
             <CardContent>
-              {alumno.propietario ? (
-                loadingCaballo ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  </div>
-                ) : caballoPrivado ? (
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Nombre del Caballo
-                      </p>
-                      <p className="font-medium text-lg">
-                        {caballoPrivado.nombre}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Tipo</p>
-                      <StatusBadge status="success">Privado</StatusBadge>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Disponibilidad
-                      </p>
-                      <StatusBadge
-                        status={caballoPrivado.disponible ? "success" : "error"}
-                      >
-                        {caballoPrivado.disponible
-                          ? "Disponible"
-                          : "No Disponible"}
-                      </StatusBadge>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Accessibility className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">
-                      No se encontró caballo privado registrado
-                    </p>
-                  </div>
-                )
-              ) : (
+              {!alumno.propietario ? (
                 <div className="text-center py-8">
                   <div className="rounded-lg bg-muted/50 p-6">
                     <Accessibility className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
@@ -427,6 +361,59 @@ export default function AlumnoDetalle() {
                       clases
                     </p>
                   </div>
+                </div>
+              ) : loadingData ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : alumno.caballoPropio ? (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Nombre del Caballo
+                    </p>
+                    <p className="font-medium text-lg">
+                      {alumno.caballoPropio.nombre || "No asignado"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Tipo</p>
+                    <StatusBadge status="success">Privado</StatusBadge>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Disponibilidad
+                    </p>
+                    <StatusBadge
+                      status={
+                        alumno.caballoPropio.disponible ? "success" : "error"
+                      }
+                    >
+                      {alumno.caballoPropio.disponible
+                        ? "Disponible"
+                        : "No Disponible"}
+                    </StatusBadge>
+                  </div>
+                  <div className="p-2 text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() =>
+                        navigate(`/caballos/${alumno.caballoPropio?.id}`)
+                      }
+                    >
+                      {/* Se agrega un icono visible al botón */}
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Accessibility className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">
+                    No se encontró caballo privado registrado
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -514,7 +501,7 @@ export default function AlumnoDetalle() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loadingClases ? (
+            {loadingData ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>

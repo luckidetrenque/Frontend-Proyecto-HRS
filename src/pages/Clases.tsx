@@ -77,7 +77,6 @@ export default function ClasesPage() {
 
   // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
   const [searchFilters, setSearchFilters] = useState<ClaseSearchFilters>({});
-  const [isSearchActive, setIsSearchActive] = useState(false);
 
   // 🔍 HANDLER PARA BÚSQUEDA INTELIGENTE
   const handleSmartSearch = (filters: Record<string, unknown>) => {
@@ -144,33 +143,37 @@ export default function ClasesPage() {
     useState<string>("");
   const [alumnoIdSeleccionado, setAlumnoIdSeleccionado] = useState<string>("");
 
-  // 🔍 QUERY PARA BÚSQUEDA INTELIGENTE
-  const { data: searchResults, isLoading: isSearching } = useQuery({
-    queryKey: ["clases-search", searchFilters],
+  // 🔍 QUERY UNIFICADA
+  const { data: clases = [], isLoading } = useQuery({
+    queryKey: ["clases-page", searchFilters],
     queryFn: () => {
       if (Object.keys(searchFilters).length > 0) {
-        setIsSearchActive(true);
         return clasesApi.buscar(searchFilters);
       }
-      setIsSearchActive(false);
       return clasesApi.listarDetalladas();
     },
     enabled: true,
   });
 
-  const { data: allClases = [], isLoading: isLoadingAll } = useQuery({
-    queryKey: ["clases"],
-    queryFn: clasesApi.listarDetalladas,
-    enabled: !isSearchActive,
-  });
-
-  const clases = searchResults || allClases;
-  const isLoading = isSearching || isLoadingAll;
+  // Determinar si hay búsqueda activa
+  const isSearchActive = Object.keys(searchFilters).length > 0;
 
   const { data: alumnos = [] } = useQuery({
     queryKey: ["alumnos"],
     queryFn: alumnosApi.listar,
   });
+
+  // 🔧 Filtrar solo objetos válidos de Alumno
+  const alumnosValidos = useMemo(() => {
+    return alumnos.filter((alumno: unknown): alumno is Alumno => {
+      return (
+        typeof alumno === "object" &&
+        alumno !== null &&
+        "id" in alumno &&
+        "nombre" in alumno
+      );
+    });
+  }, [alumnos]);
 
   const { data: instructores = [] } = useQuery({
     queryKey: ["instructores"],
@@ -268,7 +271,7 @@ export default function ClasesPage() {
       name: "alumnoId",
       label: "Alumno",
       type: "select" as const,
-      options: alumnos.map((a: Alumno) => ({
+      options: alumnosValidos.map((a: Alumno) => ({
         label: `${a.nombre} ${a.apellido}`,
         value: String(a.id),
       })),
@@ -417,7 +420,7 @@ export default function ClasesPage() {
     const formData = new FormData(e.currentTarget);
 
     const alumnoId = Number(formData.get("alumnoId"));
-    const alumno = alumnos.find((a: Alumno) => a.id === alumnoId);
+    const alumno = alumnosValidos.find((a: Alumno) => a.id === alumnoId);
 
     // ✅ PRESERVAR: Validación de especialidad duplicada
     const especialidad = formData.get("especialidad") as
@@ -470,7 +473,11 @@ export default function ClasesPage() {
     const caballoIdForm = formData.get("caballoId");
     const caballoId = caballoIdForm
       ? Number(caballoIdForm)
-      : alumno?.caballoId || null;
+      : alumno?.caballoPropio
+        ? typeof alumno.caballoPropio === "number"
+          ? alumno.caballoPropio
+          : alumno.caballoPropio.id
+        : null;
 
     if (!caballoId) {
       toast.error("Debe seleccionar un caballo");
@@ -493,7 +500,7 @@ export default function ClasesPage() {
         | "ACA"
         | "ASA",
       observaciones: "",
-      alumnoId: alumnoId,
+      alumnoId: alumno.id,
       instructorId: Number(formData.get("instructorId")),
       caballoId: caballoId,
       diaHoraCompleto: "",
@@ -508,7 +515,7 @@ export default function ClasesPage() {
   };
 
   const getAlumnoNombre = (id: number) => {
-    const alumno = alumnos.find((a: Alumno) => a.id === id);
+    const alumno = alumnosValidos.find((a: Alumno) => a.id === id);
     return alumno ? `${alumno.nombre} ${alumno.apellido}` : "-";
   };
 
@@ -751,16 +758,15 @@ export default function ClasesPage() {
                               : "alumnoId"
                           }
                           required={especialidadSeleccionada !== "MONTA"}
-                          value={alumnoIdSeleccionado}
+                          value={alumnoIdSeleccionado || ""}
                           onValueChange={setAlumnoIdSeleccionado}
-                          defaultValue={String(editingClase?.alumnoId || "")}
                           disabled={especialidadSeleccionada === "MONTA"}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccionar alumno" />
                           </SelectTrigger>
                           <SelectContent>
-                            {alumnos.map((alumno: Alumno) => (
+                            {alumnosValidos.map((alumno: Alumno) => (
                               <SelectItem
                                 key={alumno.id}
                                 value={String(alumno.id)}
@@ -776,13 +782,17 @@ export default function ClasesPage() {
                           Caballo
                           {/* Mostrar caballo predeterminado */}
                           {(() => {
-                            const alumno = alumnos.find(
+                            const alumno = alumnosValidos.find(
                               (a: Alumno) =>
                                 a.id === Number(alumnoIdSeleccionado),
                             );
-                            if (alumno?.caballoId) {
+                            if (alumno?.caballoPropio) {
                               const caballo = caballos.find(
-                                (c: Caballo) => c.id === alumno.caballoId,
+                                (c: Caballo) =>
+                                  c.id ===
+                                  (typeof alumno.caballoPropio === "number"
+                                    ? alumno.caballoPropio
+                                    : alumno.caballoPropio.id),
                               );
                               return caballo ? (
                                 <span className="ml-2 text-xs font-medium text-success">
@@ -799,12 +809,16 @@ export default function ClasesPage() {
                             editingClase
                               ? String(editingClase.caballoId)
                               : (() => {
-                                  const alumno = alumnos.find(
+                                  const alumno = alumnosValidos.find(
                                     (a: Alumno) =>
                                       a.id === Number(alumnoIdSeleccionado),
                                   );
-                                  return alumno?.caballoId
-                                    ? String(alumno.caballoId)
+                                  return alumno?.caballoPropio
+                                    ? String(
+                                        typeof alumno.caballoPropio === "number"
+                                          ? alumno.caballoPropio
+                                          : alumno.caballoPropio.id,
+                                      )
                                     : "";
                                 })()
                           }
@@ -939,6 +953,14 @@ export default function ClasesPage() {
                             name="observaciones"
                             defaultValue={editingClase?.observaciones || ""}
                             placeholder="Ej. Lluvia, Feriado, etc"
+                          />
+                          <input
+                            type="checkbox"
+                            id="esPrueba"
+                            name="esPrueba"
+                            className="hidden"
+                            value="on"
+                            defaultChecked={editingClase?.esPrueba || false}
                           />
                         </div>
                       )}

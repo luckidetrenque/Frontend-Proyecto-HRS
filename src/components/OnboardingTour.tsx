@@ -1,146 +1,137 @@
 /**
  * OnboardingTour.tsx
  * Tour guiado para nuevos usuarios del sistema
- *
+ * 
  * INSTRUCCIONES:
  * 1. Importar en tu página principal o Layout
  * 2. El tour se mostrará automáticamente la primera vez
  * 3. Se guarda en localStorage que el usuario ya lo vio
  */
 
-import {
-  ArrowLeft,
-  ArrowRight,
-  BarChart,
-  Calendar,
-  CalendarDays,
-  Landmark,
-  Sparkles,
-  UserCheck,
-  Users,
-  X,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import {
+  Users,
+  UserCheck,
+  Landmark,
+  CalendarDays,
+  Calendar,
+  BarChart,
+  ArrowRight,
+  ArrowLeft,
+  X,
+  Sparkles,
+} from 'lucide-react';
 
 const TOUR_STEPS = [
   {
-    title: "¡Bienvenido! 🎉",
-    description:
-      "Gracias por usar nuestro sistema de gestión de escuela de equitación. Este tour rápido te mostrará las funciones principales.",
+    title: '¡Bienvenido! 🎉',
+    description: 'Gracias por usar nuestro sistema de gestión de escuela de equitación. Este tour rápido te mostrará las funciones principales.',
     icon: Sparkles,
-    color: "text-amber-500",
+    color: 'text-amber-500',
     image: null,
   },
   {
-    title: "Gestión de Alumnos 👥",
-    description:
-      "Registra alumnos, gestiona sus datos de contacto, planes de clases y disponibilidad. Contacta directamente por WhatsApp o email.",
+    title: 'Gestión de Alumnos 👥',
+    description: 'Registra alumnos, gestiona sus datos de contacto, planes de clases y disponibilidad. Contacta directamente por WhatsApp o email.',
     icon: Users,
-    color: "text-blue-500",
-    path: "/alumnos",
+    color: 'text-blue-500',
+    path: '/alumnos',
     features: [
-      "Agregar y editar alumnos",
-      "Contacto directo (WhatsApp/Email)",
-      "Gestión de planes de clases",
-      "Filtros y búsqueda avanzada",
+      'Agregar y editar alumnos',
+      'Contacto directo (WhatsApp/Email)',
+      'Gestión de planes de clases',
+      'Filtros y búsqueda avanzada',
     ],
   },
   {
-    title: "Equipo de Instructores 👨‍🏫",
-    description:
-      "Administra tu equipo de instructores. Asigna colores únicos para identificarlos fácilmente en el calendario.",
+    title: 'Equipo de Instructores 👨‍🏫',
+    description: 'Administra tu equipo de instructores. Asigna colores únicos para identificarlos fácilmente en el calendario.',
     icon: UserCheck,
-    color: "text-green-500",
-    path: "/instructores",
+    color: 'text-green-500',
+    path: '/instructores',
     features: [
-      "Registro de instructores",
-      "Sistema de colores para calendario",
-      "Control de disponibilidad",
+      'Registro de instructores',
+      'Sistema de colores para calendario',
+      'Control de disponibilidad',
     ],
   },
   {
-    title: "Caballos 🐴",
-    description:
-      "Gestiona los caballos de la escuela y privados. Controla su disponibilidad y tipo.",
+    title: 'Caballos 🐴',
+    description: 'Gestiona los caballos de la escuela y privados. Controla su disponibilidad y tipo.',
     icon: Landmark,
-    color: "text-orange-500",
-    path: "/caballos",
+    color: 'text-orange-500',
+    path: '/caballos',
     features: [
-      "Caballos de escuela y privados",
-      "Control de disponibilidad",
-      "Asignación a clases",
+      'Caballos de escuela y privados',
+      'Control de disponibilidad',
+      'Asignación a clases',
     ],
   },
   {
-    title: "Programación de Clases 📅",
-    description:
-      "Crea y gestiona clases con diferentes especialidades y estados. Soporte para clases de prueba.",
+    title: 'Programación de Clases 📅',
+    description: 'Crea y gestiona clases con diferentes especialidades y estados. Soporte para clases de prueba.',
     icon: CalendarDays,
-    color: "text-purple-500",
-    path: "/clases",
+    color: 'text-purple-500',
+    path: '/clases',
     features: [
-      "Múltiples especialidades",
-      "Estados de clase (PROGRAMADA, COMPLETADA, etc.)",
-      "Clases de prueba",
-      "Filtros avanzados",
+      'Múltiples especialidades',
+      'Estados de clase (PROGRAMADA, COMPLETADA, etc.)',
+      'Clases de prueba',
+      'Filtros avanzados',
     ],
   },
   {
-    title: "Calendario Visual 🗓️",
-    description:
-      "Vista interactiva de todas las clases. Cambia entre mes, semana y día. Herramientas para copiar/eliminar semanas completas.",
+    title: 'Calendario Visual 🗓️',
+    description: 'Vista interactiva de todas las clases. Cambia entre mes, semana y día. Herramientas para copiar/eliminar semanas completas.',
     icon: Calendar,
-    color: "text-cyan-500",
-    path: "/calendario",
+    color: 'text-cyan-500',
+    path: '/calendario',
     features: [
-      "Vistas: Mes, Semana, Día",
-      "Crear clases con un clic",
-      "Copiar/Eliminar semanas",
-      "Exportar a Excel",
+      'Vistas: Mes, Semana, Día',
+      'Crear clases con un clic',
+      'Copiar/Eliminar semanas',
+      'Exportar a Excel',
     ],
   },
   {
-    title: "Reportes y Estadísticas 📊",
-    description:
-      "Análisis completo de tu operación. Métricas de alumnos, clases, instructores y caballos. Exporta todo a Excel.",
+    title: 'Reportes y Estadísticas 📊',
+    description: 'Análisis completo de tu operación. Métricas de alumnos, clases, instructores y caballos. Exporta todo a Excel.',
     icon: BarChart,
-    color: "text-pink-500",
-    path: "/reportes",
+    color: 'text-pink-500',
+    path: '/reportes',
     features: [
-      "KPIs en tiempo real",
-      "Reportes por período",
-      "Análisis de carga de trabajo",
-      "Exportación a Excel",
+      'KPIs en tiempo real',
+      'Reportes por período',
+      'Análisis de carga de trabajo',
+      'Exportación a Excel',
     ],
   },
   {
-    title: "¿Necesitas ayuda? 💡",
-    description:
-      "En cualquier momento, haz clic en el botón de ayuda (?) en la esquina inferior derecha. Cada página tiene guías específicas y consejos.",
+    title: '¿Necesitas ayuda? 💡',
+    description: 'En cualquier momento, haz clic en el botón de ayuda (?) en la esquina inferior derecha. Cada página tiene guías específicas y consejos.',
     icon: Sparkles,
-    color: "text-amber-500",
+    color: 'text-amber-500',
     features: [
-      "Guías paso a paso en cada página",
-      "Consejos contextuales",
-      "Búsqueda de ayuda",
-      "Tooltips en formularios",
+      'Guías paso a paso en cada página',
+      'Consejos contextuales',
+      'Búsqueda de ayuda',
+      'Tooltips en formularios',
     ],
   },
 ];
 
-const STORAGE_KEY = "escuela-equitacion-tour-completed";
+const STORAGE_KEY = 'escuela-equitacion-tour-completed';
 
 export function OnboardingTour() {
   const [isOpen, setIsOpen] = useState(false);
@@ -172,13 +163,13 @@ export function OnboardingTour() {
   };
 
   const handleComplete = () => {
-    localStorage.setItem(STORAGE_KEY, "true");
+    localStorage.setItem(STORAGE_KEY, 'true');
     setIsOpen(false);
     setCurrentStep(0);
   };
 
   const handleSkip = () => {
-    localStorage.setItem(STORAGE_KEY, "true");
+    localStorage.setItem(STORAGE_KEY, 'true');
     setIsOpen(false);
   };
 
@@ -237,9 +228,7 @@ export function OnboardingTour() {
 
           {step.features && (
             <div className="space-y-2">
-              <h4 className="text-sm font-semibold">
-                Características principales:
-              </h4>
+              <h4 className="text-sm font-semibold">Características principales:</h4>
               <ul className="space-y-1.5">
                 {step.features.map((feature, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-sm">
@@ -285,7 +274,7 @@ export function OnboardingTour() {
 
             <Button onClick={handleNext}>
               {currentStep === TOUR_STEPS.length - 1 ? (
-                "Finalizar"
+                'Finalizar'
               ) : (
                 <>
                   Siguiente
@@ -302,11 +291,11 @@ export function OnboardingTour() {
 
 /**
  * 🎯 INTEGRACIÓN:
- *
+ * 
  * 1. En tu Layout.tsx o página principal:
- *
+ * 
  * import { OnboardingTour } from '@/components/OnboardingTour';
- *
+ * 
  * export function Layout({ children }) {
  *   return (
  *     <div>
@@ -315,23 +304,23 @@ export function OnboardingTour() {
  *     </div>
  *   );
  * }
- *
+ * 
  * 2. Para forzar que el tour se muestre nuevamente (testing):
  *    - Abre la consola del navegador
  *    - Ejecuta: localStorage.removeItem('escuela-equitacion-tour-completed')
  *    - Recarga la página
- *
+ * 
  * 3. Para personalizar los pasos:
  *    - Edita el array TOUR_STEPS
  *    - Agrega o quita pasos según necesites
- *
+ * 
  * 4. Para cambiar el delay inicial:
  *    - En el useEffect, ajusta el valor en setTimeout (actualmente 1000ms)
  */
 
 /**
  * 💡 PERSONALIZACIÓN ADICIONAL:
- *
+ * 
  * Puedes agregar:
  * - Screenshots de cada sección
  * - Videos demostrativos
