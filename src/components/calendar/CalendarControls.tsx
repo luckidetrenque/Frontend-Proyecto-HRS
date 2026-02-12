@@ -9,7 +9,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-import { ViewMode } from "./calendar.styles";
+import { ViewMode } from "./clases.constants";
 
 interface CalendarControlsProps {
   currentDate: Date;

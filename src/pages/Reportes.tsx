@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { endOfMonth, format, parseISO,startOfMonth } from "date-fns";
+import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   Calendar,
@@ -11,7 +11,7 @@ import {
   UserCheck,
   Users,
 } from "lucide-react";
-import { useMemo,useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -221,358 +221,148 @@ export default function ReportesPage() {
     });
 
     return Object.entries(uso)
-      .map(([nombre, cantidad]) => ({
-        nombre,
-        cantidad,
-        tipo:
-          caballos.find((c: Caballo) => c.nombre === nombre)?.tipo || "ESCUELA",
-      }))
+      .map(([nombre, cantidad]) => {
+        const caballo = caballos.find((c: Caballo) => c.nombre === nombre);
+        return {
+          nombre,
+          cantidad,
+          tipo: caballo?.tipo || "ESCUELA",
+        };
+      })
       .sort((a, b) => b.cantidad - a.cantidad);
   }, [clasesFiltradas, caballos]);
 
-  // 📥 EXPORTAR A EXCEL CON FORMATO
+  // 📅 DISTRIBUCIÓN POR DÍA DE SEMANA
+  const distribucionDias = useMemo(() => {
+    const dias: Record<string, number> = {
+      Lunes: 0,
+      Martes: 0,
+      Miércoles: 0,
+      Jueves: 0,
+      Viernes: 0,
+      Sábado: 0,
+      Domingo: 0,
+    };
 
-  // ==========================================
-  // NUEVA FUNCIÓN exportarReporteCompleto
-  // Copiar y pegar completa desde aquí hasta el final
-  // ==========================================
+    clasesFiltradas.forEach((c: Clase) => {
+      const fecha = parseISO(c.dia);
+      const diaNombre = format(fecha, "EEEE", { locale: es });
+      const diaCapitalizado =
+        diaNombre.charAt(0).toUpperCase() + diaNombre.slice(1);
+      if (dias[diaCapitalizado] !== undefined) {
+        dias[diaCapitalizado]++;
+      }
+    });
 
-  const exportarReporteCompleto = async () => {
-    try {
-      const ExcelJS = await import("exceljs");
-      const { saveAs } = await import("file-saver");
-      const workbook = new ExcelJS.Workbook();
+    return Object.entries(dias).map(([dia, cantidad]) => ({
+      dia,
+      cantidad,
+      porcentaje:
+        clasesFiltradas.length > 0
+          ? ((cantidad / clasesFiltradas.length) * 100).toFixed(1)
+          : "0",
+    }));
+  }, [clasesFiltradas]);
 
-      // HOJA 1: ESTADÍSTICAS
-      const statsSheet = workbook.addWorksheet("Estadísticas");
-      statsSheet.addRow(["ESTADÍSTICAS GENERALES"]);
-      statsSheet.mergeCells("A1:B1");
-      statsSheet.getRow(1).font = {
-        size: 14,
-        bold: true,
-        color: { argb: "FFFFFFFF" },
-      };
-      statsSheet.getRow(1).fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF4472C4" },
-      };
-      statsSheet.getRow(1).alignment = {
-        horizontal: "center",
-        vertical: "middle",
-      };
-      statsSheet.getRow(1).height = 25;
+  // 🕐 DISTRIBUCIÓN POR HORARIO
+  const distribucionHorarios = useMemo(() => {
+    const horarios: Record<string, number> = {
+      Mañana: 0,
+      Tarde: 0,
+      Noche: 0,
+    };
 
-      const statsHeader = statsSheet.addRow(["Métrica", "Valor"]);
-      statsHeader.font = { bold: true, color: { argb: "FFFFFFFF" } };
-      statsHeader.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF5B9BD5" },
-      };
+    clasesFiltradas.forEach((c: Clase) => {
+      const hora = parseInt(c.hora.split(":")[0]);
+      if (hora < 12) {
+        horarios.Mañana++;
+      } else if (hora < 18) {
+        horarios.Tarde++;
+      } else {
+        horarios.Noche++;
+      }
+    });
 
-      [
-        ["Alumnos Activos", estadisticasGenerales.alumnosActivos],
-        ["Alumnos Inactivos", estadisticasGenerales.alumnosInactivos],
-        ["Instructores Activos", estadisticasGenerales.totalInstructores],
-        ["Caballos Totales", estadisticasGenerales.totalCaballos],
-        ["Caballos Disponibles", estadisticasGenerales.caballosDisponibles],
-        ["Total Clases (Período)", estadisticasGenerales.totalClases],
-        ["Clases Completadas", estadisticasGenerales.clasesCompletadas],
-        ["Clases Canceladas", estadisticasGenerales.clasesCanceladas],
-        ["Tasa Completado (%)", estadisticasGenerales.tasaCompletado],
-        ["Ingresos Estimados ($)", estadisticasGenerales.ingresosEstimados],
-      ].forEach(([metrica, valor], idx) => {
-        const row = statsSheet.addRow([metrica, valor]);
-        if (idx % 2 === 0)
-          row.fill = {
-            type: "pattern",
-            pattern: "solid",
-            fgColor: { argb: "FFF8F9FA" },
-          };
-        row.getCell(2).alignment = { horizontal: "right" };
-      });
+    return Object.entries(horarios).map(([horario, cantidad]) => ({
+      horario,
+      cantidad,
+      porcentaje:
+        clasesFiltradas.length > 0
+          ? ((cantidad / clasesFiltradas.length) * 100).toFixed(1)
+          : "0",
+    }));
+  }, [clasesFiltradas]);
 
-      statsSheet.getColumn(1).width = 30;
-      statsSheet.getColumn(2).width = 20;
+  // 📊 ASISTENCIA POR ALUMNO
+  const asistenciaPorAlumno = useMemo(() => {
+    const asistencia: Record<
+      string,
+      { total: number; asistidas: number; faltas: number }
+    > = {};
 
-      // HOJA 2: ALUMNOS
-      const alumnosSheet = workbook.addWorksheet("Alumnos");
-      alumnosSheet.addRow(["LISTA DE ALUMNOS"]);
-      alumnosSheet.mergeCells("A1:I1");
-      alumnosSheet.getRow(1).font = {
-        size: 14,
-        bold: true,
-        color: { argb: "FFFFFFFF" },
-      };
-      alumnosSheet.getRow(1).fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF2E7D32" },
-      };
-      alumnosSheet.getRow(1).alignment = {
-        horizontal: "center",
-        vertical: "middle",
-      };
-      alumnosSheet.getRow(1).height = 25;
+    clasesFiltradas.forEach((c: Clase) => {
+      const alumno = alumnos.find((a: Alumno) => a.id === c.alumnoId);
+      if (alumno) {
+        const nombre = `${alumno.nombre} ${alumno.apellido}`;
+        if (!asistencia[nombre]) {
+          asistencia[nombre] = { total: 0, asistidas: 0, faltas: 0 };
+        }
+        asistencia[nombre].total++;
+        if (c.estado === "COMPLETADA") asistencia[nombre].asistidas++;
+        if (c.estado === "CANCELADA") asistencia[nombre].faltas++;
+      }
+    });
 
-      const alumnosHeader = alumnosSheet.addRow([
-        "Nombre",
-        "Apellido",
-        "DNI",
-        "Email",
-        "Teléfono",
-        "Clases/Mes",
-        "Propietario",
-        "Estado",
-        "Fecha Inscripción",
-      ]);
-      alumnosHeader.font = { bold: true, color: { argb: "FFFFFFFF" } };
-      alumnosHeader.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF66BB6A" },
-      };
+    return Object.entries(asistencia).map(([nombre, datos]) => ({
+      nombre,
+      ...datos,
+      porcentajeAsistencia:
+        datos.total > 0
+          ? ((datos.asistidas / datos.total) * 100).toFixed(1)
+          : "0",
+    }));
+  }, [clasesFiltradas, alumnos]);
 
-      alumnos.forEach((a: Alumno, idx) => {
-        const row = alumnosSheet.addRow([
-          a.nombre,
-          a.apellido,
-          a.dni,
-          a.email,
-          a.telefono,
-          a.cantidadClases,
-          a.propietario ? "Sí" : "No",
-          a.activo ? "Activo" : "Inactivo",
-          a.fechaInscripcion,
-        ]);
-        if (idx % 2 === 0)
-          row.fill = {
-            type: "pattern",
-            pattern: "solid",
-            fgColor: { argb: "FFF8F9FA" },
-          };
-      });
-
-      alumnosSheet.columns.forEach((col) => {
-        col.width = 18;
-      });
-
-      // HOJA 3: CLASES
-      const clasesSheet = workbook.addWorksheet("Clases");
-      clasesSheet.addRow([
-        `CLASES - ${format(new Date(dateRange.inicio), "dd/MM/yyyy")} al ${format(new Date(dateRange.fin), "dd/MM/yyyy")}`,
-      ]);
-      clasesSheet.mergeCells("A1:G1");
-      clasesSheet.getRow(1).font = {
-        size: 14,
-        bold: true,
-        color: { argb: "FFFFFFFF" },
-      };
-      clasesSheet.getRow(1).fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF4472C4" },
-      };
-      clasesSheet.getRow(1).alignment = {
-        horizontal: "center",
-        vertical: "middle",
-      };
-      clasesSheet.getRow(1).height = 25;
-
-      const clasesHeader = clasesSheet.addRow([
-        "Fecha",
-        "Hora",
-        "Especialidad",
-        "Estado",
-        "Alumno",
-        "Instructor",
-        "Caballo",
-      ]);
-      clasesHeader.font = { bold: true, color: { argb: "FFFFFFFF" } };
-      clasesHeader.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF5B9BD5" },
-      };
-
-      clasesFiltradas.forEach((c: Clase, idx) => {
-        const row = clasesSheet.addRow([
-          c.dia,
-          c.hora,
-          c.especialidad,
-          c.estado,
-          alumnos.find((a: Alumno) => a.id === c.alumnoId)?.nombre || "",
-          instructores.find((i: Instructor) => i.id === c.instructorId)
-            ?.nombre || "",
-          caballos.find((cab: Caballo) => cab.id === c.caballoId)?.nombre || "",
-        ]);
-        if (idx % 2 === 0)
-          row.fill = {
-            type: "pattern",
-            pattern: "solid",
-            fgColor: { argb: "FFF8F9FA" },
-          };
-      });
-
-      clasesSheet.columns.forEach((col) => {
-        col.width = 18;
-      });
-
-      // HOJA 4: INSTRUCTORES
-      const instructoresSheet = workbook.addWorksheet("Instructores");
-      instructoresSheet.addRow(["CARGA DE INSTRUCTORES"]);
-      instructoresSheet.mergeCells("A1:E1");
-      instructoresSheet.getRow(1).font = {
-        size: 14,
-        bold: true,
-        color: { argb: "FFFFFFFF" },
-      };
-      instructoresSheet.getRow(1).fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF7B1FA2" },
-      };
-      instructoresSheet.getRow(1).alignment = {
-        horizontal: "center",
-        vertical: "middle",
-      };
-      instructoresSheet.getRow(1).height = 25;
-
-      const instructoresHeader = instructoresSheet.addRow([
-        "Nombre",
-        "Total",
-        "Completadas",
-        "Canceladas",
-        "Eficiencia",
-      ]);
-      instructoresHeader.font = { bold: true, color: { argb: "FFFFFFFF" } };
-      instructoresHeader.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF9C27B0" },
-      };
-
-      cargaInstructores.forEach((inst, idx) => {
-        const row = instructoresSheet.addRow([
-          inst.nombre,
-          inst.total,
-          inst.completadas,
-          inst.canceladas,
-          `${inst.eficiencia}%`,
-        ]);
-        if (idx % 2 === 0)
-          row.fill = {
-            type: "pattern",
-            pattern: "solid",
-            fgColor: { argb: "FFF8F9FA" },
-          };
-      });
-
-      instructoresSheet.columns.forEach((col) => {
-        col.width = 18;
-      });
-
-      // HOJA 5: CABALLOS
-      const caballosSheet = workbook.addWorksheet("Caballos");
-      caballosSheet.addRow(["USO DE CABALLOS"]);
-      caballosSheet.mergeCells("A1:C1");
-      caballosSheet.getRow(1).font = {
-        size: 14,
-        bold: true,
-        color: { argb: "FFFFFFFF" },
-      };
-      caballosSheet.getRow(1).fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FFD4A017" },
-      };
-      caballosSheet.getRow(1).alignment = {
-        horizontal: "center",
-        vertical: "middle",
-      };
-      caballosSheet.getRow(1).height = 25;
-
-      const caballosHeader = caballosSheet.addRow([
-        "Nombre",
-        "Tipo",
-        "Cantidad",
-      ]);
-      caballosHeader.font = { bold: true, color: { argb: "FFFFFFFF" } };
-      caballosHeader.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FFE4B429" },
-      };
-
-      usoCaballos.forEach((cab, idx) => {
-        const row = caballosSheet.addRow([cab.nombre, cab.tipo, cab.cantidad]);
-        if (idx % 2 === 0)
-          row.fill = {
-            type: "pattern",
-            pattern: "solid",
-            fgColor: { argb: "FFF8F9FA" },
-          };
-      });
-
-      caballosSheet.columns.forEach((col) => {
-        col.width = 18;
-      });
-
-      // GENERAR Y DESCARGAR
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      saveAs(blob, `Reporte_Completo_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
-    } catch (error) {
-      console.error("Error al exportar reporte completo:", error);
-    }
-  };
   return (
     <Layout>
-      <PageHeader
-        title="Reportes y Estadísticas"
-        description="Análisis completo de la operación de la escuela"
-        action={
-          <Button onClick={exportarReporteCompleto} className="gap-2">
-            <Download className="h-4 w-4" />
-            Exportar Todo
-          </Button>
-        }
-      />
-
       <div className="space-y-6">
-        {/* Filtros de Fecha */}
+        <PageHeader
+          title="Reportes y Estadísticas"
+          description="Análisis detallado de la actividad del club ecuestre"
+        />
+
+        {/* FILTROS DE FECHA */}
         <Card>
           <CardHeader>
-            <CardTitle>Período de Análisis</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Período de Análisis
+            </CardTitle>
             <CardDescription>
-              Selecciona el rango de fechas para los reportes
+              Selecciona el rango de fechas para el reporte
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Fecha Inicio</Label>
+                <Label htmlFor="fecha-inicio">Fecha Inicio</Label>
                 <Input
+                  id="fecha-inicio"
                   type="date"
                   value={dateRange.inicio}
                   onChange={(e) =>
-                    setDateRange((prev) => ({
-                      ...prev,
-                      inicio: e.target.value,
-                    }))
+                    setDateRange({ ...dateRange, inicio: e.target.value })
                   }
                 />
               </div>
               <div className="space-y-2">
-                <Label>Fecha Fin</Label>
+                <Label htmlFor="fecha-fin">Fecha Fin</Label>
                 <Input
+                  id="fecha-fin"
                   type="date"
                   value={dateRange.fin}
                   onChange={(e) =>
-                    setDateRange((prev) => ({ ...prev, fin: e.target.value }))
+                    setDateRange({ ...dateRange, fin: e.target.value })
                   }
                 />
               </div>
@@ -580,7 +370,7 @@ export default function ReportesPage() {
           </CardContent>
         </Card>
 
-        {/* KPIs */}
+        {/* TARJETAS DE ESTADÍSTICAS */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -602,6 +392,23 @@ export default function ReportesPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
+                Total Clases
+              </CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {estadisticasGenerales.totalClases}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {estadisticasGenerales.tasaCompletado}% completadas
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
                 Instructores
               </CardTitle>
               <UserCheck className="h-4 w-4 text-muted-foreground" />
@@ -610,25 +417,7 @@ export default function ReportesPage() {
               <div className="text-2xl font-bold">
                 {estadisticasGenerales.totalInstructores}
               </div>
-              <p className="text-xs text-muted-foreground">Equipo activo</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Tasa Completado
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {estadisticasGenerales.tasaCompletado}%
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {estadisticasGenerales.clasesCompletadas} de{" "}
-                {estadisticasGenerales.totalClases} clases
-              </p>
+              <p className="text-xs text-muted-foreground">Activos</p>
             </CardContent>
           </Card>
 
@@ -643,102 +432,189 @@ export default function ReportesPage() {
               <div className="text-2xl font-bold">
                 ${estadisticasGenerales.ingresosEstimados.toLocaleString()}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Mensuales proyectados
-              </p>
+              <p className="text-xs text-muted-foreground">Mensual</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Tabs de Reportes */}
-        <Tabs defaultValue="alumnos" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+        {/* TABS DE REPORTES */}
+        <Tabs defaultValue="general" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="alumnos">Alumnos</TabsTrigger>
             <TabsTrigger value="clases">Clases</TabsTrigger>
             <TabsTrigger value="instructores">Instructores</TabsTrigger>
             <TabsTrigger value="caballos">Caballos</TabsTrigger>
           </TabsList>
 
+          {/* REPORTE GENERAL */}
+          <TabsContent value="general" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Distribución por Plan</CardTitle>
+                  <CardDescription>
+                    Cantidad de alumnos por plan mensual
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {alumnosPorClases.map((item) => (
+                    <div key={item.plan} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>{item.plan}</span>
+                        <span className="font-medium">{item.cantidad}</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all"
+                          style={{ width: `${item.porcentaje}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Estados de Clases</CardTitle>
+                  <CardDescription>
+                    Distribución por estado en el período
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {estadosClases.map((item) => (
+                    <div key={item.estado} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>{item.estado}</span>
+                        <span className="font-medium">{item.cantidad}</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all"
+                          style={{ width: `${item.porcentaje}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Distribución por Día</CardTitle>
+                  <CardDescription>Clases por día de la semana</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {distribucionDias.map((item) => (
+                    <div key={item.dia} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>{item.dia}</span>
+                        <span className="font-medium">{item.cantidad}</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all"
+                          style={{ width: `${item.porcentaje}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Distribución por Horario</CardTitle>
+                  <CardDescription>Clases por franja horaria</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {distribucionHorarios.map((item) => (
+                    <div key={item.horario} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>{item.horario}</span>
+                        <span className="font-medium">{item.cantidad}</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all"
+                          style={{ width: `${item.porcentaje}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
           {/* REPORTE ALUMNOS */}
           <TabsContent value="alumnos" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <div>
-                    <CardTitle>Distribución por Plan</CardTitle>
-                    <CardDescription>
-                      Clases mensuales contratadas
-                    </CardDescription>
-                  </div>
-                  <PieIcon className="h-5 w-5 text-muted-foreground" />
+                <CardHeader>
+                  <CardTitle>Resumen</CardTitle>
+                  <CardDescription>
+                    Estadísticas generales de alumnos
+                  </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {alumnosPorClases.map((item, index) => (
-                      <div key={item.plan} className="space-y-1">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium">{item.plan}</span>
-                          <span className="text-muted-foreground">
-                            {item.cantidad} alumnos ({item.porcentaje}%)
-                          </span>
-                        </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full transition-all"
-                            style={{
-                              width: `${item.porcentaje}%`,
-                              backgroundColor: Object.values(COLORS)[index],
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-2xl font-bold">
+                        {estadisticasGenerales.alumnosActivos}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Alumnos Activos
+                      </p>
+                    </div>
+                    <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center">
+                      <Users className="h-8 w-8 text-success" />
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-2xl font-bold">
+                        {estadisticasGenerales.alumnosInactivos}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Alumnos Inactivos
+                      </p>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {alumnos.length > 0
+                        ? (
+                            (estadisticasGenerales.alumnosInactivos /
+                              alumnos.length) *
+                            100
+                          ).toFixed(1)
+                        : "0"}
+                      %
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Propietarios</CardTitle>
-                  <CardDescription>Alumnos con caballo propio</CardDescription>
+                  <CardTitle>Por Plan</CardTitle>
+                  <CardDescription>Distribución de planes</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                <CardContent className="space-y-3">
+                  {alumnosPorClases.map((item) => (
+                    <div
+                      key={item.plan}
+                      className="flex justify-between items-center"
+                    >
                       <div>
-                        <p className="text-2xl font-bold">
-                          {alumnos.filter((a: Alumno) => a.propietario).length}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Con caballo propio
+                        <p className="text-sm font-medium">{item.plan}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.porcentaje}% del total
                         </p>
                       </div>
-                      <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Landmark className="h-8 w-8 text-primary" />
-                      </div>
+                      <div className="text-2xl font-bold">{item.cantidad}</div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-2xl font-bold">
-                          {alumnos.filter((a: Alumno) => !a.propietario).length}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Sin caballo propio
-                        </p>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {alumnos.length > 0
-                          ? (
-                              (alumnos.filter((a: Alumno) => !a.propietario)
-                                .length /
-                                alumnos.length) *
-                              100
-                            ).toFixed(1)
-                          : "0"}
-                        %
-                      </div>
-                    </div>
-                  </div>
+                  ))}
                 </CardContent>
               </Card>
             </div>
@@ -747,9 +623,7 @@ export default function ReportesPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Listado de Alumnos</CardTitle>
-                  <CardDescription>
-                    {alumnos.length} alumnos registrados
-                  </CardDescription>
+                  <CardDescription>Primeros 10 alumnos</CardDescription>
                 </div>
                 <Button
                   variant="outline"
@@ -758,12 +632,12 @@ export default function ReportesPage() {
                     exportarExcel(
                       alumnos.map((a: Alumno) => ({
                         Nombre: `${a.nombre} ${a.apellido}`,
-                        DNI: a.dni,
                         Email: a.email,
                         Teléfono: a.telefono,
-                        "Clases/Mes": a.cantidadClases,
-                        Propietario: a.propietario ? "Sí" : "No",
+                        "Cantidad Clases": a.cantidadClases,
                         Estado: a.activo ? "Activo" : "Inactivo",
+                        Propietario: a.propietario ? "Sí" : "No",
+                        "Fecha Inscripción": a.fechaInscripcion || "N/A",
                       })),
                       "Alumnos",
                     )
@@ -782,7 +656,7 @@ export default function ReportesPage() {
                           Nombre
                         </th>
                         <th className="text-left p-3 font-semibold text-sm">
-                          Clases/Mes
+                          Clases
                         </th>
                         <th className="text-left p-3 font-semibold text-sm">
                           Estado
@@ -818,19 +692,21 @@ export default function ReportesPage() {
                             {alumno.propietario ? "Sí" : "No"}
                           </td>
                           <td className="p-3 text-sm text-muted-foreground">
-                            {format(
-                              parseISO(alumno.fechaInscripcion),
-                              "dd/MM/yyyy",
-                              { locale: es },
-                            )}
+                            {alumno.fechaInscripcion
+                              ? format(
+                                  parseISO(alumno.fechaInscripcion),
+                                  "dd/MM/yyyy",
+                                  { locale: es },
+                                )
+                              : "N/A"}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  {alumnos.length > 10 && (
-                    <p className="text-center text-sm text-muted-foreground mt-4">
-                      Mostrando 10 de {alumnos.length} alumnos
+                  {alumnos.length === 0 && (
+                    <p className="text-center text-sm text-muted-foreground py-8">
+                      No hay alumnos registrados
                     </p>
                   )}
                 </div>
@@ -840,121 +716,242 @@ export default function ReportesPage() {
 
           {/* REPORTE CLASES */}
           <TabsContent value="clases" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <Card>
                 <CardHeader>
-                  <CardTitle>Estados de Clases</CardTitle>
-                  <CardDescription>
-                    Distribución por estado en el período
-                  </CardDescription>
+                  <CardTitle>Total</CardTitle>
+                  <CardDescription>Clases en el período</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {estadosClases.map((item) => (
-                      <div key={item.estado} className="space-y-1">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium">{item.estado}</span>
-                          <span className="text-muted-foreground">
-                            {item.cantidad} ({item.porcentaje}%)
-                          </span>
-                        </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full transition-all bg-primary"
-                            style={{ width: `${item.porcentaje}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-3xl font-bold">
+                        {estadisticasGenerales.totalClases}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Clases</p>
+                    </div>
+                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Calendar className="h-8 w-8 text-primary" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Resumen del Período</CardTitle>
-                  <CardDescription>
-                    {format(parseISO(dateRange.inicio), "dd/MM/yyyy")} -{" "}
-                    {format(parseISO(dateRange.fin), "dd/MM/yyyy")}
-                  </CardDescription>
+                  <CardTitle>Completadas</CardTitle>
+                  <CardDescription>Clases finalizadas</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      Total de clases
-                    </span>
-                    <span className="text-2xl font-bold">
-                      {estadisticasGenerales.totalClases}
-                    </span>
+                    <div>
+                      <p className="text-3xl font-bold">
+                        {estadisticasGenerales.clasesCompletadas}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {estadisticasGenerales.tasaCompletado}% del total
+                      </p>
+                    </div>
+                    <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center">
+                      <TrendingUp className="h-8 w-8 text-success" />
+                    </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Canceladas</CardTitle>
+                  <CardDescription>Clases no realizadas</CardDescription>
+                </CardHeader>
+                <CardContent>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      Completadas
-                    </span>
-                    <span className="text-lg font-semibold text-success">
-                      {estadisticasGenerales.clasesCompletadas}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      Canceladas
-                    </span>
-                    <span className="text-lg font-semibold text-destructive">
-                      {estadisticasGenerales.clasesCanceladas}
-                    </span>
+                    <div>
+                      <p className="text-3xl font-bold">
+                        {estadisticasGenerales.clasesCanceladas}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {estadisticasGenerales.totalClases > 0
+                          ? (
+                              (estadisticasGenerales.clasesCanceladas /
+                                estadisticasGenerales.totalClases) *
+                              100
+                            ).toFixed(1)
+                          : "0"}
+                        % del total
+                      </p>
+                    </div>
+                    <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
+                      <PieIcon className="h-8 w-8 text-destructive" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Por Estado</CardTitle>
+                  <CardDescription>Distribución de estados</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {estadosClases.map((item) => (
+                    <div key={item.estado} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>{item.estado}</span>
+                        <span className="font-medium">{item.cantidad}</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all"
+                          style={{ width: `${item.porcentaje}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Por Día de Semana</CardTitle>
+                  <CardDescription>Distribución semanal</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {distribucionDias.map((item) => (
+                    <div key={item.dia} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>{item.dia}</span>
+                        <span className="font-medium">{item.cantidad}</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all"
+                          style={{ width: `${item.porcentaje}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Detalle de Clases</CardTitle>
+                  <CardTitle>Asistencia por Alumno</CardTitle>
                   <CardDescription>
-                    {clasesFiltradas.length} clases en el período
+                    Porcentaje de asistencia en el período
                   </CardDescription>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() =>
-                    exportarExcel(
-                      clasesFiltradas.map((c: Clase) => ({
-                        Fecha: c.dia,
-                        Hora: c.hora,
-                        Alumno:
-                          alumnos.find((a: Alumno) => a.id === c.alumnoId)
-                            ?.nombre || "",
-                        Instructor:
-                          instructores.find(
-                            (i: Instructor) => i.id === c.instructorId,
-                          )?.nombre || "",
-                        Caballo:
-                          caballos.find(
-                            (cab: Caballo) => cab.id === c.caballoId,
-                          )?.nombre || "",
-                        Estado: c.estado,
-                      })),
-                      "Clases",
-                    )
+                    exportarExcel(asistenciaPorAlumno, "Asistencia")
                   }
                 >
                   <Download className="mr-2 h-4 w-4" />
                   Exportar
                 </Button>
               </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="text-left p-3 font-semibold text-sm">
+                          Alumno
+                        </th>
+                        <th className="text-left p-3 font-semibold text-sm">
+                          Total
+                        </th>
+                        <th className="text-left p-3 font-semibold text-sm">
+                          Asistidas
+                        </th>
+                        <th className="text-left p-3 font-semibold text-sm">
+                          Faltas
+                        </th>
+                        <th className="text-left p-3 font-semibold text-sm">
+                          % Asistencia
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {asistenciaPorAlumno.map((item) => (
+                        <tr
+                          key={item.nombre}
+                          className="border-b hover:bg-muted/30 transition-colors"
+                        >
+                          <td className="p-3 text-sm font-medium">
+                            {item.nombre}
+                          </td>
+                          <td className="p-3 text-sm">{item.total}</td>
+                          <td className="p-3 text-sm text-success">
+                            {item.asistidas}
+                          </td>
+                          <td className="p-3 text-sm text-destructive">
+                            {item.faltas}
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
+                                <div
+                                  className="h-full rounded-full bg-success transition-all"
+                                  style={{
+                                    width: `${item.porcentajeAsistencia}%`,
+                                  }}
+                                />
+                              </div>
+                              <span className="text-sm text-muted-foreground">
+                                {item.porcentajeAsistencia}%
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {asistenciaPorAlumno.length === 0 && (
+                    <p className="text-center text-sm text-muted-foreground py-8">
+                      No hay datos de asistencia en este período
+                    </p>
+                  )}
+                </div>
+              </CardContent>
             </Card>
           </TabsContent>
 
           {/* REPORTE INSTRUCTORES */}
           <TabsContent value="instructores" className="space-y-4">
             <Card>
+              <CardHeader>
+                <CardTitle>Resumen</CardTitle>
+                <CardDescription>Estadísticas de instructores</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-3xl font-bold">
+                      {estadisticasGenerales.totalInstructores}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Instructores Activos
+                    </p>
+                  </div>
+                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                    <UserCheck className="h-8 w-8 text-primary" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Carga de Trabajo</CardTitle>
+                  <CardTitle>Carga por Instructor</CardTitle>
                   <CardDescription>
-                    Clases por instructor en el período
+                    Clases asignadas en el período
                   </CardDescription>
                 </div>
                 <Button
@@ -977,7 +974,7 @@ export default function ReportesPage() {
                           Instructor
                         </th>
                         <th className="text-left p-3 font-semibold text-sm">
-                          Total Clases
+                          Total
                         </th>
                         <th className="text-left p-3 font-semibold text-sm">
                           Completadas
@@ -1006,10 +1003,20 @@ export default function ReportesPage() {
                           <td className="p-3 text-sm text-destructive">
                             {instructor.canceladas}
                           </td>
-                          <td className="p-3 text-sm">
-                            <span className="font-semibold">
-                              {instructor.eficiencia}%
-                            </span>
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
+                                <div
+                                  className="h-full rounded-full bg-success transition-all"
+                                  style={{
+                                    width: `${instructor.eficiencia}%`,
+                                  }}
+                                />
+                              </div>
+                              <span className="text-sm text-muted-foreground">
+                                {instructor.eficiencia}%
+                              </span>
+                            </div>
                           </td>
                         </tr>
                       ))}

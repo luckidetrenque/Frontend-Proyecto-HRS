@@ -10,7 +10,7 @@ import { es } from "date-fns/locale";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 
-import { Alumno, Caballo,Clase, Instructor } from "@/lib/api";
+import { Alumno, Caballo, Clase, Instructor } from "@/lib/api";
 
 /**
  * Convierte un color hex a formato ARGB para Excel
@@ -45,7 +45,7 @@ interface ReportConfig {
  */
 export async function exportarReporte(
   data: ReportData[],
-  tipo: "Clases" | "Alumnos" | "Instructores" | "Caballos",
+  tipo: "Clases" | "Alumnos" | "Instructores" | "Caballos" | "Asistencia",
   dateRange?: { inicio: string; fin: string },
 ) {
   if (!data || data.length === 0) {
@@ -97,6 +97,11 @@ export async function exportarReporte(
     subtitleRow.alignment = {
       horizontal: "center",
       vertical: "middle",
+    };
+    subtitleRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFF8F9FA" },
     };
   } else {
     const subtitleRow = worksheet.addRow([
@@ -266,7 +271,7 @@ export async function exportarReporte(
  * Obtener configuración específica para cada tipo de reporte
  */
 function getReportConfig(
-  tipo: "Clases" | "Alumnos" | "Instructores" | "Caballos",
+  tipo: "Clases" | "Alumnos" | "Instructores" | "Caballos" | "Asistencia",
   data: ReportData[],
 ): ReportConfig {
   switch (tipo) {
@@ -354,6 +359,29 @@ function getReportConfig(
         ],
       };
 
+    case "Asistencia":
+      return {
+        title: "Reporte de Asistencia",
+        headerColor: "FF2E7D32",
+        columns: [
+          { header: "Alumno", key: "nombre", width: 30 },
+          { header: "Total", key: "total", width: 12, format: "number" },
+          {
+            header: "Asistidas",
+            key: "asistidas",
+            width: 12,
+            format: "number",
+          },
+          { header: "Faltas", key: "faltas", width: 12, format: "number" },
+          {
+            header: "% Asistencia",
+            key: "porcentajeAsistencia",
+            width: 15,
+            format: "percentage",
+          },
+        ],
+      };
+
     default:
       return {
         title: "Reporte",
@@ -397,7 +425,7 @@ export async function exportarClases(
  */
 export async function exportarExcel(
   data: ReportData[],
-  tipo: "Clases" | "Alumnos" | "Instructores" | "Caballos",
+  tipo: "Clases" | "Alumnos" | "Instructores" | "Caballos" | "Asistencia",
 ) {
   await exportarReporte(data, tipo);
 }

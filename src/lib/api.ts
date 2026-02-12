@@ -452,10 +452,10 @@ export const clasesApi = {
     return data || [];
   },
 
-  buscarPorInstructor: async (cinstructorId: number): Promise<Clase[]> => {
+  buscarPorInstructor: async (instructorId: number): Promise<Clase[]> => {
     // Realiza la petición usando el ID directamente en la URL
     const response = await apiFetch(
-      `/clases/cinstructor/${cinstructorId}/detalles`,
+      `/clases/instructor/${instructorId}/detalles`,
     );
 
     // Maneja la respuesta (ajusta el tipo si ClaseResponseDto es distinto a Clase)

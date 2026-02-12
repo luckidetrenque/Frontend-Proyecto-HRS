@@ -46,16 +46,14 @@ import { Switch } from "@/components/ui/switch";
 import { Clase, clasesApi, Instructor, instructoresApi } from "@/lib/api";
 
 const PRESET_COLORS = [
-  "#3B82F6",
-  "#EF4444",
-  "#10B981",
-  "#F59E0B",
-  "#8B5CF6",
-  "#EC4899",
-  "#14B8A6",
-  "#F97316",
-  "#6366F1",
-  "#84CC16",
+  "#F3E3EB",
+  "#E6EDFD",
+  "#F2B6B6",
+  "#FFF6B3",
+  "#EAF4E6",
+  "#F7C6EE",
+  "#FFD6A3",
+  "#B3CCE6",
 ];
 
 export default function InstructorDetalle() {
@@ -116,11 +114,16 @@ export default function InstructorDetalle() {
   }, [isEditOpen, instructor]);
 
   // Query para obtener las clases del instructor
-  const { data: clasesInstructor = [], isLoading: loadingClases } = useQuery({
-    queryKey: ["clases-instructor", instructorId],
-    queryFn: () => clasesApi.buscar({ instructorId }),
-    enabled: !!instructorId,
-  });
+  const { data: clasesInstructorData = [], isLoading: loadingClases } =
+    useQuery({
+      queryKey: ["clases-instructor", instructorId],
+      queryFn: () => clasesApi.buscarPorInstructor(instructorId),
+      enabled: !!instructorId,
+    });
+
+  const clasesInstructor = Array.isArray(clasesInstructorData)
+    ? clasesInstructorData
+    : [];
 
   // Calcular estadísticas
   const estadisticas = {

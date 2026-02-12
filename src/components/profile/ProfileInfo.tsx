@@ -12,7 +12,7 @@ import {
   User,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -28,7 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { useAuth } from "@/contexts/AuthContext";
+import { AuthContext } from "@/contexts/AuthContext";
 import { uploadAvatar } from "@/services/uploadService";
 
 interface ProfileInfoProps {
@@ -40,7 +40,7 @@ interface ProfileInfoProps {
 }
 
 export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
-  const { user } = useAuth();
+  const { user, refreshUser } = useContext(AuthContext)!;
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [avatarHover, setAvatarHover] = useState(false);
@@ -103,18 +103,26 @@ export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
     input.type = "file";
     input.accept = "image/*";
 
+    input.setAttribute("capture", "user");
+
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
       setIsUploading(true);
       try {
-        const avatarUrl = await uploadAvatar(file);
+        const avatarUrl = await uploadAvatar(file, user.id);
 
         // Actualizar perfil con nueva URL
-        await onUpdate?.({ avatarUrl });
+        const updatedUser = { ...user, avatarUrl: avatarUrl };
+        sessionStorage.setItem("user", JSON.stringify(updatedUser));
 
         toast.success("Avatar actualizado correctamente");
+        if (refreshUser) {
+          refreshUser();
+        } else {
+          window.location.reload();
+        }
       } catch (error) {
         toast.error("Error al subir avatar", {
           description:
@@ -143,7 +151,11 @@ export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
             >
               <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
                 <AvatarImage
-                  src={user.avatarUrl || "https://via.placeholder.com"}
+                  src={
+                    user.avatarUrl ||
+                    "https://ui-avatars.com/api/?name=" +
+                      encodeURIComponent(user.username)
+                  }
                   alt={user.username}
                 />
                 <AvatarFallback className="bg-primary text-primary-foreground text-2xl">

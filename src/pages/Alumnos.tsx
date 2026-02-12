@@ -2,10 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Mail,
   MessageCircleMore,
+  MoreVertical,
   Pencil,
   Plus,
   Trash2,
-  Voicemail,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +26,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -197,7 +203,8 @@ export default function AlumnosPage() {
         typeof alumno === "object" &&
         alumno !== null &&
         "id" in alumno &&
-        "nombre" in alumno
+        "nombre" in alumno &&
+        alumno.id !== 1 // ⛔ Excluir alumno con id 1
       );
     });
 
@@ -372,64 +379,59 @@ export default function AlumnosPage() {
     {
       header: "Acciones",
       cell: (row: Alumno) => (
-        <div className="flex gap-2">
-          <Button
-            title={`Enviar mensaje a ${row.nombre} ${row.apellido}`}
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              // location.href = `https://wa.me/549221${row.telefono}`;
-              window.open(
-                encodeURI(
-                  `https://wa.me/${row.telefono}?text=Hola ${row.nombre}, te contactamos desde la Escuela para avisarte que... `,
-                ),
-                "_blank",
-              );
-              // setAlumnoActivo(row);
-            }}
-          >
-            <MessageCircleMore className="h-4 w-4 text-success" />
-          </Button>
-          <Button
-            title={`Enviar correo a ${row.nombre} ${row.apellido}`}
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              window.location.href = `mailto:${row.email}?subject=${encodeURIComponent(`Contacto para ${row.nombre} ${row.apellido}`)}`;
-            }}
-          >
-            <Mail className="h-4 w-4 text-success" />
-          </Button>
-          <Button
-            title={`Editar datos del alumno ${row.nombre} ${row.apellido}`}
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditingAlumno(row);
-              setIsOpen(true);
-            }}
-            // label={`Editar datos de ${row.nombre} ${row.apellido}`}
-            // {showLabel && <span>{label}</span>}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            title={`Eliminar el alumno ${row.nombre} ${row.apellido}`}
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (confirm("¿Eliminar este alumno?")) {
-                deleteMutation.mutate(row.id);
-              }
-            }}
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreVertical className="h-4 w-4" />
+              <span className="sr-only">Abrir menú de acciones</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(
+                  encodeURI(
+                    `https://wa.me/${row.telefono}?text=Hola ${row.nombre}, te contactamos desde la Escuela para avisarte que... `,
+                  ),
+                  "_blank",
+                );
+              }}
+            >
+              <MessageCircleMore className="mr-2 h-4 w-4 text-green-600" />
+              Enviar WhatsApp
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                window.location.href = `mailto:${row.email}?subject=${encodeURIComponent(`Contacto para ${row.nombre} ${row.apellido}`)}`;
+              }}
+            >
+              <Mail className="mr-2 h-4 w-4 text-blue-600" />
+              Enviar correo
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditingAlumno(row);
+                setIsOpen(true);
+              }}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                setAlumnoToDelete(row);
+              }}
+              className="text-red-600 focus:text-red-600"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Eliminar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];

@@ -16,6 +16,15 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
+import {
+  ESPECIALIDADES,
+  ESTADO_COLORS,
+  ESTADO_LABELS,
+  ESTADOS,
+  formatearConZona,
+  obtenerHoraArgentina,
+  parsearHoraParaApi,
+} from "@/components/calendar/clases.constants";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,52 +66,31 @@ import {
   instructoresApi,
 } from "@/lib/api";
 
-const estadoColors: Record<
-  string,
-  "success" | "warning" | "error" | "info" | "default"
-> = {
-  PROGRAMADA: "warning",
-  INICIADA: "info",
-  COMPLETADA: "success",
-  CANCELADA: "error",
-  ACA: "info",
-  ASA: "info",
-};
-
-const estadoLabels: Record<string, string> = {
-  PROGRAMADA: "Programada",
-  INICIADA: "Iniciada",
-  COMPLETADA: "Completada",
-  CANCELADA: "Cancelada",
-  ACA: "Ausente con Aviso",
-  ASA: "Ausente sin Aviso",
-};
-
 export default function ClaseDetalle() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const claseId = parseInt(id || "0");
 
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Queries adicionales para los selectores
   const { data: alumnos = [] } = useQuery({
     queryKey: ["alumnos"],
     queryFn: alumnosApi.listar,
-    enabled: isEditOpen,
+    enabled: isDialogOpen,
   });
 
   const { data: instructores = [] } = useQuery({
     queryKey: ["instructores"],
     queryFn: instructoresApi.listar,
-    enabled: isEditOpen,
+    enabled: isDialogOpen,
   });
 
   const { data: caballos = [] } = useQuery({
     queryKey: ["caballos"],
     queryFn: caballosApi.listar,
-    enabled: isEditOpen,
+    enabled: isDialogOpen,
   });
 
   const updateMutation = useMutation({
@@ -111,24 +99,21 @@ export default function ClaseDetalle() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clase", claseId] });
       queryClient.invalidateQueries({ queryKey: ["clases"] });
-      setIsEditOpen(false);
+      setIsDialogOpen(false);
       toast.success("Clase actualizada correctamente");
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al actualizar la clase"),
   });
 
-  const handleSubmitEdit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
     const data = {
       especialidad: formData.get("especialidad") as Clase["especialidad"],
       dia: new Date(formData.get("dia") as string).toISOString().split("T")[0],
-      hora: new Date(`1970-01-01T${formData.get("hora") as string}`)
-        .toISOString()
-        .split("T")[1]
-        .substring(0, 5),
+      hora: parsearHoraParaApi(formData.get("hora") as string),
       estado: formData.get("estado") as Clase["estado"],
       observaciones: formData.get("observaciones") as string,
       alumnoId: Number(formData.get("alumnoId")),
@@ -137,20 +122,6 @@ export default function ClaseDetalle() {
     };
 
     updateMutation.mutate({ id: claseId, data });
-  };
-
-  const obtenerHoraArgentina = (isoString?: string) => {
-    if (!isoString) return "";
-    const fecha = new Date(isoString);
-    if (isNaN(fecha.getTime())) return "";
-    return fecha
-      .toLocaleTimeString("es-AR", {
-        timeZone: "America/Argentina/Buenos_Aires",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      })
-      .replace(":", ":");
   };
 
   const [nuevoEstado, setNuevoEstado] = useState<Clase["estado"] | null>(null);
@@ -184,7 +155,7 @@ export default function ClaseDetalle() {
   // Mutation para cambiar el estado
   const cambiarEstadoMutation = useMutation({
     mutationFn: (estado: Clase["estado"]) =>
-      clasesApi.cambiarEstado(claseId, estado),
+      clasesApi.actualizar(claseId, { estado }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clase", claseId] });
       toast.success("Estado de la clase actualizado correctamente");
@@ -201,15 +172,8 @@ export default function ClaseDetalle() {
     }
   };
 
-  const formatearConZona = (diaHoraIso?: string) => {
-    if (!diaHoraIso) return "-";
-    return new Intl.DateTimeFormat("es-AR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-      timeZone: "America/Argentina/Buenos_Aires",
-    }).format(new Date(diaHoraIso));
-  };
+  // Función para cerrar el diálogo
+  const handleCloseDialog = () => setIsDialogOpen(false);
 
   if (loadingClase) {
     return (
@@ -248,7 +212,7 @@ export default function ClaseDetalle() {
           title="Detalle de Clase"
           description={`Información completa de la clase de ${clase.especialidad}`}
           action={
-            <Button onClick={() => setIsEditOpen(true)}>
+            <Button onClick={() => setIsDialogOpen(true)}>
               <Edit className="mr-2 h-4 w-4" />
               Editar
             </Button>
@@ -272,8 +236,8 @@ export default function ClaseDetalle() {
                   <CardDescription>Detalles generales</CardDescription>
                 </div>
               </div>
-              <StatusBadge status={estadoColors[clase.estado] || "default"}>
-                {estadoLabels[clase.estado] || clase.estado}
+              <StatusBadge status={ESTADO_COLORS[clase.estado] || "default"}>
+                {ESTADO_LABELS[clase.estado] || clase.estado}
               </StatusBadge>
             </div>
           </CardHeader>
@@ -534,9 +498,9 @@ export default function ClaseDetalle() {
         </Card>
       </div>
 
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-lg">
-          <form onSubmit={handleSubmitEdit}>
+          <form onSubmit={handleSubmit}>
             <DialogHeader>
               <DialogTitle className="font-display">Editar Clase</DialogTitle>
               <DialogDescription>

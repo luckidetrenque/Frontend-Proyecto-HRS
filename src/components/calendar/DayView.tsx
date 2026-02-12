@@ -9,7 +9,7 @@ import { useMemo, useState } from "react";
 import { Caballo, Clase } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { getClaseStyle, TIME_SLOTS } from "./calendar.styles";
+import { getClaseStyle, TIME_SLOTS } from "./clases.constants";
 import { ClaseBadge } from "./ClaseBadge";
 import { ClasePopover } from "./ClasePopover";
 
@@ -136,6 +136,11 @@ export function DayView({
                         onCellClick &&
                         "cursor-pointer hover:bg-primary/10",
                     )}
+                    title={
+                      clase
+                        ? `Clase ${clase.estado.toLowerCase()} con el instructor ${getInstructorNombre(clase.instructorId)}`
+                        : `Agregar clase para ${caballo.nombre} a las ${hora}`
+                    }
                     onClick={() => {
                       if (!clase && onCellClick) {
                         onCellClick(caballo, hora);

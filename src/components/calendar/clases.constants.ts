@@ -157,3 +157,58 @@ export const getContrastColor = (hexColor: string): string => {
   // Retornar blanco para fondos oscuros, negro para fondos claros
   return luminance > 0.5 ? "#000000" : "#FFFFFF";
 };
+
+// Etiquetas legibles por estado
+export const ESTADO_LABELS: Record<string, string> = {
+  PROGRAMADA: "Programada",
+  INICIADA: "Iniciada",
+  COMPLETADA: "Completada",
+  CANCELADA: "Cancelada",
+  ACA: "Ausente con Aviso",
+  ASA: "Ausente sin Aviso",
+};
+
+/**
+ * Devuelve la hora en formato HH:mm usando zona America/Argentina/Buenos_Aires.
+ * Útil para poblar inputs type="time" con el valor correcto.
+ */
+export const obtenerHoraArgentina = (isoString?: string): string => {
+  if (!isoString) return "";
+  const fecha = new Date(isoString);
+  if (isNaN(fecha.getTime())) return "";
+  return fecha
+    .toLocaleTimeString("es-AR", {
+      timeZone: "America/Argentina/Buenos_Aires",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+    .replace(":", ":");
+};
+
+/**
+ * Formatea una fecha ISO completa mostrando sólo la hora HH:mm
+ * con zona America/Argentina/Buenos_Aires.
+ * Útil para mostrar la hora en tablas y tarjetas.
+ */
+export const formatearConZona = (diaHoraIso?: string): string => {
+  if (!diaHoraIso) return "-";
+  return new Intl.DateTimeFormat("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "America/Argentina/Buenos_Aires",
+  }).format(new Date(diaHoraIso));
+};
+
+/**
+ * Convierte una hora HH:mm de un input de formulario al formato HH:mm
+ * que espera la API (normalizado sin offsets de timezone).
+ * Usar siempre que se procese el campo "hora" de un formulario de clase.
+ */
+export const parsearHoraParaApi = (horaInput: string): string => {
+  return new Date(`1970-01-01T${horaInput}`)
+    .toISOString()
+    .split("T")[1]
+    .substring(0, 5);
+};

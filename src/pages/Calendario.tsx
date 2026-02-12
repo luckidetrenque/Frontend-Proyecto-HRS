@@ -1,20 +1,15 @@
-/**
- * Calendario.tsx
- * Página principal del calendario - Solo UI y composición
- */
-
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertCircle, AlertTriangle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { CalendarControls } from "@/components/calendar/CalendarControls";
+import { CalendarToolbar } from "@/components/calendar/CalendarToolbar";
 import {
   ALUMNO_COMODIN_ID,
   ESPECIALIDADES,
   ESTADOS,
-} from "@/components/calendar/calendar.styles";
-import { CalendarControls } from "@/components/calendar/CalendarControls";
-import { CalendarToolbar } from "@/components/calendar/CalendarToolbar";
+} from "@/components/calendar/clases.constants";
 import { DayView } from "@/components/calendar/DayView";
 import { MonthView } from "@/components/calendar/MonthView";
 import { WeekView } from "@/components/calendar/WeekView";
@@ -46,6 +41,7 @@ import { useClasesRestantes } from "@/hooks/useClasesRestantes";
 import { Alumno, Caballo, Instructor } from "@/lib/api";
 import {
   filtrarCaballosDisponibles,
+  handleEspecialidadChangeEffect,
   puedeEditarClase,
   verificarConflictoHorario,
 } from "@/utils/validacionesClases";
@@ -83,7 +79,7 @@ export default function CalendarioPage() {
     handleEditClase,
     handleDeleteClase,
     handleCloseDialog,
-    handleSubmit,
+    handleSubmitClase,
     handleStatusChange,
     handleCopySubmit,
     handleDeleteSubmit,
@@ -101,7 +97,7 @@ export default function CalendarioPage() {
     conflictSet,
   } = useCalendar();
 
-  // Estado para controlar la especialidad seleccionada y el alumno
+  // Estados para controlar la especialidad y el alumno en el formulario
   const [especialidadSeleccionada, setEspecialidadSeleccionada] =
     useState<string>("");
   const [alumnoIdSeleccionado, setAlumnoIdSeleccionado] = useState<string>("");
@@ -137,28 +133,22 @@ export default function CalendarioPage() {
 
   // Manejador para cambio de especialidad
   const handleEspecialidadChange = (value: string) => {
-    setEspecialidadSeleccionada(value);
-
-    // Si es MONTA, asignar automáticamente el alumno comodín
-    if (value === "MONTA") {
-      setAlumnoIdSeleccionado(String(ALUMNO_COMODIN_ID));
-    }
+    handleEspecialidadChangeEffect(
+      value,
+      ALUMNO_COMODIN_ID,
+      setEspecialidadSeleccionada,
+      setAlumnoIdSeleccionado,
+    );
   };
 
   // ✅ AGREGAR ESTA FUNCIÓN COMPLETA AQUÍ
-  const onSubmitWithValidation = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    // Validar clases agotadas solo al crear
     if (estaAgotado && !claseToEdit) {
-      const confirmar = window.confirm(
-        `El alumno agotó su plan mensual (${clasesContratadas} clases). ¿Desea programar esta clase adicional?`,
-      );
+      const confirmar = window.confirm(`...`);
       if (!confirmar) return;
     }
-
-    // Llamar al handleSubmit del hook
-    handleSubmit(e);
+    handleSubmitClase(e); // ← ahora llama al del hook con nuevo nombre
   };
 
   // Configuración de filtros
@@ -305,33 +295,6 @@ export default function CalendarioPage() {
         </Card>
       )}
 
-      {/* Leyenda */}
-      {/* <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded-full bg-warning/50" />
-          <span className="text-sm text-muted-foreground">Programada</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded-full bg-info/50" />
-          <span className="text-sm text-muted-foreground">Iniciada</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded-full bg-success/50" />
-          <span className="text-sm text-muted-foreground">Completada</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded-full bg-destructive/50" />
-          <span className="text-sm text-muted-foreground">Cancelada</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded-full bg-purple-500/50" />
-          <span className="text-sm text-muted-foreground">ACA</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded-full bg-cyan-500/50" />
-          <span className="text-sm text-muted-foreground">ASA</span>
-        </div>
-      </div> */}
       {/* En Calendario.tsx, reemplazar la leyenda actual */}
       <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
         {instructores.map((instructor) => (
@@ -350,7 +313,7 @@ export default function CalendarioPage() {
       {/* Diálogo Crear/Editar Clase */}
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
         <DialogContent className="sm:max-w-lg">
-          <form onSubmit={onSubmitWithValidation}>
+          <form onSubmit={handleSubmit}>
             <DialogHeader>
               <DialogTitle className="font-display">
                 {claseToEdit ? "Editar Clase" : "Nueva Clase"}
@@ -378,6 +341,8 @@ export default function CalendarioPage() {
                     required
                   />
                 </div>
+
+                {/* ✅ FILA 2: Alumno - Caballo */}
                 <div className="space-y-2">
                   <Label htmlFor="alumnoId">
                     Alumno
@@ -456,9 +421,13 @@ export default function CalendarioPage() {
                       const alumno = alumnos.find(
                         (a: Alumno) => a.id === Number(alumnoIdSeleccionado),
                       );
-                      if (alumno?.caballoId) {
+                      if (alumno?.caballoPropio) {
+                        const caballoIdPred =
+                          typeof alumno.caballoPropio === "number"
+                            ? alumno.caballoPropio
+                            : alumno.caballoPropio.id;
                         const caballo = caballos.find(
-                          (c: Caballo) => c.id === alumno.caballoId,
+                          (c: Caballo) => c.id === caballoIdPred,
                         );
                         return caballo ? (
                           <span className="ml-2 text-xs font-medium text-success">
@@ -482,9 +451,12 @@ export default function CalendarioPage() {
                                 (a: Alumno) =>
                                   a.id === Number(alumnoIdSeleccionado),
                               );
-                              return alumno?.caballoId
-                                ? String(alumno.caballoId)
-                                : undefined;
+                              if (!alumno?.caballoPropio) return undefined;
+                              const caballoIdPred =
+                                typeof alumno.caballoPropio === "number"
+                                  ? alumno.caballoPropio
+                                  : alumno.caballoPropio.id;
+                              return String(caballoIdPred);
                             })()
                     }
                   >
@@ -535,48 +507,65 @@ export default function CalendarioPage() {
                   </Select>
                 </div>
 
-                {/* ✅ Checkbox Clase de Prueba (solo al crear) */}
-                {!claseToEdit ? (
-                  <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground">
-                      Tipo de Clase
-                    </Label>
-                    <div className="flex items-center gap-3 rounded-md border border-orange-300 bg-orange-50 p-2.5 h-10">
+                {/* ✅ FILA 4: Estado - Checkbox/Observaciones */}
+                <div className="space-y-2">
+                  {!claseToEdit ? (
+                    <>
+                      <Label className="text-sm text-muted-foreground">
+                        Tipo de Clase
+                      </Label>
+                      <div className="flex items-center gap-3 rounded-md border border-orange-300 bg-orange-50 p-2.5 h-10">
+                        <input
+                          type="checkbox"
+                          id="esPrueba"
+                          name="esPrueba"
+                          className="h-4 w-4 rounded border-orange-400 text-orange-600 focus:ring-orange-500"
+                        />
+                        <Label
+                          htmlFor="esPrueba"
+                          className="text-sm font-medium text-orange-800 cursor-pointer"
+                        >
+                          Clase de Prueba
+                        </Label>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Label htmlFor="estado">Estado</Label>
+                      <Select
+                        name="estado"
+                        required
+                        defaultValue={claseToEdit.estado}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ESTADOS.map((estado) => (
+                            <SelectItem key={estado} value={estado}>
+                              {estado}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Label htmlFor="observaciones">Observaciones</Label>
+                      <Input
+                        id="observaciones"
+                        name="observaciones"
+                        defaultValue={claseToEdit?.observaciones || ""}
+                        placeholder="Ej. Lluvia, Feriado, etc"
+                      />
                       <input
                         type="checkbox"
                         id="esPrueba"
                         name="esPrueba"
-                        className="h-4 w-4 rounded border-orange-400 text-orange-600 focus:ring-orange-500"
+                        className="hidden"
+                        value="on"
+                        defaultChecked={claseToEdit?.esPrueba || false}
                       />
-                      <Label
-                        htmlFor="esPrueba"
-                        className="text-sm font-medium text-orange-800 cursor-pointer"
-                      >
-                        Clase de Prueba
-                      </Label>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label htmlFor="estado">Estado</Label>
-                    <Select
-                      name="estado"
-                      required
-                      defaultValue={claseToEdit.estado}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ESTADOS.map((estado) => (
-                          <SelectItem key={estado} value={estado}>
-                            {estado}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
             <DialogFooter>

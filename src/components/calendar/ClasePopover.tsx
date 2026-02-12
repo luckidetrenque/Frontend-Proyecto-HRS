@@ -26,7 +26,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Clase } from "@/lib/api";
 
-import { ESTADO_COLORS, ESTADO_STYLES, ESTADOS } from "./calendar.styles";
+import { ESTADO_COLORS, ESTADO_STYLES, ESTADOS } from "./clases.constants";
 
 interface ClasePopoverProps {
   clase: Clase;

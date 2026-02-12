@@ -9,7 +9,7 @@ import { useState } from "react";
 import { Clase } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { DIAS_SEMANA, MAX_CLASES_POR_CELDA } from "./calendar.styles";
+import { DIAS_SEMANA, MAX_CLASES_POR_CELDA } from "./clases.constants";
 import { ClaseBadge } from "./ClaseBadge";
 import { ClasePopover } from "./ClasePopover";
 

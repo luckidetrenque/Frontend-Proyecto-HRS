@@ -12,8 +12,8 @@ import { es } from "date-fns/locale";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 
-import { TIME_SLOTS } from "@/components/calendar/calendar.styles";
-import { Caballo,Clase } from "@/lib/api";
+import { TIME_SLOTS } from "@/components/calendar/clases.constants";
+import { Caballo, Clase } from "@/lib/api";
 
 interface ExportToExcelParams {
   selectedDate: Date;

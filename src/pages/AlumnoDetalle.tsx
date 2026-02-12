@@ -62,12 +62,11 @@ import {
 export default function AlumnoDetalle() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const alumnoId = parseInt(id || "0");
 
-  const queryClient = useQueryClient();
   const [isEditOpen, setIsEditOpen] = useState(false);
 
-  // Agregar mutation para actualizar
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Alumno> }) =>
       alumnosApi.actualizar(id, data),
@@ -77,8 +76,18 @@ export default function AlumnoDetalle() {
       setIsEditOpen(false);
       toast.success("Alumno actualizado correctamente");
     },
-    onError: (error: Error) =>
-      toast.error(error.message || "Error al actualizar el alumno"),
+  });
+
+  const { data: alumno, isLoading: loadingAlumno } = useQuery({
+    queryKey: ["alumno", alumnoId],
+    queryFn: () => alumnosApi.obtener(alumnoId),
+    enabled: !!alumnoId && alumnoId !== 1, // Evita la ejecución innecesaria
+  });
+
+  const { data: clasesAlumnoData = [], isLoading: loadingData } = useQuery({
+    queryKey: ["clases-alumno", alumnoId],
+    queryFn: () => clasesApi.buscarPorAlumno(alumnoId),
+    enabled: !!alumnoId && alumnoId !== 1,
   });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -104,33 +113,7 @@ export default function AlumnoDetalle() {
     updateMutation.mutate({ id: alumnoId, data });
   };
 
-  // Query para obtener el alumno
-  const { data: alumno, isLoading: loadingAlumno } = useQuery({
-    queryKey: ["alumno", alumnoId],
-    queryFn: () => alumnosApi.obtener(alumnoId),
-    enabled: !!alumnoId,
-  });
-
-  // Query para obtener las clases del alumno
-  const { data: clasesAlumnoData = [], isLoading: loadingData } = useQuery({
-    queryKey: ["clases-alumno", alumnoId],
-    queryFn: () => clasesApi.buscarPorAlumno(alumnoId),
-    enabled: !!alumnoId,
-  });
-
   const clasesAlumno = Array.isArray(clasesAlumnoData) ? clasesAlumnoData : [];
-
-  // Query para obtener todos los caballos (solo si es propietario)
-  // const { data: todosCaballos = [], isLoading: loadingData } = useQuery({
-  //   queryKey: ["caballos"],
-  //   queryFn: caballosApi.listar,
-  //   enabled: !!alumno?.propietario,
-  // });
-
-  // Filtrar el caballo privado de este alumno
-  // const caballoPrivado = todosCaballos.find(
-  //   (c) => c.tipo === "PRIVADO" && c.alumnoId === alumnoId,
-  // );
 
   // Calcular estadísticas
   const estadisticas = {
@@ -366,7 +349,8 @@ export default function AlumnoDetalle() {
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
-              ) : alumno.caballoPropio ? (
+              ) : alumno.caballoPropio &&
+                typeof alumno.caballoPropio === "object" ? (
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">
@@ -376,32 +360,43 @@ export default function AlumnoDetalle() {
                       {alumno.caballoPropio.nombre || "No asignado"}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Tipo</p>
-                    <StatusBadge status="success">Privado</StatusBadge>
+                  <div className="pt-4 border-t grid grid-cols-2 gap-4">
+                    <div>
+                      <InfoField label="Tipo">
+                        <StatusBadge status="success">Privado</StatusBadge>
+                      </InfoField>
+                    </div>
+                    <div>
+                      <InfoField label="Disponibilidad">
+                        <StatusBadge
+                          status={
+                            alumno.caballoPropio.disponible
+                              ? "success"
+                              : "error"
+                          }
+                        >
+                          {alumno.caballoPropio.disponible
+                            ? "Disponible"
+                            : "No Disponible"}
+                        </StatusBadge>
+                      </InfoField>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Disponibilidad
-                    </p>
-                    <StatusBadge
-                      status={
-                        alumno.caballoPropio.disponible ? "success" : "error"
-                      }
-                    >
-                      {alumno.caballoPropio.disponible
-                        ? "Disponible"
-                        : "No Disponible"}
-                    </StatusBadge>
-                  </div>
+
                   <div className="p-2 text-right">
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0"
-                      onClick={() =>
-                        navigate(`/caballos/${alumno.caballoPropio?.id}`)
-                      }
+                      onClick={() => {
+                        if (
+                          alumno.caballoPropio &&
+                          typeof alumno.caballoPropio === "object" &&
+                          "id" in alumno.caballoPropio
+                        ) {
+                          navigate(`/caballos/${alumno.caballoPropio.id}`);
+                        }
+                      }}
                     >
                       {/* Se agrega un icono visible al botón */}
                       <ChevronRight className="h-4 w-4" />

@@ -1,15 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
-import { AlertCircle, AlertTriangle } from "lucide-react";
+import { MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import { ALUMNO_COMODIN_ID } from "@/components/calendar/calendar.styles";
+import {
+  ALUMNO_COMODIN_ID,
+  ESPECIALIDADES,
+  ESTADO_COLORS,
+  formatearConZona,
+  obtenerHoraArgentina,
+  parsearHoraParaApi,
+} from "@/components/calendar/clases.constants";
 import { GenericCard } from "@/components/cards/GenericCard";
 import { GenericCardSkeleton } from "@/components/cards/GenericCardSkeleton";
 import { Layout } from "@/components/Layout";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import {
@@ -21,6 +26,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,28 +60,17 @@ import {
 } from "@/lib/api";
 import {
   filtrarCaballosDisponibles,
+  handleEspecialidadChangeEffect,
   puedeEditarClase,
+  resolverCaballoId,
+  validarClasePrueba,
   verificarConflictoHorario,
 } from "@/utils/validacionesClases";
-
-const estadoColors: Record<
-  string,
-  "success" | "warning" | "error" | "info" | "default"
-> = {
-  PROGRAMADA: "warning",
-  INICIADA: "info",
-  COMPLETADA: "success",
-  CANCELADA: "error",
-  ACA: "info",
-  ASA: "info",
-};
-
-const especialidad = ["EQUINOTERAPIA", "EQUITACION", "ADIESTRAMIENTO", "MONTA"];
 
 export default function ClasesPage() {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
-  const [editingClase, setEditingClase] = useState<Clase | null>(null);
+  const [claseToEdit, setClaseToEdit] = useState<Clase | null>(null);
   const [claseToDelete, setClaseToDelete] = useState<Clase | null>(null);
 
   const navigate = useNavigate();
@@ -125,7 +125,7 @@ export default function ClasesPage() {
 
   // Estados de filtros
   const [filters, setFilters] = useState({
-    dia: "",
+    dia: new Date().toISOString().split("T")[0],
     hora: "",
     alumnoId: "all",
     instructorId: "all",
@@ -275,6 +275,7 @@ export default function ClasesPage() {
         label: `${a.nombre} ${a.apellido}`,
         value: String(a.id),
       })),
+      placeholder: "Todos los alumnos",
     },
     {
       name: "instructorId",
@@ -284,6 +285,7 @@ export default function ClasesPage() {
         label: `${i.nombre} ${i.apellido}`,
         value: String(i.id),
       })),
+      placeholder: "Todos los instructores",
     },
     {
       name: "caballoId",
@@ -298,7 +300,7 @@ export default function ClasesPage() {
       name: "especialidad",
       label: "Especialidad",
       type: "select" as const,
-      options: especialidad.map((e) => ({
+      options: ESPECIALIDADES.map((e) => ({
         label: e,
         value: e,
       })),
@@ -320,7 +322,7 @@ export default function ClasesPage() {
 
   // Función para abrir el diálogo de edición
   const handleOpenEditDialog = (clase: Clase) => {
-    setEditingClase(clase);
+    setClaseToEdit (clase);
     setEspecialidadSeleccionada(clase.especialidad);
     setAlumnoIdSeleccionado(String(clase.alumnoId));
     setIsOpen(true);
@@ -328,7 +330,7 @@ export default function ClasesPage() {
 
   // Función para abrir el diálogo de nueva clase
   const handleOpenCreateDialog = () => {
-    setEditingClase(null);
+    setClaseToEdit (null);
     setEspecialidadSeleccionada("");
     setAlumnoIdSeleccionado("");
     setIsOpen(true);
@@ -337,7 +339,7 @@ export default function ClasesPage() {
   // Función para cerrar el diálogo y resetear estados
   const handleCloseDialog = () => {
     setIsOpen(false);
-    setEditingClase(null);
+    setClaseToEdit (null);
     setEspecialidadSeleccionada("");
     setAlumnoIdSeleccionado("");
   };
@@ -349,7 +351,7 @@ export default function ClasesPage() {
 
   const handleResetFilters = () => {
     setFilters({
-      dia: "",
+      dia: new Date().toISOString().split("T")[0],
       hora: "",
       alumnoId: "all",
       instructorId: "all",
@@ -368,12 +370,12 @@ export default function ClasesPage() {
 
   // Manejador para cambio de especialidad
   const handleEspecialidadChange = (value: string) => {
-    setEspecialidadSeleccionada(value);
-
-    // Si es MONTA, asignar automáticamente el alumno comodín
-    if (value === "MONTA") {
-      setAlumnoIdSeleccionado(String(ALUMNO_COMODIN_ID));
-    }
+    handleEspecialidadChangeEffect(
+      value,
+      ALUMNO_COMODIN_ID,
+      setEspecialidadSeleccionada,
+      setAlumnoIdSeleccionado,
+    );
   };
 
   const createMutation = useMutation({
@@ -394,7 +396,7 @@ export default function ClasesPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["clases-search"] });
       setIsOpen(false);
-      setEditingClase(null);
+      setClaseToEdit (null);
       const successMsg =
         data.__successMessage || "Clase actualizada correctamente";
       toast.success(successMsg);
@@ -421,94 +423,46 @@ export default function ClasesPage() {
 
     const alumnoId = Number(formData.get("alumnoId"));
     const alumno = alumnosValidos.find((a: Alumno) => a.id === alumnoId);
-
-    // ✅ PRESERVAR: Validación de especialidad duplicada
-    const especialidad = formData.get("especialidad") as
-      | "ADIESTRAMIENTO"
-      | "EQUINOTERAPIA"
-      | "EQUITACION"
-      | "MONTA";
-
-    if (!editingClase && alumno) {
-      const yaTomoEspecialidad = clases.some(
-        (c) =>
-          c.alumnoId === alumno.id &&
-          c.especialidad === especialidad &&
-          (c.estado === "PROGRAMADA" ||
-            c.estado === "INICIADA" ||
-            c.estado === "COMPLETADA"),
-      );
-
-      if (yaTomoEspecialidad) {
-        toast.error(
-          `${alumno.nombre} ${alumno.apellido} ya tiene una clase de ${especialidad} programada o completada`,
-        );
-        return;
-      }
-    }
-
-    // ✅ PRESERVAR: Validación de clase de prueba
+    const especialidad = formData.get("especialidad") as Clase["especialidad"];
     const esPrueba = formData.get("esPrueba") === "on";
-    if (esPrueba && alumno) {
-      if (alumno.activo) {
-        toast.error(
-          "Las clases de prueba solo pueden asignarse a alumnos inactivos",
-        );
-        return;
-      }
 
-      const yaTomoClaseDePrueba = clases.some(
-        (c) => c.alumnoId === alumno.id && c.esPrueba,
+    // Validación de clase de prueba (unificada)
+    if (!claseToEdit && esPrueba && alumno) {
+      const { esValido, mensaje } = validarClasePrueba(
+        clases,
+        alumno,
+        especialidad,
+        claseToEdit?.id,
       );
-
-      if (yaTomoClaseDePrueba) {
-        toast.error(
-          `${alumno.nombre} ${alumno.apellido} ya ha tomado una clase de prueba anteriormente`,
-        );
+      if (!esValido) {
+        toast.error(mensaje);
         return;
       }
     }
 
-    // ✅ NUEVO: Usar caballo propio si no se especifica otro
-    const caballoIdForm = formData.get("caballoId");
-    const caballoId = caballoIdForm
-      ? Number(caballoIdForm)
-      : alumno?.caballoPropio
-        ? typeof alumno.caballoPropio === "number"
-          ? alumno.caballoPropio
-          : alumno.caballoPropio.id
-        : null;
-
+    // Resolver caballo
+    const caballoId = resolverCaballoId(formData.get("caballoId"), alumno);
     if (!caballoId) {
       toast.error("Debe seleccionar un caballo");
       return;
     }
 
     const data = {
-      especialidad: especialidad,
+      especialidad,
       dia: new Date(formData.get("dia") as string).toISOString().split("T")[0],
-      hora: new Date(`1970-01-01T${formData.get("hora") as string}`)
-        .toISOString()
-        .split("T")[1]
-        .substring(0, 5),
+      hora: parsearHoraParaApi(formData.get("hora") as string),
       duracion: 60,
-      estado: formData.get("estado") as
-        | "PROGRAMADA"
-        | "INICIADA"
-        | "COMPLETADA"
-        | "CANCELADA"
-        | "ACA"
-        | "ASA",
+      estado: claseToEdit?.estado || "PROGRAMADA",
       observaciones: "",
-      alumnoId: alumno.id,
+      alumnoId: alumno!.id,
       instructorId: Number(formData.get("instructorId")),
-      caballoId: caballoId,
+      caballoId,
       diaHoraCompleto: "",
-      esPrueba: esPrueba,
+      esPrueba,
     };
 
-    if (editingClase) {
-      updateMutation.mutate({ id: editingClase.id, data });
+    if (claseToEdit) {
+      updateMutation.mutate({ id: claseToEdit.id, data });
     } else {
       createMutation.mutate(data);
     }
@@ -516,6 +470,11 @@ export default function ClasesPage() {
 
   const getAlumnoNombre = (id: number) => {
     const alumno = alumnosValidos.find((a: Alumno) => a.id === id);
+    return alumno ? `${alumno.nombre} ${alumno.apellido}` : "-";
+  };
+
+  const getAlumnoNombreCompleto = (id: number) => {
+    const alumno = alumnos.find((a: Alumno) => a.id === id);
     return alumno ? `${alumno.nombre} ${alumno.apellido}` : "-";
   };
 
@@ -527,32 +486,6 @@ export default function ClasesPage() {
   const getCaballoNombre = (id: number) => {
     const caballo = caballos.find((c: Caballo) => c.id === id);
     return caballo?.nombre || "-";
-  };
-
-  const formatearConZona = (diaHoraIso: string) => {
-    return new Intl.DateTimeFormat("es-AR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-      timeZone: "America/Argentina/Buenos_Aires", // Fuerza la zona horaria
-    }).format(new Date(diaHoraIso));
-  };
-
-  const obtenerHoraArgentina = (isoString?: string) => {
-    if (!isoString) return "";
-
-    const fecha = new Date(isoString);
-    if (isNaN(fecha.getTime())) return "";
-
-    // Forzamos la zona horaria a America/Argentina/Buenos_Aires
-    return fecha
-      .toLocaleTimeString("es-AR", {
-        timeZone: "America/Argentina/Buenos_Aires",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false, // Formato 24hs requerido por el input
-      })
-      .replace(":", ":"); // Asegura que use el separador estándar
   };
 
   const columns = [
@@ -583,7 +516,7 @@ export default function ClasesPage() {
     {
       header: "Estado",
       cell: (row: Clase) => (
-        <StatusBadge status={estadoColors[row.estado] || "default"}>
+        <StatusBadge status={ESTADO_COLORS[row.estado] || "default"}>
           {row.estado}
         </StatusBadge>
       ),
@@ -597,51 +530,59 @@ export default function ClasesPage() {
     },
     {
       header: "Acciones",
-      cell: (row: Clase) => (
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditingClase(row);
-              setIsOpen(true);
-            }}
-            disabled={!puedeEditarClase(row)}
-            className={
-              !puedeEditarClase(row) ? "opacity-50 cursor-not-allowed" : ""
-            }
-            title={
-              !puedeEditarClase(row)
-                ? "No se puede editar una clase finalizada"
-                : "Editar clase"
-            }
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (confirm("¿Eliminar esta clase?")) {
-                deleteMutation.mutate(row.id);
-              }
-            }}
-            disabled={!puedeEditarClase(row)}
-            className={
-              !puedeEditarClase(row) ? "opacity-50 cursor-not-allowed" : ""
-            }
-            title={
-              !puedeEditarClase(row)
-                ? "No se puede eliminar una clase finalizada"
-                : "Eliminar clase"
-            }
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </div>
-      ),
+      cell: (row: Clase) => {
+        const puedeEditar = puedeEditarClase(row);
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreVertical className="h-4 w-4" />
+                <span className="sr-only">Abrir menú de acciones</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenEditDialog(row);
+                }}
+                disabled={!puedeEditar}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                <div className="flex flex-col">
+                  <span>Editar</span>
+                  {!puedeEditar && (
+                    <span className="text-xs text-muted-foreground">
+                      Clase finalizada
+                    </span>
+                  )}
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm("¿Eliminar esta clase?")) {
+                    deleteMutation.mutate(row.id);
+                  }
+                }}
+                disabled={!puedeEditar}
+                className="text-red-600 focus:text-red-600 disabled:text-muted-foreground"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                <div className="flex flex-col">
+                  <span>Eliminar</span>
+                  {!puedeEditar && (
+                    <span className="text-xs text-muted-foreground">
+                      Clase finalizada
+                    </span>
+                  )}
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
     },
   ];
 
@@ -673,8 +614,8 @@ export default function ClasesPage() {
             <Dialog
               open={isOpen}
               onOpenChange={(open) => {
-                setIsOpen(open);
-                if (!open) setEditingClase(null);
+                if (!open) handleCloseDialog();
+                else setIsOpen(true);
               }}
             >
               <DialogTrigger asChild>
@@ -687,16 +628,16 @@ export default function ClasesPage() {
                 <form onSubmit={handleSubmit}>
                   <DialogHeader>
                     <DialogTitle className="font-display">
-                      {editingClase ? "Editar Clase" : "Nueva Clase"}
+                      {claseToEdit ? "Editar Clase" : "Nueva Clase"}
                     </DialogTitle>
                     <DialogDescription>
-                      {editingClase
-                        ? "Modifica los datos de la clase"
+                      {claseToEdit
+                        ? `Editando clase de ${getAlumnoNombreCompleto(claseToEdit.alumnoId)}`
                         : "Completa los datos para programar una nueva clase"}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
-                    {/* ✅ FILA 1: Día - Hora */}
+                    {/* ✅ FILA 1: Hora de Inicio - Alumno */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="dia">Día</Label>
@@ -705,7 +646,7 @@ export default function ClasesPage() {
                           name="dia"
                           type="date"
                           defaultValue={
-                            editingClase?.dia ||
+                            claseToEdit?.dia ||
                             hoy.getFullYear() +
                               "-" +
                               String(hoy.getMonth() + 1).padStart(2, "0") +
@@ -716,15 +657,15 @@ export default function ClasesPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="hora">Hora</Label>
+                        <Label htmlFor="hora">Hora de Inicio</Label>
                         <Input
                           id="hora"
                           name="hora"
                           type="time"
                           defaultValue={
-                            editingClase
+                            claseToEdit
                               ? obtenerHoraArgentina(
-                                  editingClase.diaHoraCompleto,
+                                  claseToEdit.diaHoraCompleto,
                                 )
                               : "09:00"
                           }
@@ -740,7 +681,7 @@ export default function ClasesPage() {
                           Alumno
                           {especialidadSeleccionada === "MONTA" && (
                             <span className="ml-2 text-xs text-muted-foreground">
-                              (Auto)
+                              (Asignado automáticamente)
                             </span>
                           )}
                         </Label>
@@ -806,8 +747,8 @@ export default function ClasesPage() {
                         <Select
                           name="caballoId"
                           defaultValue={
-                            editingClase
-                              ? String(editingClase.caballoId)
+                            claseToEdit
+                              ? String(claseToEdit.caballoId)
                               : (() => {
                                   const alumno = alumnosValidos.find(
                                     (a: Alumno) =>
@@ -853,9 +794,7 @@ export default function ClasesPage() {
                         <Select
                           name="instructorId"
                           required
-                          defaultValue={String(
-                            editingClase?.instructorId || "",
-                          )}
+                          defaultValue={String(claseToEdit?.instructorId || "")}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccionar instructor" />
@@ -881,13 +820,13 @@ export default function ClasesPage() {
                           required
                           value={especialidadSeleccionada}
                           onValueChange={handleEspecialidadChange}
-                          defaultValue={editingClase?.especialidad || ""}
+                          defaultValue={claseToEdit?.especialidad || ""}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccionar especialidad" />
                           </SelectTrigger>
                           <SelectContent>
-                            {especialidad.map((esp) => (
+                            {ESPECIALIDADES.map((esp) => (
                               <SelectItem key={esp} value={esp}>
                                 {esp}
                               </SelectItem>
@@ -904,7 +843,7 @@ export default function ClasesPage() {
                         <Select
                           name="estado"
                           required
-                          defaultValue={editingClase?.estado || "PROGRAMADA"}
+                          defaultValue={claseToEdit?.estado || "PROGRAMADA"}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccionar estado" />
@@ -925,7 +864,7 @@ export default function ClasesPage() {
                       </div>
 
                       {/* ✅ Checkbox Clase de Prueba (solo al crear) */}
-                      {!editingClase ? (
+                      {!claseToEdit ? (
                         <div className="space-y-2">
                           <Label className="text-sm text-muted-foreground">
                             Tipo de Clase
@@ -951,7 +890,7 @@ export default function ClasesPage() {
                           <Input
                             id="observaciones"
                             name="observaciones"
-                            defaultValue={editingClase?.observaciones || ""}
+                            defaultValue={claseToEdit?.observaciones || ""}
                             placeholder="Ej. Lluvia, Feriado, etc"
                           />
                           <input
@@ -960,7 +899,7 @@ export default function ClasesPage() {
                             name="esPrueba"
                             className="hidden"
                             value="on"
-                            defaultChecked={editingClase?.esPrueba || false}
+                            defaultChecked={claseToEdit?.esPrueba || false}
                           />
                         </div>
                       )}
@@ -973,7 +912,7 @@ export default function ClasesPage() {
                         createMutation.isPending || updateMutation.isPending
                       }
                     >
-                      {editingClase ? "Guardar Cambios" : "Crear Clase"}
+                      {claseToEdit ? "Guardar Cambios" : "Crear Clase"}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -1053,7 +992,7 @@ export default function ClasesPage() {
                 onClick={() => navigate(`/clases/${clase.id}`)}
                 onEdit={() => {
                   if (puedeEditarClase(clase)) {
-                    setEditingClase(clase);
+                    setClaseToEdit (clase);
                     setIsOpen(true);
                   } else {
                     toast.error("No se puede editar una clase finalizada");

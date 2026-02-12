@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-import { MOTIVOS_CANCELACION } from "./calendar.styles";
+import { MOTIVOS_CANCELACION } from "./clases.constants";
 
 interface CalendarToolbarProps {
   // Copiar Clases
@@ -281,17 +281,17 @@ export function CalendarToolbar({
                 Selecciona las clases a eliminar
               </DialogTitle>
               <DialogDescription>
-                Indica el día de inicio y fin de las clases a eliminar.
+                Indica el día de inicio y de fin de las clases a eliminar.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="inicioOri">Día de origen</Label>
+                  <Label htmlFor="inicioOri">Desde</Label>
                   <Input id="inicioOri" name="inicioOri" type="date" required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="inicioDes">Día de destino</Label>
+                  <Label htmlFor="inicioDes">Hasta</Label>
                   <Input id="inicioDes" name="inicioDes" type="date" required />
                 </div>
               </div>

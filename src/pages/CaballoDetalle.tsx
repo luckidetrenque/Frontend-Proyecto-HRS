@@ -329,7 +329,6 @@ export default function CaballoDetalle() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <tbody className="divide-y">
-                        // DESPUÉS (CORRECTO - filtra solo objetos completos):
                         {caballo.propietarios
                           .filter(
                             (p): p is Alumno =>

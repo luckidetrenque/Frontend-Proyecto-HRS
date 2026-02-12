@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -18,6 +18,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,16 +39,14 @@ import {
 } from "@/lib/api";
 
 const PRESET_COLORS = [
-  "#3B82F6", // blue
-  "#EF4444", // red
-  "#10B981", // green
-  "#F59E0B", // amber
-  "#8B5CF6", // purple
-  "#EC4899", // pink
-  "#14B8A6", // teal
-  "#F97316", // orange
-  "#6366F1", // indigo
-  "#84CC16", // lime
+  "#F3E3EB",
+  "#E6EDFD",
+  "#F2B6B6",
+  "#FFF6B3",
+  "#EAF4E6",
+  "#F7C6EE",
+  "#FFD6A3",
+  "#B3CCE6",
 ];
 
 export default function InstructoresPage() {
@@ -306,31 +310,38 @@ export default function InstructoresPage() {
     {
       header: "Acciones",
       cell: (row: Instructor) => (
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditingInstructor(row);
-              setIsOpen(true);
-            }}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (confirm("¿Eliminar este instructor?")) {
-                deleteMutation.mutate(row.id);
-              }
-            }}
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreVertical className="h-4 w-4" />
+              <span className="sr-only">Abrir menú</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditingInstructor(row);
+                setIsOpen(true);
+              }}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirm("¿Eliminar este instructor?")) {
+                  deleteMutation.mutate(row.id);
+                }
+              }}
+              className="text-red-600 focus:text-red-600"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Eliminar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];
