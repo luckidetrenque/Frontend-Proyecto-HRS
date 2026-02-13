@@ -12,7 +12,6 @@ import {
   endOfMonth,
   endOfWeek,
   format,
-  isSameMonth,
   startOfMonth,
   startOfWeek,
   subDays,
@@ -22,7 +21,7 @@ import {
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { TIME_SLOTS, ViewMode } from "@/components/calendar/clases.constants";
+import { ViewMode } from "@/components/calendar/clases.constants";
 import { parsearHoraParaApi } from "@/components/calendar/clases.constants";
 import {
   Alumno,
@@ -36,11 +35,8 @@ import {
 } from "@/lib/api";
 import { exportToExcel } from "@/utils/exportToExcel";
 import {
-  filtrarCaballosDisponibles,
-  puedeEditarClase,
   resolverCaballoId,
   validarClasePrueba,
-  verificarConflictoHorario,
 } from "@/utils/validacionesClases";
 
 export function useCalendar() {
@@ -328,7 +324,7 @@ export function useCalendar() {
 
     const data = {
       especialidad,
-      dia: new Date(formData.get("dia") as string).toISOString().split("T")[0],
+      dia: format(currentDate, "yyyy-MM-dd"),
       hora: parsearHoraParaApi(formData.get("hora") as string),
       duracion: 60,
       estado: claseToEdit?.estado || "PROGRAMADA",

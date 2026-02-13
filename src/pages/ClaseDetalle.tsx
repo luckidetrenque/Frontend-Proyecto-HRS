@@ -54,7 +54,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Switch } from "@/components/ui/switch";
 import {
   Alumno,
   alumnosApi,
@@ -99,6 +98,7 @@ export default function ClaseDetalle() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clase", claseId] });
       queryClient.invalidateQueries({ queryKey: ["clases"] });
+      queryClient.invalidateQueries({ queryKey: ["clases-page"] });
       setIsDialogOpen(false);
       toast.success("Clase actualizada correctamente");
     },
@@ -112,7 +112,7 @@ export default function ClaseDetalle() {
 
     const data = {
       especialidad: formData.get("especialidad") as Clase["especialidad"],
-      dia: new Date(formData.get("dia") as string).toISOString().split("T")[0],
+      dia: formData.get("dia") as string,
       hora: parsearHoraParaApi(formData.get("hora") as string),
       estado: formData.get("estado") as Clase["estado"],
       observaciones: formData.get("observaciones") as string,
@@ -158,6 +158,7 @@ export default function ClaseDetalle() {
       clasesApi.actualizar(claseId, { estado }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clase", claseId] });
+      queryClient.invalidateQueries({ queryKey: ["clases-page"] });
       toast.success("Estado de la clase actualizado correctamente");
       setNuevoEstado(null);
     },
@@ -600,14 +601,12 @@ export default function ClaseDetalle() {
                       <SelectValue placeholder="Seleccionar especialidad" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="EQUITACION">EQUITACION</SelectItem>
-                      <SelectItem value="ADIESTRAMIENTO">
-                        ADIESTRAMIENTO
-                      </SelectItem>
-                      <SelectItem value="EQUINOTERAPIA">
-                        EQUINOTERAPIA
-                      </SelectItem>
-                      <SelectItem value="MONTA">MONTA</SelectItem>
+                      {ESPECIALIDADES.map((esp) => (
+                        <SelectItem key={esp} value={esp}>
+                          {esp.charAt(0).toUpperCase() +
+                            esp.slice(1).toLowerCase()}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -617,18 +616,20 @@ export default function ClaseDetalle() {
                   <Label htmlFor="estado">Estado</Label>
                   <Select
                     name="estado"
+                    required
                     defaultValue={clase?.estado || "PROGRAMADA"}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar estado" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="PROGRAMADA">Programada</SelectItem>
-                      <SelectItem value="INICIADA">Iniciada</SelectItem>
-                      <SelectItem value="COMPLETADA">Completada</SelectItem>
-                      <SelectItem value="CANCELADA">Cancelada</SelectItem>
-                      <SelectItem value="ACA">ACA</SelectItem>
-                      <SelectItem value="ASA">ASA</SelectItem>
+                      {ESTADOS.map((estado) => (
+                        <SelectItem key={estado} value={estado}>
+                          {/* Convierte "PROGRAMADA" en "Programada" */}
+                          {estado.charAt(0).toUpperCase() +
+                            estado.slice(1).toLowerCase()}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

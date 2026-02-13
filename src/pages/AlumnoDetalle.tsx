@@ -10,7 +10,6 @@ import {
   Edit,
   Mail,
   MessageCircle,
-  Phone,
   TrendingUp,
   User,
   XCircle,
@@ -50,14 +49,7 @@ import {
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Switch } from "@/components/ui/switch";
-import {
-  Alumno,
-  alumnosApi,
-  Caballo,
-  caballosApi,
-  Clase,
-  clasesApi,
-} from "@/lib/api";
+import { Alumno, alumnosApi, Clase, clasesApi } from "@/lib/api";
 
 export default function AlumnoDetalle() {
   const { id } = useParams<{ id: string }>();
@@ -97,14 +89,10 @@ export default function AlumnoDetalle() {
       dni: formData.get("dni") as string,
       nombre: formData.get("nombre") as string,
       apellido: formData.get("apellido") as string,
-      fechaNacimiento: new Date(formData.get("fechaNacimiento") as string)
-        .toISOString()
-        .split("T")[0],
+      fechaNacimiento: formData.get("fechaNacimiento") as string,
       telefono: formData.get("telefono") as string,
       email: formData.get("email") as string,
-      fechaInscripcion: new Date(formData.get("fechaInscripcion") as string)
-        .toISOString()
-        .split("T")[0],
+      fechaInscripcion: formData.get("fechaInscripcion") as string,
       cantidadClases: Number(formData.get("cantidadClases")),
       propietario: formData.get("propietario") === "on",
       activo: formData.get("activo") === "on",

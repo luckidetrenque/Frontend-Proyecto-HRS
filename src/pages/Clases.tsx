@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -7,7 +8,10 @@ import { toast } from "sonner";
 import {
   ALUMNO_COMODIN_ID,
   ESPECIALIDADES,
+  ESPECIALIDADES_OPTIONS,
   ESTADO_COLORS,
+  ESTADOS,
+  ESTADOS_OPTIONS,
   formatearConZona,
   obtenerHoraArgentina,
   parsearHoraParaApi,
@@ -52,19 +56,16 @@ import {
   Caballo,
   caballosApi,
   Clase,
-  ClaseDetallada,
   clasesApi,
   ClaseSearchFilters,
   Instructor,
   instructoresApi,
 } from "@/lib/api";
 import {
-  filtrarCaballosDisponibles,
   handleEspecialidadChangeEffect,
   puedeEditarClase,
   resolverCaballoId,
   validarClasePrueba,
-  verificarConflictoHorario,
 } from "@/utils/validacionesClases";
 
 export default function ClasesPage() {
@@ -89,18 +90,11 @@ export default function ClasesPage() {
       typedFilters.instructorId = Number(filters.instructorId);
     if (filters.caballoId) typedFilters.caballoId = Number(filters.caballoId);
     if (filters.especialidad)
-      typedFilters.especialidad = String(filters.especialidad) as
-        | "ADIESTRAMIENTO"
-        | "EQUINOTERAPIA"
-        | "EQUITACION";
+      typedFilters.especialidad = String(
+        filters.especialidad,
+      ) as Clase["especialidad"];
     if (filters.estado)
-      typedFilters.estado = String(filters.estado) as
-        | "PROGRAMADA"
-        | "INICIADA"
-        | "COMPLETADA"
-        | "CANCELADA"
-        | "ACA"
-        | "ASA";
+      typedFilters.estado = String(filters.estado) as Clase["estado"];
 
     setSearchFilters(typedFilters);
     setCurrentPage(1);
@@ -125,7 +119,8 @@ export default function ClasesPage() {
 
   // Estados de filtros
   const [filters, setFilters] = useState({
-    dia: new Date().toISOString().split("T")[0],
+    dia: "",
+    // dia: format(new Date(), "yyyy-MM-dd"),
     hora: "",
     alumnoId: "all",
     instructorId: "all",
@@ -186,10 +181,6 @@ export default function ClasesPage() {
   });
 
   // Filtrar caballos según alumno seleccionado
-  const caballosDisponibles = useMemo(() => {
-    if (!alumnoIdSeleccionado) return caballos.filter((c) => c.disponible);
-    return filtrarCaballosDisponibles(caballos, Number(alumnoIdSeleccionado));
-  }, [caballos, alumnoIdSeleccionado]);
 
   // Verificar clases restantes del alumno
   const hoy = new Date();
@@ -300,46 +291,30 @@ export default function ClasesPage() {
       name: "especialidad",
       label: "Especialidad",
       type: "select" as const,
-      options: ESPECIALIDADES.map((e) => ({
-        label: e,
-        value: e,
-      })),
+      options: ESPECIALIDADES_OPTIONS,
     },
     {
       name: "estado",
       label: "Estado",
       type: "select" as const,
-      options: [
-        { label: "Programada", value: "PROGRAMADA" },
-        { label: "Iniciada", value: "INICIADA" },
-        { label: "Completada", value: "COMPLETADA" },
-        { label: "Cancelada", value: "CANCELADA" },
-        { label: "ACA", value: "ACA" },
-        { label: "ASA", value: "ASA" },
-      ],
+      options: ESTADOS_OPTIONS,
     },
   ];
 
   // Función para abrir el diálogo de edición
   const handleOpenEditDialog = (clase: Clase) => {
-    setClaseToEdit (clase);
+    setClaseToEdit(clase);
     setEspecialidadSeleccionada(clase.especialidad);
     setAlumnoIdSeleccionado(String(clase.alumnoId));
     setIsOpen(true);
   };
 
   // Función para abrir el diálogo de nueva clase
-  const handleOpenCreateDialog = () => {
-    setClaseToEdit (null);
-    setEspecialidadSeleccionada("");
-    setAlumnoIdSeleccionado("");
-    setIsOpen(true);
-  };
 
   // Función para cerrar el diálogo y resetear estados
   const handleCloseDialog = () => {
     setIsOpen(false);
-    setClaseToEdit (null);
+    setClaseToEdit(null);
     setEspecialidadSeleccionada("");
     setAlumnoIdSeleccionado("");
   };
@@ -351,7 +326,8 @@ export default function ClasesPage() {
 
   const handleResetFilters = () => {
     setFilters({
-      dia: new Date().toISOString().split("T")[0],
+      // dia: format(new Date(), "yyyy-MM-dd"),
+      dia: "",
       hora: "",
       alumnoId: "all",
       instructorId: "all",
@@ -381,7 +357,7 @@ export default function ClasesPage() {
   const createMutation = useMutation({
     mutationFn: clasesApi.crear,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["clases-search"] });
+      queryClient.invalidateQueries({ queryKey: ["clases-page"] });
       setIsOpen(false);
       const successMsg = data.__successMessage || "Clase creada correctamente";
       toast.success(successMsg);
@@ -394,9 +370,9 @@ export default function ClasesPage() {
     mutationFn: ({ id, data }: { id: number; data: Partial<Clase> }) =>
       clasesApi.actualizar(id, data),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["clases-search"] });
+      queryClient.invalidateQueries({ queryKey: ["clases-page"] });
       setIsOpen(false);
-      setClaseToEdit (null);
+      setClaseToEdit(null);
       const successMsg =
         data.__successMessage || "Clase actualizada correctamente";
       toast.success(successMsg);
@@ -408,7 +384,7 @@ export default function ClasesPage() {
   const deleteMutation = useMutation({
     mutationFn: clasesApi.eliminar,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["clases-search"] });
+      queryClient.invalidateQueries({ queryKey: ["clases-page"] });
       const successMsg =
         data.__successMessage || "Clase eliminada correctamente";
       toast.success(successMsg);
@@ -449,11 +425,11 @@ export default function ClasesPage() {
 
     const data = {
       especialidad,
-      dia: new Date(formData.get("dia") as string).toISOString().split("T")[0],
+      dia: formData.get("dia") as string,
       hora: parsearHoraParaApi(formData.get("hora") as string),
       duracion: 60,
-      estado: claseToEdit?.estado || "PROGRAMADA",
-      observaciones: "",
+      estado: (formData.get("estado") as Clase["estado"]) || "PROGRAMADA",
+      observaciones: formData.get("observaciones") as string,
       alumnoId: alumno!.id,
       instructorId: Number(formData.get("instructorId")),
       caballoId,
@@ -646,12 +622,7 @@ export default function ClasesPage() {
                           name="dia"
                           type="date"
                           defaultValue={
-                            claseToEdit?.dia ||
-                            hoy.getFullYear() +
-                              "-" +
-                              String(hoy.getMonth() + 1).padStart(2, "0") +
-                              "-" +
-                              String(hoy.getDate()).padStart(2, "0")
+                            claseToEdit?.dia || format(new Date(), "yyyy-MM-dd")
                           }
                           required
                         />
@@ -828,7 +799,8 @@ export default function ClasesPage() {
                           <SelectContent>
                             {ESPECIALIDADES.map((esp) => (
                               <SelectItem key={esp} value={esp}>
-                                {esp}
+                                {esp.charAt(0).toUpperCase() +
+                                  esp.slice(1).toLowerCase()}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -849,21 +821,17 @@ export default function ClasesPage() {
                             <SelectValue placeholder="Seleccionar estado" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="PROGRAMADA">
-                              Programada
-                            </SelectItem>
-                            <SelectItem value="INICIADA">Iniciada</SelectItem>
-                            <SelectItem value="COMPLETADA">
-                              Completada
-                            </SelectItem>
-                            <SelectItem value="CANCELADA">Cancelada</SelectItem>
-                            <SelectItem value="ACA">ACA</SelectItem>
-                            <SelectItem value="ASA">ASA</SelectItem>
+                            {ESTADOS.map((estado) => (
+                              <SelectItem key={estado} value={estado}>
+                                {/* Convierte "PROGRAMADA" en "Programada" */}
+                                {estado.charAt(0).toUpperCase() +
+                                  estado.slice(1).toLowerCase()}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
 
-                      {/* ✅ Checkbox Clase de Prueba (solo al crear) */}
                       {!claseToEdit ? (
                         <div className="space-y-2">
                           <Label className="text-sm text-muted-foreground">
@@ -992,7 +960,7 @@ export default function ClasesPage() {
                 onClick={() => navigate(`/clases/${clase.id}`)}
                 onEdit={() => {
                   if (puedeEditarClase(clase)) {
-                    setClaseToEdit (clase);
+                    setClaseToEdit(clase);
                     setIsOpen(true);
                   } else {
                     toast.error("No se puede editar una clase finalizada");

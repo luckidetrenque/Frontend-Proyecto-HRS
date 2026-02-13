@@ -112,22 +112,6 @@ export default function AlumnosPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  // 🔍 QUERY PARA BÚSQUEDA INTELIGENTE
-  // const { data: searchResults, isLoading: isSearching } = useQuery({
-  //   queryKey: ["alumnos-search", searchFilters],
-  //   queryFn: () => {
-  //     // Si hay filtros de búsqueda, usar endpoint de búsqueda
-  //     if (Object.keys(searchFilters).length > 0) {
-  //       setIsSearchActive(true);
-  //       return alumnosApi.buscar(searchFilters);
-  //     }
-  //     // Si no hay filtros, listar todos
-  //     setIsSearchActive(false);
-  //     return alumnosApi.listar();
-  //   },
-  //   enabled: true,
-  // });
-
   useEffect(() => {
     const handleGlobalSearchEvent = (e: CustomEvent) => {
       const { filters, entityType } = e.detail;
@@ -450,14 +434,10 @@ export default function AlumnosPage() {
       dni: formData.get("dni") as string,
       nombre: formData.get("nombre") as string,
       apellido: formData.get("apellido") as string,
-      fechaNacimiento: new Date(formData.get("fechaNacimiento") as string)
-        .toISOString()
-        .split("T")[0],
+      fechaNacimiento: formData.get("fechaNacimiento") as string,
       telefono: formData.get("telefono") as string,
       email: formData.get("email") as string,
-      fechaInscripcion: new Date(formData.get("fechaInscripcion") as string)
-        .toISOString()
-        .split("T")[0],
+      fechaInscripcion: formData.get("fechaInscripcion") as string,
       cantidadClases: Number(formData.get("cantidadClases")),
       propietario: propietario,
       activo: formData.get("activo") === "on",

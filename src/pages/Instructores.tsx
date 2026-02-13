@@ -31,23 +31,13 @@ import { PageHeader } from "@/components/ui/page-header";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Switch } from "@/components/ui/switch";
+import { PRESET_COLORS } from "@/constants/instructor.constants";
 import { useValidarDniDuplicado } from "@/hooks/useValidarDniDuplicado";
 import {
   Instructor,
   instructoresApi,
   InstructorSearchFilters,
 } from "@/lib/api";
-
-const PRESET_COLORS = [
-  "#F3E3EB",
-  "#E6EDFD",
-  "#F2B6B6",
-  "#FFF6B3",
-  "#EAF4E6",
-  "#F7C6EE",
-  "#FFD6A3",
-  "#B3CCE6",
-];
 
 export default function InstructoresPage() {
   const queryClient = useQueryClient();
@@ -259,9 +249,7 @@ export default function InstructoresPage() {
       dni: formData.get("dni") as string,
       nombre: formData.get("nombre") as string,
       apellido: formData.get("apellido") as string,
-      fechaNacimiento: new Date(formData.get("fechaNacimiento") as string)
-        .toISOString()
-        .split("T")[0],
+      fechaNacimiento: formData.get("fechaNacimiento") as string,
       telefono: formData.get("telefono") as string,
       email: formData.get("email") as string,
       activo: formData.get("activo") === "on",
@@ -483,7 +471,6 @@ export default function InstructoresPage() {
                       </div>
                     </div>
 
-                    {/* ✅ AGREGAR ESTA SECCIÓN COMPLETA */}
                     <div className="space-y-2">
                       <Label>Color del Instructor</Label>
                       <div className="flex gap-2 flex-wrap">

@@ -94,7 +94,7 @@ export interface ClaseSearchFilters {
   alumnoId?: number;
   instructorId?: number;
   caballoId?: number;
-  especialidad?: "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUITACION";
+  especialidad?: "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUITACION" | "MONTA";
   estado?:
     | "PROGRAMADA"
     | "INICIADA"

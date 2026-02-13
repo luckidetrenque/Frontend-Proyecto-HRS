@@ -212,3 +212,20 @@ export const parsearHoraParaApi = (horaInput: string): string => {
     .split("T")[1]
     .substring(0, 5);
 };
+
+/**
+ * Opciones de estado con label legible para usar en FilterBar y Selects.
+ * Combina el valor de la API con el texto para el usuario.
+ */
+export const ESTADOS_OPTIONS = ESTADOS.map((estado) => ({
+  value: estado,
+  label: ESTADO_LABELS[estado] ?? estado,
+}));
+
+/**
+ * Opciones de especialidad para usar en FilterBar y Selects.
+ */
+export const ESPECIALIDADES_OPTIONS = ESPECIALIDADES.map((esp) => ({
+  value: esp,
+  label: esp,
+}));

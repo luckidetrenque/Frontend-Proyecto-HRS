@@ -1,6 +1,5 @@
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { AlertCircle, AlertTriangle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { CalendarControls } from "@/components/calendar/CalendarControls";
@@ -14,7 +13,6 @@ import { DayView } from "@/components/calendar/DayView";
 import { MonthView } from "@/components/calendar/MonthView";
 import { WeekView } from "@/components/calendar/WeekView";
 import { Layout } from "@/components/Layout";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -43,7 +41,6 @@ import {
   filtrarCaballosDisponibles,
   handleEspecialidadChangeEffect,
   puedeEditarClase,
-  verificarConflictoHorario,
 } from "@/utils/validacionesClases";
 
 export default function CalendarioPage() {
@@ -60,7 +57,6 @@ export default function CalendarioPage() {
     isDeleteOpen,
     setIsDeleteOpen,
     filters,
-    clases,
     filteredClases,
     alumnos,
     instructores,
@@ -103,19 +99,9 @@ export default function CalendarioPage() {
   const [alumnoIdSeleccionado, setAlumnoIdSeleccionado] = useState<string>("");
 
   // Filtrar caballos según alumno seleccionado
-  const caballosDisponibles = useMemo(() => {
-    if (!alumnoIdSeleccionado) return caballos.filter((c) => c.disponible);
-    return filtrarCaballosDisponibles(caballos, Number(alumnoIdSeleccionado));
-  }, [caballos, alumnoIdSeleccionado]);
 
   // Verificar clases restantes del alumno
-  const {
-    clasesRestantes,
-    estaAgotado,
-    cercaDelLimite,
-    clasesTomadas,
-    clasesContratadas,
-  } = useClasesRestantes(
+  const { estaAgotado } = useClasesRestantes(
     alumnoIdSeleccionado ? Number(alumnoIdSeleccionado) : 0,
     currentDate,
   );
@@ -500,7 +486,8 @@ export default function CalendarioPage() {
                     <SelectContent>
                       {ESPECIALIDADES.map((esp) => (
                         <SelectItem key={esp} value={esp}>
-                          {esp}
+                          {esp.charAt(0).toUpperCase() +
+                            esp.slice(1).toLowerCase()}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -543,7 +530,8 @@ export default function CalendarioPage() {
                         <SelectContent>
                           {ESTADOS.map((estado) => (
                             <SelectItem key={estado} value={estado}>
-                              {estado}
+                              {estado.charAt(0).toUpperCase() +
+                                estado.slice(1).toLowerCase()}
                             </SelectItem>
                           ))}
                         </SelectContent>
