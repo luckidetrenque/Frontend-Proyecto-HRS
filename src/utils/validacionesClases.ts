@@ -125,3 +125,30 @@ export const handleEspecialidadChangeEffect = (
     setAlumnoId(String(alumnoComodinId));
   }
 };
+
+/**
+ * Valida que la clase no termine después de las 18:30.
+ * Retorna { esValido, mensaje } para que el llamador muestre el error.
+ */
+export const validarHorarioLimite = (
+  hora: string,
+  duracion: number,
+): { esValido: boolean; mensaje: string } => {
+  if (!hora) return { esValido: true, mensaje: "" };
+
+  const [hh, mm] = hora.slice(0, 5).split(":").map(Number);
+  const inicioEnMinutos = hh * 60 + mm;
+  const finEnMinutos = inicioEnMinutos + duracion;
+  const limiteEnMinutos = 18 * 60 + 30; // 18:30
+
+  if (finEnMinutos > limiteEnMinutos) {
+    const finHH = String(Math.floor(finEnMinutos / 60)).padStart(2, "0");
+    const finMM = String(finEnMinutos % 60).padStart(2, "0");
+    return {
+      esValido: false,
+      mensaje: `La clase no puede terminar después de las 18:30. Con duración de ${duracion} minutos a las ${hora} terminaría a las ${finHH}:${finMM}.`,
+    };
+  }
+
+  return { esValido: true, mensaje: "" };
+};

@@ -266,9 +266,11 @@ export default function InstructoresPage() {
   useEffect(() => {
     if (editingInstructor) {
       setDniInput(editingInstructor.dni);
+      setInstructorColor(editingInstructor.color);
       setValidacionHabilitada(false);
     } else {
       setDniInput("");
+      setInstructorColor(PRESET_COLORS[0]);
       setValidacionHabilitada(true);
     }
   }, [editingInstructor]);

@@ -42,6 +42,7 @@ export interface Clase {
   especialidad: "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUITACION" | "MONTA";
   dia: string;
   hora: string;
+  duracion: number;
   estado:
     | "PROGRAMADA"
     | "INICIADA"

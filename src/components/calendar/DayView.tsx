@@ -9,9 +9,9 @@ import { useMemo, useState } from "react";
 import { Caballo, Clase } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { getClaseStyle, TIME_SLOTS } from "./clases.constants";
 import { ClaseBadge } from "./ClaseBadge";
 import { ClasePopover } from "./ClasePopover";
+import { getClaseStyle, TIME_SLOTS } from "./clases.constants";
 
 interface DayViewProps {
   selectedDate: Date;
@@ -61,12 +61,24 @@ export function DayView({
 
   const claseMap = useMemo(() => {
     const map: Record<string, Clase> = {};
+    const continuacionMap: Record<string, Clase> = {}; // ← nuevo
+
     clasesDelDia.forEach((clase) => {
       const horaKey = clase.hora.slice(0, 5);
       const key = `${clase.caballoId}-${horaKey}`;
       map[key] = clase;
+
+      // Si dura 60 min, ocupa también la franja siguiente
+      if (clase.duracion === 60) {
+        const [h, m] = horaKey.split(":").map(Number);
+        const totalMin = h * 60 + m + 30;
+        const nextHora = `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
+        const continuacionKey = `${clase.caballoId}-${nextHora}`;
+        continuacionMap[continuacionKey] = clase;
+      }
     });
-    return map;
+
+    return { map, continuacionMap };
   }, [clasesDelDia]);
 
   const caballosOrdenados = useMemo(() => {
@@ -114,7 +126,10 @@ export function DayView({
 
               {caballosOrdenados.map((caballo) => {
                 const key = `${caballo.id}-${hora}`;
-                const clase = claseMap[key];
+                const clase = claseMap.map[key];
+                const esContinuacion =
+                  !clase && !!claseMap.continuacionMap[key];
+                const claseContinuacion = claseMap.continuacionMap[key];
 
                 const conflictKey = `${dateKey}|${hora}|${caballo.id}`;
                 const hasConflict = conflictSet.has(conflictKey);
@@ -124,31 +139,36 @@ export function DayView({
                     key={key}
                     className={cn(
                       "border border-border p-1 text-center transition-colors relative",
-
+                      // Continuación de clase de 60min
+                      esContinuacion && "bg-muted/20 border-dashed",
                       // Conflicto
                       !clase &&
+                        !esContinuacion &&
                         hasConflict &&
                         "bg-red-100 border-red-400 hover:bg-red-200",
-
                       // Libre
                       !clase &&
+                        !esContinuacion &&
                         !hasConflict &&
                         onCellClick &&
                         "cursor-pointer hover:bg-primary/10",
                     )}
                     title={
-                      clase
-                        ? `Clase ${clase.estado.toLowerCase()} con el instructor ${getInstructorNombre(clase.instructorId)}`
-                        : `Agregar clase para ${caballo.nombre} a las ${hora}`
+                      esContinuacion
+                        ? `Continúa clase de ${getAlumnoNombre(claseContinuacion!.alumnoId)} (60 min)`
+                        : clase
+                          ? `Clase ${clase.estado.toLowerCase()} con el instructor ${getInstructorNombre(clase.instructorId)}`
+                          : `Agregar clase para ${caballo.nombre} a las ${hora}`
                     }
                     onClick={() => {
-                      if (!clase && onCellClick) {
+                      // No permitir click en celdas de continuación ni en celdas con clase
+                      if (!clase && !esContinuacion && onCellClick) {
                         onCellClick(caballo, hora);
                       }
                     }}
                   >
-                    {/* ⚠ Tooltip visual */}
-                    {!clase && hasConflict && (
+                    {/* ⚠ Tooltip visual de conflicto */}
+                    {!clase && !esContinuacion && hasConflict && (
                       <span
                         className="absolute top-1 right-1 text-[10px] text-red-600"
                         title="Conflicto de horario"
@@ -156,12 +176,75 @@ export function DayView({
                         ⚠
                       </span>
                     )}
-                    {clase ? (
+
+                    {/* Celda de continuación de clase 60 min */}
+                    {/* Celda de continuación de clase 60 min — clickeable, mismo popover */}
+                    {esContinuacion && claseContinuacion && (
+                      <ClasePopover
+                        clase={claseContinuacion}
+                        trigger={
+                          <div
+                            className="relative opacity-80 cursor-pointer"
+                            title={`Continúa hasta las ${(() => {
+                              const [h, m] = claseContinuacion.hora
+                                .slice(0, 5)
+                                .split(":")
+                                .map(Number);
+                              const fin =
+                                h * 60 + m + (claseContinuacion.duracion ?? 60);
+                              return `${String(Math.floor(fin / 60)).padStart(2, "0")}:${String(fin % 60).padStart(2, "0")}`;
+                            })()}`}
+                          >
+                            {claseContinuacion.esPrueba && (
+                              <span
+                                className="absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs shadow-sm border border-orange-600"
+                                title="Clase de Prueba"
+                              >
+                                🎓
+                              </span>
+                            )}
+                            {/* Badge igual al de inicio pero con borde izquierdo para indicar continuación */}
+                            <ClaseBadge
+                              clase={claseContinuacion}
+                              alumnoNombre={getAlumnoNombre(
+                                claseContinuacion.alumnoId,
+                              )}
+                              instructorColor={getInstructorColor(
+                                claseContinuacion.instructorId,
+                              )}
+                            />
+                          </div>
+                        }
+                        alumnoNombre={getAlumnoNombreCompleto(
+                          claseContinuacion.alumnoId,
+                        )}
+                        instructorNombre={getInstructorNombre(
+                          claseContinuacion.instructorId,
+                        )}
+                        caballoNombre={getCaballoNombre(
+                          claseContinuacion.caballoId,
+                        )}
+                        onStatusChange={onStatusChange}
+                        onEdit={onEditClase!}
+                        onDelete={onDeleteClase!}
+                        puedeEditar={
+                          puedeEditarClase
+                            ? puedeEditarClase(claseContinuacion)
+                            : true
+                        }
+                        open={popoverOpen === `${key}-cont`}
+                        onOpenChange={(open) =>
+                          setPopoverOpen(open ? `${key}-cont` : null)
+                        }
+                      />
+                    )}
+
+                    {/* Celda con clase (inicio) */}
+                    {clase && (
                       <ClasePopover
                         clase={clase}
                         trigger={
                           <div className="relative">
-                            {/* ✅ Indicador de clase de prueba en esquina superior derecha */}
                             {clase.esPrueba && (
                               <span
                                 className="absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs shadow-sm border border-orange-600"
@@ -195,7 +278,10 @@ export function DayView({
                           setPopoverOpen(open ? key : null)
                         }
                       />
-                    ) : (
+                    )}
+
+                    {/* Celda vacía */}
+                    {!clase && !esContinuacion && (
                       <span className="text-xs text-muted-foreground/30">
                         —
                       </span>

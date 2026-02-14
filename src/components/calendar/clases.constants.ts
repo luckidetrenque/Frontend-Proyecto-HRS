@@ -207,10 +207,9 @@ export const formatearConZona = (diaHoraIso?: string): string => {
  * Usar siempre que se procese el campo "hora" de un formulario de clase.
  */
 export const parsearHoraParaApi = (horaInput: string): string => {
-  return new Date(`1970-01-01T${horaInput}`)
-    .toISOString()
-    .split("T")[1]
-    .substring(0, 5);
+  if (!horaInput) return "09:00";
+  // Devolver directamente HH:mm sin ninguna conversión de zona horaria
+  return horaInput.slice(0, 5);
 };
 
 /**

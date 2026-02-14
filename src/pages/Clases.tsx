@@ -10,6 +10,7 @@ import {
   ESPECIALIDADES,
   ESPECIALIDADES_OPTIONS,
   ESTADO_COLORS,
+  ESTADO_LABELS,
   ESTADOS,
   ESTADOS_OPTIONS,
   formatearConZona,
@@ -66,6 +67,7 @@ import {
   puedeEditarClase,
   resolverCaballoId,
   validarClasePrueba,
+  validarHorarioLimite,
 } from "@/utils/validacionesClases";
 
 export default function ClasesPage() {
@@ -423,11 +425,21 @@ export default function ClasesPage() {
       return;
     }
 
+    // Validar horario límite
+    const horaValor = (formData.get("hora") as string).slice(0, 5);
+    const duracionValor = Number(formData.get("duracion")) || 60;
+    const { esValido: horarioOk, mensaje: mensajeHorario } =
+      validarHorarioLimite(horaValor, duracionValor);
+    if (!horarioOk) {
+      toast.error(mensajeHorario);
+      return;
+    }
+
     const data = {
       especialidad,
       dia: formData.get("dia") as string,
       hora: parsearHoraParaApi(formData.get("hora") as string),
-      duracion: 60,
+      duracion: Number(formData.get("duracion")) || 30,
       estado: (formData.get("estado") as Clase["estado"]) || "PROGRAMADA",
       observaciones: formData.get("observaciones") as string,
       alumnoId: alumno!.id,
@@ -872,6 +884,35 @@ export default function ClasesPage() {
                         </div>
                       )}
                     </div>
+                    {/* FILA 5: Duración */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="duracion">Duración</Label>
+                        <Select
+                          name="duracion"
+                          required
+                          defaultValue={String(claseToEdit?.duracion || 60)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar duración" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="30">30 minutos</SelectItem>
+                            <SelectItem value="60">60 minutos</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {claseToEdit && (
+                        <div className="space-y-2">
+                          <Label className="text-sm text-muted-foreground">
+                            Fin estimado
+                          </Label>
+                          <p className="flex h-10 items-center text-sm text-muted-foreground">
+                            {/* Calculado visualmente, solo informativo */}
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <DialogFooter>
                     <Button
@@ -951,7 +992,7 @@ export default function ClasesPage() {
                   },
                   {
                     label: "Estado ",
-                    value: clase.estado,
+                    value: ESTADO_LABELS[clase.estado] || clase.estado,
                     type: "badge",
                     trueLabel: "",
                     falseLabel: "",

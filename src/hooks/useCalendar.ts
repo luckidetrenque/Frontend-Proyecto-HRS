@@ -37,6 +37,7 @@ import { exportToExcel } from "@/utils/exportToExcel";
 import {
   resolverCaballoId,
   validarClasePrueba,
+  validarHorarioLimite,
 } from "@/utils/validacionesClases";
 
 export function useCalendar() {
@@ -322,11 +323,21 @@ export function useCalendar() {
       return;
     }
 
+    // Validar horario límite
+    const horaValor = (formData.get("hora") as string).slice(0, 5);
+    const duracionValor = Number(formData.get("duracion")) || 60;
+    const { esValido: horarioOk, mensaje: mensajeHorario } =
+      validarHorarioLimite(horaValor, duracionValor);
+    if (!horarioOk) {
+      toast.error(mensajeHorario);
+      return;
+    }
+
     const data = {
       especialidad,
-      dia: format(currentDate, "yyyy-MM-dd"),
+      dia: (formData.get("dia") as string) || format(currentDate, "yyyy-MM-dd"),
       hora: parsearHoraParaApi(formData.get("hora") as string),
-      duracion: 60,
+      duracion: Number(formData.get("duracion")) || 30,
       estado: claseToEdit?.estado || "PROGRAMADA",
       observaciones: "",
       alumnoId: alumno!.id,

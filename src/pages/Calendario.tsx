@@ -281,7 +281,6 @@ export default function CalendarioPage() {
         </Card>
       )}
 
-      {/* En Calendario.tsx, reemplazar la leyenda actual */}
       <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
         {instructores.map((instructor) => (
           <div key={instructor.id} className="flex items-center gap-2">
@@ -369,6 +368,36 @@ export default function CalendarioPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {/* FILA 5: Duración */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="duracion">Duración</Label>
+                  <Select
+                    name="duracion"
+                    required
+                    defaultValue={String(claseToEdit?.duracion || 60)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar duración" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="30">30 minutos</SelectItem>
+                      <SelectItem value="60">60 minutos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {claseToEdit && (
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">
+                      Fin estimado
+                    </Label>
+                    <p className="flex h-10 items-center text-sm text-muted-foreground">
+                      {/* Calculado visualmente, solo informativo */}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* ✅ FILA 2: Instructor - Caballo */}
