@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 import { ClaseBadge } from "./ClaseBadge";
 import { ClasePopover } from "./ClasePopover";
-import { getClaseStyle, TIME_SLOTS } from "./clases.constants";
+import { TIME_SLOTS } from "./clases.constants";
 
 interface DayViewProps {
   selectedDate: Date;
@@ -24,6 +24,8 @@ interface DayViewProps {
   puedeEditarClase?: (clase: Clase) => boolean;
   getAlumnoNombre: (id: number) => string;
   getAlumnoNombreCompleto: (id: number) => string;
+  getNombreParaClase: (clase: Clase) => string;
+  getNombreCompletoParaClase: (clase: Clase) => string;
   getInstructorNombre: (id: number) => string;
   getCaballoNombre: (id: number) => string;
   getInstructorColor: (id: number) => string;
@@ -41,6 +43,8 @@ export function DayView({
   puedeEditarClase,
   getAlumnoNombre,
   getAlumnoNombreCompleto,
+  getNombreParaClase,
+  getNombreCompletoParaClase,
   getInstructorNombre,
   getCaballoNombre,
   getInstructorColor,
@@ -69,7 +73,7 @@ export function DayView({
       map[key] = clase;
 
       // Si dura 60 min, ocupa también la franja siguiente
-      if (clase.duracion === 60) {
+      if ((clase.duracion ?? 60) >= 60) {
         const [h, m] = horaKey.split(":").map(Number);
         const totalMin = h * 60 + m + 30;
         const nextHora = `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
@@ -81,8 +85,14 @@ export function DayView({
     return { map, continuacionMap };
   }, [clasesDelDia]);
 
+  // Orden de los caballos alfabéticamente
+  // const caballosOrdenados = useMemo(() => {
+  //   return [...caballos].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  // }, [caballos]);
+
+  // Orden de los caballos según el backend
   const caballosOrdenados = useMemo(() => {
-    return [...caballos].sort((a, b) => a.nombre.localeCompare(b.nombre));
+    return [...caballos];
   }, [caballos]);
 
   return (
@@ -111,6 +121,25 @@ export function DayView({
                 >
                   {caballo.nombre}
                 </span>
+                {/* <div className="flex flex-col items-center gap-0.5">
+                  <span
+                    className={cn(
+                      caballo.tipo === "PRIVADO" && "text-primary font-bold",
+                    )}
+                  >
+                    {caballo.nombre}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[10px] font-normal px-1.5 py-0.5 rounded-full",
+                      caballo.tipo === "PRIVADO"
+                        ? "bg-primary/10 text-primary"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {caballo.tipo === "PRIVADO" ? "Privado" : "Escuela"}
+                  </span>
+                </div> */}
               </th>
             ))}
           </tr>
@@ -155,7 +184,7 @@ export function DayView({
                     )}
                     title={
                       esContinuacion
-                        ? `Continúa clase de ${getAlumnoNombre(claseContinuacion!.alumnoId)} (60 min)`
+                        ? `Continúa clase de ${getNombreCompletoParaClase(claseContinuacion)} (60 min)`
                         : clase
                           ? `Clase ${clase.estado.toLowerCase()} con el instructor ${getInstructorNombre(clase.instructorId)}`
                           : `Agregar clase para ${caballo.nombre} a las ${hora}`
@@ -206,8 +235,8 @@ export function DayView({
                             {/* Badge igual al de inicio pero con borde izquierdo para indicar continuación */}
                             <ClaseBadge
                               clase={claseContinuacion}
-                              alumnoNombre={getAlumnoNombre(
-                                claseContinuacion.alumnoId,
+                              alumnoNombre={getNombreCompletoParaClase(
+                                claseContinuacion,
                               )}
                               instructorColor={getInstructorColor(
                                 claseContinuacion.instructorId,
@@ -215,8 +244,8 @@ export function DayView({
                             />
                           </div>
                         }
-                        alumnoNombre={getAlumnoNombreCompleto(
-                          claseContinuacion.alumnoId,
+                        alumnoNombre={getNombreCompletoParaClase(
+                          claseContinuacion,
                         )}
                         instructorNombre={getInstructorNombre(
                           claseContinuacion.instructorId,
@@ -255,14 +284,14 @@ export function DayView({
                             )}
                             <ClaseBadge
                               clase={clase}
-                              alumnoNombre={getAlumnoNombre(clase.alumnoId)}
+                              alumnoNombre={getNombreCompletoParaClase(clase)}
                               instructorColor={getInstructorColor(
                                 clase.instructorId,
                               )}
                             />
                           </div>
                         }
-                        alumnoNombre={getAlumnoNombreCompleto(clase.alumnoId)}
+                        alumnoNombre={getNombreCompletoParaClase(clase)}
                         instructorNombre={getInstructorNombre(
                           clase.instructorId,
                         )}

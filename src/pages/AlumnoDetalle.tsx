@@ -14,7 +14,7 @@ import {
   User,
   XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -49,7 +49,8 @@ import {
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Switch } from "@/components/ui/switch";
-import { Alumno, alumnosApi, Clase, clasesApi } from "@/lib/api";
+import { Alumno, alumnosApi, caballosApi, Clase, clasesApi } from "@/lib/api";
+import { CuotaPension, TipoPension } from "@/types/enums";
 
 export default function AlumnoDetalle() {
   const { id } = useParams<{ id: string }>();
@@ -82,6 +83,29 @@ export default function AlumnoDetalle() {
     enabled: !!alumnoId && alumnoId !== 1,
   });
 
+  const { data: caballos = [] } = useQuery({
+    queryKey: ["caballos"],
+    queryFn: caballosApi.listar,
+  });
+
+  const [tipoPensionForm, setTipoPensionForm] =
+    useState<TipoPension>("SIN_CABALLO");
+
+  // Sincronizar tipoPensionForm cuando el alumno carga del servidor
+  useEffect(() => {
+    if (alumno?.tipoPension) {
+      setTipoPensionForm(alumno.tipoPension);
+    }
+  }, [alumno?.tipoPension]);
+
+  // Resetear al cerrar el dialog
+  const handleOpenChange = (open: boolean) => {
+    setIsEditOpen(open);
+    if (!open && alumno) {
+      setTipoPensionForm(alumno.tipoPension ?? "SIN_CABALLO");
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -94,7 +118,12 @@ export default function AlumnoDetalle() {
       email: formData.get("email") as string,
       fechaInscripcion: formData.get("fechaInscripcion") as string,
       cantidadClases: Number(formData.get("cantidadClases")),
-      propietario: formData.get("propietario") === "on",
+      propietario: formData.get("tipoPension") !== "SIN_CABALLO", // derivado
+      tipoPension: formData.get("tipoPension") as TipoPension,
+      cuotaPension: (formData.get("cuotaPension") as CuotaPension) || null,
+      caballoId: formData.get("caballoId")
+        ? Number(formData.get("caballoId"))
+        : null,
       activo: formData.get("activo") === "on",
     };
 
@@ -314,22 +343,24 @@ export default function AlumnoDetalle() {
                 <div>
                   <CardTitle className="text-lg">Caballo</CardTitle>
                   <CardDescription>
-                    {alumno.propietario
-                      ? "Información del caballo privado"
-                      : "Utiliza caballos de la escuela"}
+                    {alumno.tipoPension === "SIN_CABALLO" &&
+                      "Se asigna caballo por clase"}
+                    {alumno.tipoPension === "RESERVA_ESCUELA" &&
+                      "Reserva caballo de escuela"}
+                    {alumno.tipoPension === "CABALLO_PROPIO" &&
+                      "Caballo propio"}
                   </CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              {!alumno.propietario ? (
+              {alumno.tipoPension === "SIN_CABALLO" ? (
                 <div className="text-center py-8">
                   <div className="rounded-lg bg-muted/50 p-6">
                     <Accessibility className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="font-medium mb-1">No tiene caballo propio</p>
+                    <p className="font-medium mb-1">Sin caballo asignado</p>
                     <p className="text-sm text-muted-foreground">
-                      Este alumno utiliza los caballos de la escuela para sus
-                      clases
+                      Se le asigna un caballo de la escuela en cada clase
                     </p>
                   </div>
                 </div>
@@ -340,6 +371,24 @@ export default function AlumnoDetalle() {
               ) : alumno.caballoPropio &&
                 typeof alumno.caballoPropio === "object" ? (
                 <div className="space-y-4">
+                  <div className="pt-2">
+                    <InfoField label="Tipo de pensión">
+                      <span>
+                        {alumno.tipoPension === "RESERVA_ESCUELA" &&
+                          "Reserva de escuela"}
+                        {alumno.tipoPension === "CABALLO_PROPIO" &&
+                          "Caballo propio"}
+                      </span>
+                    </InfoField>
+                    {alumno.cuotaPension && (
+                      <InfoField label="Cuota">
+                        <StatusBadge status="info">
+                          {alumno.cuotaPension.charAt(0) +
+                            alumno.cuotaPension.slice(1).toLowerCase()}
+                        </StatusBadge>
+                      </InfoField>
+                    )}
+                  </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">
                       Nombre del Caballo
@@ -351,7 +400,11 @@ export default function AlumnoDetalle() {
                   <div className="pt-4 border-t grid grid-cols-2 gap-4">
                     <div>
                       <InfoField label="Tipo">
-                        <StatusBadge status="success">Privado</StatusBadge>
+                        <StatusBadge status="success">
+                          {alumno.tipoPension === "CABALLO_PROPIO"
+                            ? "Privado"
+                            : "Escuela"}
+                        </StatusBadge>
                       </InfoField>
                     </div>
                     <div>
@@ -395,7 +448,9 @@ export default function AlumnoDetalle() {
                 <div className="text-center py-8">
                   <Accessibility className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                   <p className="text-sm text-muted-foreground">
-                    No se encontró caballo privado registrado
+                    {alumno.tipoPension === "RESERVA_ESCUELA"
+                      ? "No se encontró caballo de escuela registrado"
+                      : "No se encontró caballo privado registrado"}
                   </p>
                 </div>
               )}
@@ -509,7 +564,7 @@ export default function AlumnoDetalle() {
         </Card>
 
         {/* Dialog para Editar Alumno */}
-        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <Dialog open={isEditOpen} onOpenChange={handleOpenChange}>
           <DialogContent className="sm:max-w-md">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
@@ -624,15 +679,33 @@ export default function AlumnoDetalle() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3">
-                    <Switch
-                      id="propietario"
-                      name="propietario"
-                      defaultChecked={alumno?.propietario}
-                    />
-                    <Label htmlFor="propietario">Tiene caballo propio</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="tipoPension">Pensión</Label>
+                    <Select
+                      name="tipoPension"
+                      defaultValue={alumno?.tipoPension ?? "SIN_CABALLO"}
+                      value={tipoPensionForm}
+                      onValueChange={(value) =>
+                        setTipoPensionForm(value as TipoPension)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Tipo de pensión" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="SIN_CABALLO">
+                          Sin caballo asignado
+                        </SelectItem>
+                        <SelectItem value="RESERVA_ESCUELA">
+                          Reserva caballo de escuela
+                        </SelectItem>
+                        <SelectItem value="CABALLO_PROPIO">
+                          Caballo propio
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 pt-6">
                     <Switch
                       id="activo"
                       name="activo"
@@ -641,6 +714,57 @@ export default function AlumnoDetalle() {
                     <Label htmlFor="activo">Está activo</Label>
                   </div>
                 </div>
+
+                {/* Fila condicional: cuota + caballo, solo si tiene caballo */}
+                {tipoPensionForm !== "SIN_CABALLO" && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="cuotaPension">Cuota de pensión</Label>
+                      <Select
+                        name="cuotaPension"
+                        defaultValue={alumno?.cuotaPension ?? ""}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar cuota" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ENTERA">Entera</SelectItem>
+                          <SelectItem value="MEDIA">Media</SelectItem>
+                          <SelectItem value="TERCIO">Tercio</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="caballoId">Caballo</Label>
+                      <Select
+                        name="caballoId"
+                        defaultValue={String(
+                          alumno?.caballoPropio &&
+                            typeof alumno.caballoPropio === "object"
+                            ? alumno.caballoPropio.id
+                            : "",
+                        )}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar caballo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {caballos
+                            .filter((c) =>
+                              tipoPensionForm === "CABALLO_PROPIO"
+                                ? c.tipo === "PRIVADO"
+                                : c.tipo === "ESCUELA",
+                            )
+                            .map((c) => (
+                              <SelectItem key={c.id} value={String(c.id)}>
+                                {c.nombre}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={updateMutation.isPending}>

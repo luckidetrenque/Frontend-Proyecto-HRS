@@ -32,6 +32,7 @@ import {
   clasesApi,
   Instructor,
   instructoresApi,
+  personasPruebaApi,
 } from "@/lib/api";
 import { exportToExcel } from "@/utils/exportToExcel";
 import {
@@ -58,6 +59,13 @@ export function useCalendar() {
   // Estados de otros diálogos
   const [isCopyOpen, setIsCopyOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+  const [tipoPrueba, setTipoPrueba] = useState<
+    "alumno_existente" | "persona_nueva"
+  >("persona_nueva");
+  const [nombrePrueba, setNombrePrueba] = useState("");
+  const [apellidoPrueba, setApellidoPrueba] = useState("");
+  const [esPruebaChecked, setEsPruebaChecked] = useState(false);
 
   // Estados de filtros
   const [filters, setFilters] = useState({
@@ -291,18 +299,45 @@ export function useCalendar() {
     setClaseToEdit(null);
     setPrefilledCaballoId(null);
     setPrefilledHora(null);
+    setEsPruebaChecked(false);
+    setTipoPrueba("persona_nueva");
+    setNombrePrueba("");
+    setApellidoPrueba("");
   };
 
-  const handleSubmitClase = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitClase = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-
-    const alumnoId = Number(formData.get("alumnoId"));
-    const alumno = alumnos.find((a: Alumno) => a.id === alumnoId);
-    const especialidad = formData.get("especialidad") as Clase["especialidad"];
     const esPrueba = formData.get("esPrueba") === "on";
+    const especialidad = formData.get("especialidad") as Clase["especialidad"];
 
-    // Validación de clase de prueba (unificada)
+    let alumnoId: number | null = null;
+    let personaPruebaId: number | null = null;
+
+    if (esPrueba && tipoPrueba === "persona_nueva") {
+      if (!nombrePrueba.trim() || !apellidoPrueba.trim()) {
+        toast.error("Ingresá nombre y apellido de la persona de prueba");
+        return;
+      }
+      try {
+        const personaPrueba = await personasPruebaApi.crear({
+          nombre: nombrePrueba.trim(),
+          apellido: apellidoPrueba.trim(),
+        });
+        personaPruebaId = personaPrueba.id;
+      } catch {
+        toast.error("Error al registrar la persona de prueba");
+        return;
+      }
+    } else {
+      alumnoId = Number(formData.get("alumnoId"));
+    }
+
+    const alumno = alumnoId
+      ? alumnos.find((a: Alumno) => a.id === alumnoId)
+      : undefined;
+
+    // Validación de clase de prueba para alumno existente
     if (!claseToEdit && esPrueba && alumno) {
       const { esValido, mensaje } = validarClasePrueba(
         clases,
@@ -340,10 +375,11 @@ export function useCalendar() {
       duracion: Number(formData.get("duracion")) || 30,
       estado: claseToEdit?.estado || "PROGRAMADA",
       observaciones: "",
-      alumnoId: alumno!.id,
       instructorId: Number(formData.get("instructorId")),
       caballoId,
       diaHoraCompleto: "",
+      alumnoId,
+      personaPruebaId,
       esPrueba,
     };
 
@@ -370,11 +406,6 @@ export function useCalendar() {
       diaInicioDestino: formData.get("inicioDes") as string,
       cantidadSemanas: Number(formData.get("cantidadSemanas")),
     };
-
-    // if (!data.diaInicioOrigen || !data.diaInicioDestino) {
-    //   toast.error("Ambas fechas son obligatorias");
-    //   return;
-    // }
 
     copyWeekMutation.mutate(data);
   };
@@ -470,6 +501,24 @@ export function useCalendar() {
     return alumno ? `${alumno.nombre} ${alumno.apellido}` : "-";
   };
 
+  // Agregar después de getAlumnoNombreCompleto en useCalendar.ts:
+
+  const getNombreParaClase = (clase: Clase): string => {
+    if (clase.alumnoId) {
+      const alumno = alumnos.find((a: Alumno) => a.id === clase.alumnoId);
+      return alumno ? alumno.nombre : "-";
+    }
+    return clase.personaPruebaNombreCompleto?.split(" ")[0] ?? "-";
+  };
+
+  const getNombreCompletoParaClase = (clase: Clase): string => {
+    if (clase.alumnoId) {
+      const alumno = alumnos.find((a: Alumno) => a.id === clase.alumnoId);
+      return alumno ? `${alumno.nombre} ${alumno.apellido}` : "-";
+    }
+    return clase.personaPruebaNombreCompleto ?? "-";
+  };
+
   const getInstructorNombre = (id: number) => {
     const instructor = instructores.find((i: Instructor) => i.id === id);
     return instructor ? `${instructor.nombre} ${instructor.apellido}` : "-";
@@ -499,6 +548,16 @@ export function useCalendar() {
     isDeleteOpen,
     setIsDeleteOpen,
     filters,
+
+    // Estados de prueba (para el formulario en Calendario.tsx)
+    esPruebaChecked,
+    setEsPruebaChecked,
+    tipoPrueba,
+    setTipoPrueba,
+    nombrePrueba,
+    setNombrePrueba,
+    apellidoPrueba,
+    setApellidoPrueba,
 
     // Datos
     clases,
@@ -542,6 +601,8 @@ export function useCalendar() {
     getAlumnoNombre,
     getAlumnoApellido,
     getAlumnoNombreCompleto,
+    getNombreParaClase,
+    getNombreCompletoParaClase,
     getInstructorNombre,
     getCaballoNombre,
     getInstructorColor,

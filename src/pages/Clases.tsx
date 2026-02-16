@@ -61,6 +61,7 @@ import {
   ClaseSearchFilters,
   Instructor,
   instructoresApi,
+  personasPruebaApi,
 } from "@/lib/api";
 import {
   handleEspecialidadChangeEffect,
@@ -75,6 +76,13 @@ export default function ClasesPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [claseToEdit, setClaseToEdit] = useState<Clase | null>(null);
   const [claseToDelete, setClaseToDelete] = useState<Clase | null>(null);
+
+  const [tipoPrueba, setTipoPrueba] = useState<
+    "alumno_existente" | "persona_nueva"
+  >("persona_nueva");
+  const [nombrePrueba, setNombrePrueba] = useState("");
+  const [apellidoPrueba, setApellidoPrueba] = useState("");
+  const [esPruebaChecked, setEsPruebaChecked] = useState(false);
 
   const navigate = useNavigate();
 
@@ -307,7 +315,7 @@ export default function ClasesPage() {
   const handleOpenEditDialog = (clase: Clase) => {
     setClaseToEdit(clase);
     setEspecialidadSeleccionada(clase.especialidad);
-    setAlumnoIdSeleccionado(String(clase.alumnoId));
+    setAlumnoIdSeleccionado(clase.alumnoId ? String(clase.alumnoId) : "");
     setIsOpen(true);
   };
 
@@ -319,6 +327,10 @@ export default function ClasesPage() {
     setClaseToEdit(null);
     setEspecialidadSeleccionada("");
     setAlumnoIdSeleccionado("");
+    setEsPruebaChecked(false);
+    setTipoPrueba("persona_nueva");
+    setNombrePrueba("");
+    setApellidoPrueba("");
   };
 
   const handleFilterChange = (name: string, value: string) => {
@@ -395,16 +407,40 @@ export default function ClasesPage() {
       toast.error(error.message || "Error al eliminar la clase"),
   });
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-
-    const alumnoId = Number(formData.get("alumnoId"));
-    const alumno = alumnosValidos.find((a: Alumno) => a.id === alumnoId);
-    const especialidad = formData.get("especialidad") as Clase["especialidad"];
     const esPrueba = formData.get("esPrueba") === "on";
+    const especialidad = formData.get("especialidad") as Clase["especialidad"];
 
-    // Validación de clase de prueba (unificada)
+    let alumnoId: number | null = null;
+    let personaPruebaId: number | null = null;
+
+    if (esPrueba && tipoPrueba === "persona_nueva") {
+      // Validar que se ingresaron nombre y apellido
+      if (!nombrePrueba.trim() || !apellidoPrueba.trim()) {
+        toast.error("Ingresá nombre y apellido de la persona de prueba");
+        return;
+      }
+      try {
+        const personaPrueba = await personasPruebaApi.crear({
+          nombre: nombrePrueba.trim(),
+          apellido: apellidoPrueba.trim(),
+        });
+        personaPruebaId = personaPrueba.id;
+      } catch {
+        toast.error("Error al registrar la persona de prueba");
+        return;
+      }
+    } else {
+      alumnoId = Number(formData.get("alumnoId"));
+    }
+
+    const alumno = alumnoId
+      ? alumnosValidos.find((a: Alumno) => a.id === alumnoId)
+      : undefined;
+
+    // Validación de clase de prueba para alumno existente
     if (!claseToEdit && esPrueba && alumno) {
       const { esValido, mensaje } = validarClasePrueba(
         clases,
@@ -442,10 +478,11 @@ export default function ClasesPage() {
       duracion: Number(formData.get("duracion")) || 30,
       estado: (formData.get("estado") as Clase["estado"]) || "PROGRAMADA",
       observaciones: formData.get("observaciones") as string,
-      alumnoId: alumno!.id,
       instructorId: Number(formData.get("instructorId")),
       caballoId,
       diaHoraCompleto: "",
+      alumnoId,
+      personaPruebaId,
       esPrueba,
     };
 
@@ -625,7 +662,7 @@ export default function ClasesPage() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
-                    {/* ✅ FILA 1: Hora de Inicio - Alumno */}
+                    {/* FILA 1: Día + Hora */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="dia">Día</Label>
@@ -657,34 +694,40 @@ export default function ClasesPage() {
                       </div>
                     </div>
 
-                    {/* ✅ FILA 2: Alumno - Caballo */}
+                    {/* FILA 2: Alumno + Caballo */}
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="alumnoId">
-                          Alumno
-                          {especialidadSeleccionada === "MONTA" && (
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              (Asignado automáticamente)
-                            </span>
-                          )}
-                        </Label>
-                        {especialidadSeleccionada === "MONTA" && (
-                          <input
-                            type="hidden"
-                            name="alumnoId"
-                            value={alumnoIdSeleccionado}
+                      {claseToEdit?.esPrueba && !claseToEdit?.alumnoId ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            value={claseToEdit.personaPruebaNombre ?? ""}
+                            disabled
+                            className="bg-muted text-muted-foreground"
+                            placeholder="Nombre"
                           />
-                        )}
+                          <Input
+                            value={claseToEdit.personaPruebaApellido ?? ""}
+                            disabled
+                            className="bg-muted text-muted-foreground"
+                            placeholder="Apellido"
+                          />
+                        </div>
+                      ) : (
                         <Select
                           name={
                             especialidadSeleccionada === "MONTA"
                               ? ""
                               : "alumnoId"
                           }
-                          required={especialidadSeleccionada !== "MONTA"}
+                          required={
+                            especialidadSeleccionada !== "MONTA" &&
+                            !(esPruebaChecked && tipoPrueba === "persona_nueva")
+                          }
                           value={alumnoIdSeleccionado || ""}
                           onValueChange={setAlumnoIdSeleccionado}
-                          disabled={especialidadSeleccionada === "MONTA"}
+                          disabled={
+                            especialidadSeleccionada === "MONTA" ||
+                            (esPruebaChecked && tipoPrueba === "persona_nueva")
+                          }
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccionar alumno" />
@@ -700,11 +743,10 @@ export default function ClasesPage() {
                             ))}
                           </SelectContent>
                         </Select>
-                      </div>
+                      )}
                       <div className="space-y-2">
                         <Label htmlFor="caballoId">
                           Caballo
-                          {/* Mostrar caballo predeterminado */}
                           {(() => {
                             const alumno = alumnosValidos.find(
                               (a: Alumno) =>
@@ -770,7 +812,7 @@ export default function ClasesPage() {
                       </div>
                     </div>
 
-                    {/* ✅ FILA 3: Instructor - Especialidad */}
+                    {/* FILA 3: Instructor + Especialidad */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="instructorId">Instructor</Label>
@@ -820,7 +862,7 @@ export default function ClasesPage() {
                       </div>
                     </div>
 
-                    {/* ✅ FILA 4: Estado - Checkbox/Observaciones */}
+                    {/* FILA 4: Estado + Tipo de Clase (crear) / Observaciones (editar) */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="estado">Estado</Label>
@@ -835,7 +877,6 @@ export default function ClasesPage() {
                           <SelectContent>
                             {ESTADOS.map((estado) => (
                               <SelectItem key={estado} value={estado}>
-                                {/* Convierte "PROGRAMADA" en "Programada" */}
                                 {estado.charAt(0).toUpperCase() +
                                   estado.slice(1).toLowerCase()}
                               </SelectItem>
@@ -854,6 +895,15 @@ export default function ClasesPage() {
                               type="checkbox"
                               id="esPrueba"
                               name="esPrueba"
+                              checked={esPruebaChecked}
+                              onChange={(e) => {
+                                setEsPruebaChecked(e.target.checked);
+                                if (!e.target.checked) {
+                                  setTipoPrueba("persona_nueva");
+                                  setNombrePrueba("");
+                                  setApellidoPrueba("");
+                                }
+                              }}
                               className="h-4 w-4 rounded border-orange-400 text-orange-600 focus:ring-orange-500"
                             />
                             <Label
@@ -865,26 +915,26 @@ export default function ClasesPage() {
                           </div>
                         </div>
                       ) : (
-                        <div className="space-y-2">
-                          <Label htmlFor="observaciones">Observaciones</Label>
-                          <Input
-                            id="observaciones"
-                            name="observaciones"
-                            defaultValue={claseToEdit?.observaciones || ""}
-                            placeholder="Ej. Lluvia, Feriado, etc"
-                          />
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="observaciones">Observaciones</Label>
+                            <Input
+                              id="observaciones"
+                              name="observaciones"
+                              defaultValue={claseToEdit?.observaciones || ""}
+                              placeholder="Ej. Lluvia, Feriado, etc"
+                            />
+                          </div>
                           <input
-                            type="checkbox"
-                            id="esPrueba"
+                            type="hidden"
                             name="esPrueba"
-                            className="hidden"
-                            value="on"
-                            defaultChecked={claseToEdit?.esPrueba || false}
+                            value={claseToEdit?.esPrueba ? "on" : "off"}
                           />
-                        </div>
+                        </>
                       )}
                     </div>
-                    {/* FILA 5: Duración */}
+
+                    {/* FILA 5: Duración + Fin estimado */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="duracion">Duración</Label>
@@ -902,17 +952,118 @@ export default function ClasesPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      {claseToEdit && (
-                        <div className="space-y-2">
-                          <Label className="text-sm text-muted-foreground">
-                            Fin estimado
-                          </Label>
-                          <p className="flex h-10 items-center text-sm text-muted-foreground">
-                            {/* Calculado visualmente, solo informativo */}
-                          </p>
-                        </div>
-                      )}
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground">
+                          Fin estimado
+                        </Label>
+                        <p className="flex h-10 items-center text-sm text-muted-foreground">
+                          {claseToEdit?.diaHoraCompleto
+                            ? (() => {
+                                const horaInicio = obtenerHoraArgentina(
+                                  claseToEdit.diaHoraCompleto,
+                                );
+                                const [h, m] = horaInicio
+                                  .split(":")
+                                  .map(Number);
+                                const durMin = claseToEdit.duracion || 60;
+                                const totalMin = h * 60 + m + durMin;
+                                return `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
+                              })()
+                            : "—"}
+                        </p>
+                      </div>
                     </div>
+
+                    {/* FILA 6: Observaciones al crear (span completo) */}
+                    {!claseToEdit && (
+                      <div className="space-y-2">
+                        <Label htmlFor="observaciones">Observaciones</Label>
+                        <Input
+                          id="observaciones"
+                          name="observaciones"
+                          placeholder="Ej. Lluvia, Feriado, etc"
+                        />
+                      </div>
+                    )}
+
+                    {/* BLOQUE PersonaPrueba: visible solo cuando esPrueba está marcado en creación */}
+                    {!claseToEdit && esPruebaChecked && (
+                      <div className="rounded-md border border-orange-200 bg-orange-50 p-4 space-y-3">
+                        {/* Radio: persona nueva vs alumno existente */}
+                        <div className="flex gap-6">
+                          <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-orange-900">
+                            <input
+                              type="radio"
+                              name="tipoPrueba"
+                              value="persona_nueva"
+                              checked={tipoPrueba === "persona_nueva"}
+                              onChange={() => {
+                                setTipoPrueba("persona_nueva");
+                                setAlumnoIdSeleccionado("");
+                              }}
+                              className="text-orange-600"
+                            />
+                            Persona nueva
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-orange-900">
+                            <input
+                              type="radio"
+                              name="tipoPrueba"
+                              value="alumno_existente"
+                              checked={tipoPrueba === "alumno_existente"}
+                              onChange={() => {
+                                setTipoPrueba("alumno_existente");
+                                setNombrePrueba("");
+                                setApellidoPrueba("");
+                              }}
+                              className="text-orange-600"
+                            />
+                            Alumno existente
+                          </label>
+                        </div>
+
+                        {/* Si persona nueva: nombre + apellido */}
+                        {tipoPrueba === "persona_nueva" && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <Label className="text-xs text-orange-800">
+                                Nombre/s
+                              </Label>
+                              <Input
+                                value={nombrePrueba}
+                                onChange={(e) =>
+                                  setNombrePrueba(e.target.value)
+                                }
+                                placeholder="Nombre/s"
+                                required
+                                className="bg-white"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs text-orange-800">
+                                Apellido/s
+                              </Label>
+                              <Input
+                                value={apellidoPrueba}
+                                onChange={(e) =>
+                                  setApellidoPrueba(e.target.value)
+                                }
+                                placeholder="Apellido/s"
+                                required
+                                className="bg-white"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Si alumno existente: select (ya está arriba, solo mostramos mensaje) */}
+                        {tipoPrueba === "alumno_existente" && (
+                          <p className="text-xs text-orange-700">
+                            Seleccioná el alumno en el selector de arriba.
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <DialogFooter>
                     <Button

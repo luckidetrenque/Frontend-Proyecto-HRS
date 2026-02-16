@@ -9,9 +9,9 @@ import { useState } from "react";
 import { Clase } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { DIAS_SEMANA, MAX_CLASES_POR_CELDA } from "./clases.constants";
 import { ClaseBadge } from "./ClaseBadge";
 import { ClasePopover } from "./ClasePopover";
+import { DIAS_SEMANA, MAX_CLASES_POR_CELDA } from "./clases.constants";
 
 interface WeekViewProps {
   calendarDays: Date[];
@@ -24,6 +24,8 @@ interface WeekViewProps {
   getAlumnoNombre: (id: number) => string;
   getAlumnoApellido: (id: number) => string;
   getAlumnoNombreCompleto: (id: number) => string;
+  getNombreParaClase: (clase: Clase) => string;
+  getNombreCompletoParaClase: (clase: Clase) => string;
   getInstructorNombre: (id: number) => string;
   getCaballoNombre: (id: number) => string;
   getInstructorColor: (id: number) => string;
@@ -40,6 +42,8 @@ export function WeekView({
   getAlumnoNombre,
   getAlumnoApellido,
   getAlumnoNombreCompleto,
+  getNombreParaClase,
+  getNombreCompletoParaClase,
   getInstructorNombre,
   getCaballoNombre,
   getInstructorColor,
@@ -105,7 +109,7 @@ export function WeekView({
                         <div>
                           <ClaseBadge
                             clase={clase}
-                            alumnoNombre={getAlumnoNombre(clase.alumnoId)}
+                            alumnoNombre={getNombreParaClase(clase)}
                             caballoNombre={getCaballoNombre(clase.caballoId)}
                             instructorColor={getInstructorColor(
                               clase.instructorId,
@@ -114,7 +118,7 @@ export function WeekView({
                           />
                         </div>
                       }
-                      alumnoNombre={getAlumnoNombreCompleto(clase.alumnoId)}
+                      alumnoNombre={getNombreCompletoParaClase(clase)}
                       instructorNombre={getInstructorNombre(clase.instructorId)}
                       caballoNombre={getCaballoNombre(clase.caballoId)}
                       onStatusChange={onStatusChange}

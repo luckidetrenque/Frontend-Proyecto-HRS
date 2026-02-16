@@ -1,7 +1,14 @@
+import {
+  CuotaPension,
+  EspecialidadClase,
+  EstadoClase,
+  TipoCaballo,
+  TipoPension,
+} from "@/types/enums";
 // API Configuration for HRS - Escuela de Equitación
 const API_BASE_URL = "http://localhost:8080/api/v1";
 
-// Types based on the Java models
+// Definición de tipos para Alumnos, Instructores, Caballos y Clases
 export interface Alumno {
   id: number;
   dni: string;
@@ -15,6 +22,15 @@ export interface Alumno {
   propietario: boolean;
   activo: boolean;
   caballoPropio?: number | Caballo;
+  tipoPension: TipoPension;
+  cuotaPension?: CuotaPension | null;
+}
+
+export interface PersonaPrueba {
+  id: number;
+  nombre: string;
+  apellido: string;
+  fechaRegistro: string;
 }
 
 export interface Instructor {
@@ -32,34 +48,33 @@ export interface Instructor {
 export interface Caballo {
   id: number;
   nombre: string;
-  tipo: "ESCUELA" | "PRIVADO";
+  tipo: TipoCaballo;
   disponible: boolean;
   propietarios?: Alumno[];
 }
 
 export interface Clase {
   id: number;
-  especialidad: "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUITACION" | "MONTA";
+  especialidad: EspecialidadClase;
   dia: string;
   hora: string;
   duracion: number;
-  estado:
-    | "PROGRAMADA"
-    | "INICIADA"
-    | "COMPLETADA"
-    | "CANCELADA"
-    | "ACA"
-    | "ASA";
+  estado: EstadoClase;
   observaciones?: string;
-  alumnoId: number;
+  alumnoId: number | null;
+  personaPruebaId?: number | null;
   instructorId: number;
   caballoId: number;
   diaHoraCompleto?: string;
   esPrueba?: boolean;
+  personaPruebaNombre?: string | null;
+  personaPruebaApellido?: string | null;
+  personaPruebaNombreCompleto?: string | null;
 }
 
 export interface ClaseDetallada extends Clase {
   alumno?: Alumno;
+  personaPrueba?: PersonaPrueba;
   instructor?: Instructor;
   caballo?: Caballo;
   esPrueba?: boolean;
@@ -84,7 +99,7 @@ export interface InstructorSearchFilters {
 
 export interface CaballoSearchFilters {
   nombre?: string;
-  tipo?: "ESCUELA" | "PRIVADO";
+  tipo?: TipoCaballo;
   disponible?: boolean;
   propietarios?: Alumno[];
 }
@@ -95,14 +110,8 @@ export interface ClaseSearchFilters {
   alumnoId?: number;
   instructorId?: number;
   caballoId?: number;
-  especialidad?: "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUITACION" | "MONTA";
-  estado?:
-    | "PROGRAMADA"
-    | "INICIADA"
-    | "COMPLETADA"
-    | "CANCELADA"
-    | "ACA"
-    | "ASA";
+  especialidad?: EspecialidadClase;
+  estado?: EstadoClase;
 }
 
 // Tipo para respuestas de búsqueda que pueden tener mensaje
@@ -236,20 +245,6 @@ export const alumnosApi = {
       return data;
     }
     return data.alumnos || [];
-  },
-
-  crearAlumnoDePrueba: async (
-    alumno: Omit<
-      Alumno,
-      "id" | "cantidadClases" | "activo" | "fechaInscripcion"
-    >,
-  ): Promise<Alumno & { __successMessage?: string }> => {
-    const response = await apiFetch(`/alumnos/prueba`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(alumno),
-    });
-    return handleResponse<Alumno>(response);
   },
 };
 
@@ -508,5 +503,23 @@ export const clasesApi = {
       body: payload ? JSON.stringify(payload) : undefined,
     });
     return handleResponse<unknown>(response);
+  },
+};
+
+// API para Personas de Prueba
+export const personasPruebaApi = {
+  crear: async (data: {
+    nombre: string;
+    apellido: string;
+  }): Promise<PersonaPrueba> => {
+    const response = await apiFetch("/personas-prueba", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    return handleResponse<PersonaPrueba>(response);
+  },
+  listar: async (): Promise<PersonaPrueba[]> => {
+    const response = await apiFetch("/personas-prueba");
+    return handleResponse<PersonaPrueba[]>(response);
   },
 };

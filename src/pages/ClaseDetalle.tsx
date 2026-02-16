@@ -114,9 +114,13 @@ export default function ClaseDetalle() {
       especialidad: formData.get("especialidad") as Clase["especialidad"],
       dia: formData.get("dia") as string,
       hora: parsearHoraParaApi(formData.get("hora") as string),
+      duracion: Number(formData.get("duracion")) || 60,
       estado: formData.get("estado") as Clase["estado"],
       observaciones: formData.get("observaciones") as string,
-      alumnoId: Number(formData.get("alumnoId")),
+      // Si es clase de prueba con persona nueva, no enviar alumnoId
+      ...(clase?.esPrueba && !clase?.alumnoId
+        ? { personaPruebaId: clase.personaPruebaId }
+        : { alumnoId: Number(formData.get("alumnoId")) }),
       instructorId: Number(formData.get("instructorId")),
       caballoId: Number(formData.get("caballoId")),
     };
@@ -509,6 +513,7 @@ export default function ClaseDetalle() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              {/* FILA 1: Día + Hora */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="dia">Día</Label>
@@ -521,7 +526,7 @@ export default function ClaseDetalle() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="hora">Hora</Label>
+                  <Label htmlFor="hora">Hora de Inicio</Label>
                   <Input
                     id="hora"
                     name="hora"
@@ -531,24 +536,51 @@ export default function ClaseDetalle() {
                   />
                 </div>
               </div>
+
+              {/* FILA 2: Alumno + Caballo */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="alumnoId">Alumno</Label>
-                  <Select
-                    name="alumnoId"
-                    defaultValue={String(clase?.alumnoId || "")}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar alumno" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {alumnos.map((alumno: Alumno) => (
-                        <SelectItem key={alumno.id} value={String(alumno.id)}>
-                          {alumno.nombre} {alumno.apellido}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="alumnoId">
+                    Alumno
+                    {clase?.esPrueba && !clase?.alumnoId && (
+                      <span className="ml-2 text-xs text-orange-600">
+                        (Clase de prueba)
+                      </span>
+                    )}
+                  </Label>
+
+                  {clase?.esPrueba && !clase?.alumnoId ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        value={clase.personaPruebaNombre ?? ""}
+                        disabled
+                        className="bg-muted text-muted-foreground"
+                        placeholder="Nombre"
+                      />
+                      <Input
+                        value={clase.personaPruebaApellido ?? ""}
+                        disabled
+                        className="bg-muted text-muted-foreground"
+                        placeholder="Apellido"
+                      />
+                    </div>
+                  ) : (
+                    <Select
+                      name="alumnoId"
+                      defaultValue={String(clase?.alumnoId || "")}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar alumno" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {alumnos.map((alumno: Alumno) => (
+                          <SelectItem key={alumno.id} value={String(alumno.id)}>
+                            {alumno.nombre} {alumno.apellido}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="caballoId">Caballo</Label>
@@ -560,15 +592,24 @@ export default function ClaseDetalle() {
                       <SelectValue placeholder="Seleccionar caballo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {caballos.map((caballo: Caballo) => (
-                        <SelectItem key={caballo.id} value={String(caballo.id)}>
-                          {caballo.nombre}
-                        </SelectItem>
-                      ))}
+                      {caballos
+                        .filter((c: Caballo) => c.disponible)
+                        .map((caballo: Caballo) => (
+                          <SelectItem
+                            key={caballo.id}
+                            value={String(caballo.id)}
+                          >
+                            {caballo.nombre} (
+                            {caballo.tipo === "ESCUELA" ? "Escuela" : "Privado"}
+                            )
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
+
+              {/* FILA 3: Instructor + Especialidad */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="instructorId">Instructor</Label>
@@ -611,6 +652,8 @@ export default function ClaseDetalle() {
                   </Select>
                 </div>
               </div>
+
+              {/* FILA 4: Estado + Observaciones (siempre edición) */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="estado">Estado</Label>
@@ -625,7 +668,6 @@ export default function ClaseDetalle() {
                     <SelectContent>
                       {ESTADOS.map((estado) => (
                         <SelectItem key={estado} value={estado}>
-                          {/* Convierte "PROGRAMADA" en "Programada" */}
                           {estado.charAt(0).toUpperCase() +
                             estado.slice(1).toLowerCase()}
                         </SelectItem>
@@ -633,15 +675,62 @@ export default function ClaseDetalle() {
                     </SelectContent>
                   </Select>
                 </div>
+                {clase?.esPrueba && (
+                  <div className="flex items-center gap-2 pt-6">
+                    <span className="inline-flex items-center gap-1.5 rounded-md border border-orange-300 bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-800">
+                      🎓 Clase de Prueba
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* FILA 5: Duración + Fin estimado */}
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="observaciones">Observaciones</Label>
-                  <Input
-                    id="observaciones"
-                    name="observaciones"
-                    defaultValue={clase?.observaciones || ""}
-                    placeholder="Ej. Lluvia, Feriado, etc"
-                  />
+                  <Label htmlFor="duracion">Duración</Label>
+                  <Select
+                    name="duracion"
+                    required
+                    defaultValue={String(clase?.duracion || 60)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar duración" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="30">30 minutos</SelectItem>
+                      <SelectItem value="60">60 minutos</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">
+                    Fin estimado
+                  </Label>
+                  <p className="flex h-10 items-center text-sm text-muted-foreground">
+                    {clase?.diaHoraCompleto
+                      ? (() => {
+                          const horaInicio = obtenerHoraArgentina(
+                            clase.diaHoraCompleto,
+                          );
+                          const [h, m] = horaInicio.split(":").map(Number);
+                          const durMin = clase.duracion || 60;
+                          const totalMin = h * 60 + m + durMin;
+                          return `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
+                        })()
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+
+              {/* FILA 6: Observaciones (span completo) */}
+              <div className="space-y-2">
+                <Label htmlFor="observaciones">Observaciones</Label>
+                <Input
+                  id="observaciones"
+                  name="observaciones"
+                  defaultValue={clase?.observaciones || ""}
+                  placeholder="Ej. Lluvia, Feriado, etc"
+                />
               </div>
             </div>
             <DialogFooter>

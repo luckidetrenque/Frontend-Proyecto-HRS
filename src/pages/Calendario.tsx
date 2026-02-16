@@ -87,9 +87,19 @@ export default function CalendarioPage() {
     getAlumnoNombre,
     getAlumnoApellido,
     getAlumnoNombreCompleto,
+    getNombreParaClase,
+    getNombreCompletoParaClase,
     getInstructorNombre,
     getCaballoNombre,
     getInstructorColor,
+    esPruebaChecked,
+    setEsPruebaChecked,
+    tipoPrueba,
+    setTipoPrueba,
+    nombrePrueba,
+    setNombrePrueba,
+    apellidoPrueba,
+    setApellidoPrueba,
     conflictSet,
   } = useCalendar();
 
@@ -110,7 +120,9 @@ export default function CalendarioPage() {
   useEffect(() => {
     if (isDialogOpen && claseToEdit) {
       setEspecialidadSeleccionada(claseToEdit.especialidad);
-      setAlumnoIdSeleccionado(String(claseToEdit.alumnoId));
+      setAlumnoIdSeleccionado(
+        claseToEdit.alumnoId ? String(claseToEdit.alumnoId) : "",
+      );
     } else if (!isDialogOpen) {
       setEspecialidadSeleccionada("");
       setAlumnoIdSeleccionado("");
@@ -127,14 +139,13 @@ export default function CalendarioPage() {
     );
   };
 
-  // ✅ AGREGAR ESTA FUNCIÓN COMPLETA AQUÍ
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (estaAgotado && !claseToEdit) {
+    if (estaAgotado && !claseToEdit && !esPruebaChecked) {
       const confirmar = window.confirm(`...`);
       if (!confirmar) return;
     }
-    handleSubmitClase(e); // ← ahora llama al del hook con nuevo nombre
+    handleSubmitClase(e);
   };
 
   // Configuración de filtros
@@ -233,6 +244,8 @@ export default function CalendarioPage() {
               puedeEditarClase={puedeEditarClase}
               getAlumnoNombre={getAlumnoNombre}
               getAlumnoNombreCompleto={getAlumnoNombreCompleto}
+              getNombreParaClase={getNombreParaClase}
+              getNombreCompletoParaClase={getNombreCompletoParaClase}
               getInstructorNombre={getInstructorNombre}
               getCaballoNombre={getCaballoNombre}
               getInstructorColor={getInstructorColor}
@@ -256,6 +269,8 @@ export default function CalendarioPage() {
                 getAlumnoNombre={getAlumnoNombre}
                 getAlumnoApellido={getAlumnoApellido}
                 getAlumnoNombreCompleto={getAlumnoNombreCompleto}
+                getNombreParaClase={getNombreParaClase}
+                getNombreCompletoParaClase={getNombreCompletoParaClase}
                 getInstructorNombre={getInstructorNombre}
                 getCaballoNombre={getCaballoNombre}
                 getInstructorColor={getInstructorColor}
@@ -272,6 +287,8 @@ export default function CalendarioPage() {
                 getAlumnoNombre={getAlumnoNombre}
                 getAlumnoApellido={getAlumnoApellido}
                 getAlumnoNombreCompleto={getAlumnoNombreCompleto}
+                getNombreParaClase={getNombreParaClase}
+                getNombreCompletoParaClase={getNombreCompletoParaClase}
                 getInstructorNombre={getInstructorNombre}
                 getCaballoNombre={getCaballoNombre}
                 getInstructorColor={getInstructorColor}
@@ -305,7 +322,7 @@ export default function CalendarioPage() {
               </DialogTitle>
               <DialogDescription>
                 {claseToEdit
-                  ? `Editando clase de ${getAlumnoNombreCompleto(claseToEdit.alumnoId)}`
+                  ? `Editando clase de ${getNombreCompletoParaClase(claseToEdit)}`
                   : `Programar clase para el ${format(currentDate, "d 'de' MMMM 'de' yyyy", { locale: es })}`}
               </DialogDescription>
             </DialogHeader>
@@ -336,6 +353,11 @@ export default function CalendarioPage() {
                         (Asignado automáticamente)
                       </span>
                     )}
+                    {claseToEdit?.esPrueba && !claseToEdit?.alumnoId && (
+                      <span className="ml-2 text-xs text-orange-600">
+                        (Clase de prueba)
+                      </span>
+                    )}
                   </Label>
                   {especialidadSeleccionada === "MONTA" && (
                     <input
@@ -344,29 +366,54 @@ export default function CalendarioPage() {
                       value={alumnoIdSeleccionado}
                     />
                   )}
-                  <Select
-                    name={
-                      especialidadSeleccionada === "MONTA" ? "" : "alumnoId"
-                    }
-                    required={especialidadSeleccionada !== "MONTA"}
-                    value={alumnoIdSeleccionado}
-                    onValueChange={setAlumnoIdSeleccionado}
-                    defaultValue={
-                      claseToEdit ? String(claseToEdit.alumnoId) : undefined
-                    }
-                    disabled={especialidadSeleccionada === "MONTA"}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar alumno" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {alumnos.map((alumno: Alumno) => (
-                        <SelectItem key={alumno.id} value={String(alumno.id)}>
-                          {alumno.nombre} {alumno.apellido}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+
+                  {/* CASO: edición de clase de prueba con persona nueva */}
+                  {claseToEdit?.esPrueba && !claseToEdit?.alumnoId ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        value={claseToEdit.personaPruebaNombre ?? ""}
+                        disabled
+                        className="bg-muted text-muted-foreground"
+                        placeholder="Nombre"
+                      />
+                      <Input
+                        value={claseToEdit.personaPruebaApellido ?? ""}
+                        disabled
+                        className="bg-muted text-muted-foreground"
+                        placeholder="Apellido"
+                      />
+                    </div>
+                  ) : (
+                    <Select
+                      name={
+                        especialidadSeleccionada === "MONTA" ? "" : "alumnoId"
+                      }
+                      required={
+                        especialidadSeleccionada !== "MONTA" &&
+                        !(esPruebaChecked && tipoPrueba === "persona_nueva")
+                      }
+                      value={alumnoIdSeleccionado}
+                      onValueChange={setAlumnoIdSeleccionado}
+                      defaultValue={
+                        claseToEdit ? String(claseToEdit.alumnoId) : undefined
+                      }
+                      disabled={
+                        especialidadSeleccionada === "MONTA" ||
+                        (esPruebaChecked && tipoPrueba === "persona_nueva")
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar alumno" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {alumnos.map((alumno: Alumno) => (
+                          <SelectItem key={alumno.id} value={String(alumno.id)}>
+                            {alumno.nombre} {alumno.apellido}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </div>
 
@@ -535,6 +582,15 @@ export default function CalendarioPage() {
                           type="checkbox"
                           id="esPrueba"
                           name="esPrueba"
+                          checked={esPruebaChecked}
+                          onChange={(e) => {
+                            setEsPruebaChecked(e.target.checked);
+                            if (!e.target.checked) {
+                              setTipoPrueba("persona_nueva");
+                              setNombrePrueba("");
+                              setApellidoPrueba("");
+                            }
+                          }}
                           className="h-4 w-4 rounded border-orange-400 text-orange-600 focus:ring-orange-500"
                         />
                         <Label
@@ -584,6 +640,77 @@ export default function CalendarioPage() {
                   )}
                 </div>
               </div>
+              {/* BLOQUE PersonaPrueba */}
+              {!claseToEdit && esPruebaChecked && (
+                <div className="rounded-md border border-orange-200 bg-orange-50 p-4 space-y-3">
+                  <div className="flex gap-6">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-orange-900">
+                      <input
+                        type="radio"
+                        name="tipoPrueba"
+                        value="persona_nueva"
+                        checked={tipoPrueba === "persona_nueva"}
+                        onChange={() => {
+                          setTipoPrueba("persona_nueva");
+                          setAlumnoIdSeleccionado("");
+                        }}
+                        className="text-orange-600"
+                      />
+                      Persona nueva
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-orange-900">
+                      <input
+                        type="radio"
+                        name="tipoPrueba"
+                        value="alumno_existente"
+                        checked={tipoPrueba === "alumno_existente"}
+                        onChange={() => {
+                          setTipoPrueba("alumno_existente");
+                          setNombrePrueba("");
+                          setApellidoPrueba("");
+                        }}
+                        className="text-orange-600"
+                      />
+                      Alumno existente
+                    </label>
+                  </div>
+
+                  {tipoPrueba === "persona_nueva" && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-orange-800">
+                          Nombre/s
+                        </Label>
+                        <Input
+                          value={nombrePrueba}
+                          onChange={(e) => setNombrePrueba(e.target.value)}
+                          placeholder="Nombre/s"
+                          required
+                          className="bg-white"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-orange-800">
+                          Apellido/s
+                        </Label>
+                        <Input
+                          value={apellidoPrueba}
+                          onChange={(e) => setApellidoPrueba(e.target.value)}
+                          placeholder="Apellido/s"
+                          required
+                          className="bg-white"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {tipoPrueba === "alumno_existente" && (
+                    <p className="text-xs text-orange-700">
+                      Seleccioná el alumno en el selector de arriba.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button

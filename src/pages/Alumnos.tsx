@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { te } from "date-fns/locale";
 import {
   Mail,
   MessageCircleMore,
@@ -55,6 +57,7 @@ import {
   Caballo,
   caballosApi,
 } from "@/lib/api";
+import { CuotaPension, TipoPension } from "@/types/enums";
 
 export default function AlumnosPage() {
   const queryClient = useQueryClient();
@@ -79,6 +82,8 @@ export default function AlumnosPage() {
   const [caballoIdSeleccionado, setCaballoIdSeleccionado] =
     useState<string>("");
   const [propietarioSeleccionado, setPropietarioSeleccionado] = useState(false);
+  const [tipoPensionSeleccionada, setTipoPensionSeleccionada] =
+    useState<TipoPension>(editingAlumno?.tipoPension ?? "SIN_CABALLO");
 
   const navigate = useNavigate();
 
@@ -144,21 +149,10 @@ export default function AlumnosPage() {
     }
   }, [editingAlumno]);
 
-  // Query original (puedes mantenerlo como fallback)
-  // const { data: allAlumnos = [], isLoading: isLoadingAll } = useQuery({
-  //   queryKey: ["alumnos"],
-  //   queryFn: alumnosApi.listar,
-  //   enabled: !isSearchActive, // Solo cargar si no hay búsqueda activa
-  // });
-
   const { data: caballos = [] } = useQuery({
     queryKey: ["caballos"],
     queryFn: caballosApi.listar,
   });
-
-  // Usar resultados de búsqueda o todos los alumnos
-  // const alumnos = searchResults || allAlumnos;
-  // const isLoading = isSearching || isLoadingAll;
 
   // 🔍 HANDLER PARA BÚSQUEDA INTELIGENTE
   const handleSmartSearch = (filters: Record<string, unknown>) => {
@@ -355,8 +349,20 @@ export default function AlumnosPage() {
     {
       header: "Propietario",
       cell: (row: Alumno) => (
-        <StatusBadge status={row.propietario ? "success" : "default"}>
-          {row.propietario ? "Sí" : "No"}
+        <StatusBadge
+          status={row.tipoPension === "SIN_CABALLO" ? "success" : "default"}
+        >
+          {row.tipoPension === "SIN_CABALLO"
+            ? "—"
+            : [
+                row.tipoPension === "CABALLO_PROPIO" ? "Propio" : "Escuela",
+                row.cuotaPension
+                  ? row.cuotaPension.charAt(0) +
+                    row.cuotaPension.slice(1).toLowerCase()
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
         </StatusBadge>
       ),
     },
@@ -428,20 +434,31 @@ export default function AlumnosPage() {
       return;
     }
     const formData = new FormData(e.currentTarget);
-    const propietario = formData.get("propietario") === "on";
+    let telefono = formData.get("telefono") as string;
+
+    // 2. Aplicamos la lógica del +549
+    if (telefono && !telefono.startsWith("+549")) {
+      // Limpiamos cualquier "+" extra y anteponemos el prefijo
+      telefono = `+549${telefono.replace(/^\+/, "")}`;
+    }
+    const tipoPension = formData.get("tipoPension") as TipoPension;
     const caballoId = formData.get("caballoId") as string;
+    const propietario = tipoPension === "CABALLO_PROPIO";
     const data = {
       dni: formData.get("dni") as string,
       nombre: formData.get("nombre") as string,
       apellido: formData.get("apellido") as string,
       fechaNacimiento: formData.get("fechaNacimiento") as string,
-      telefono: formData.get("telefono") as string,
+      telefono: telefono,
       email: formData.get("email") as string,
       fechaInscripcion: formData.get("fechaInscripcion") as string,
       cantidadClases: Number(formData.get("cantidadClases")),
-      propietario: propietario,
-      activo: formData.get("activo") === "on",
-      caballoId: propietario && caballoId ? Number(caballoId) : null,
+      propietario,
+      activo: editingAlumno ? formData.get("activo") === "on" : true,
+      caballoId:
+        tipoPension !== "SIN_CABALLO" && caballoId ? Number(caballoId) : null,
+      tipoPension,
+      cuotaPension: (formData.get("cuotaPension") as CuotaPension) || null,
     };
 
     if (editingAlumno) {
@@ -457,9 +474,11 @@ export default function AlumnosPage() {
       setCaballoIdSeleccionado(
         editingAlumno?.caballoPropio ? String(editingAlumno.caballoPropio) : "",
       );
+      setTipoPensionSeleccionada(editingAlumno.tipoPension ?? "SIN_CABALLO");
     } else if (!isOpen) {
       setPropietarioSeleccionado(false);
       setCaballoIdSeleccionado("");
+      setTipoPensionSeleccionada("SIN_CABALLO");
     }
   }, [isOpen, editingAlumno]);
 
@@ -627,7 +646,7 @@ export default function AlumnosPage() {
                           type="date"
                           defaultValue={
                             editingAlumno?.fechaInscripcion ||
-                            new Date().toISOString().split("T")[0]
+                            format(new Date(), "yyyy-MM-dd")
                           }
                           required
                         />
@@ -657,77 +676,99 @@ export default function AlumnosPage() {
                         </Select>
                       </div>
                     </div>
-
+                    {/* Pensión */}
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3">
-                        <Switch
-                          id="propietario"
-                          name="propietario"
-                          defaultChecked={editingAlumno?.propietario}
-                          onCheckedChange={setPropietarioSeleccionado}
-                        />
-                        <Label htmlFor="propietario">
-                          Tiene caballo propio
-                          <HelpTooltip
-                            content={CommonTooltips.alumno.propietario}
-                          />
-                        </Label>
+                      <div className="space-y-2">
+                        <Label htmlFor="tipoPension">Pensión</Label>
+                        <Select
+                          name="tipoPension"
+                          value={tipoPensionSeleccionada}
+                          onValueChange={(v) =>
+                            setTipoPensionSeleccionada(v as TipoPension)
+                          }
+                          defaultValue={
+                            editingAlumno?.tipoPension ?? "SIN_CABALLO"
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="SIN_CABALLO">
+                              Sin caballo asignado
+                            </SelectItem>
+                            <SelectItem value="RESERVA_ESCUELA">
+                              Reserva caballo de escuela
+                            </SelectItem>
+                            <SelectItem value="CABALLO_PROPIO">
+                              Caballo propio
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      {propietarioSeleccionado && (
+
+                      {/* Activo: solo visible al editar */}
+                      {editingAlumno && (
+                        <div className="flex items-center gap-3 pt-6">
+                          <Switch
+                            id="activo"
+                            name="activo"
+                            defaultChecked={editingAlumno.activo ?? true}
+                          />
+                          <Label htmlFor="activo">Está activo</Label>
+                        </div>
+                      )}
+                    </div>
+                    {/* Cuota y Caballo: solo si tiene caballo */}
+                    {tipoPensionSeleccionada !== "SIN_CABALLO" && (
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="caballoId">
-                            Caballo Propio
-                            <HelpTooltip
-                              content={CommonTooltips.alumno.caballoPropio}
-                            />
-                          </Label>
+                          <Label htmlFor="cuotaPension">Cuota de pensión</Label>
+                          <Select
+                            name="cuotaPension"
+                            defaultValue={editingAlumno?.cuotaPension ?? ""}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar cuota" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ENTERA">Entera</SelectItem>
+                              <SelectItem value="MEDIA">Media</SelectItem>
+                              <SelectItem value="TERCIO">Tercio</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="caballoId">Caballo</Label>
                           <Select
                             name="caballoId"
                             value={caballoIdSeleccionado}
                             onValueChange={setCaballoIdSeleccionado}
-                            required={propietarioSeleccionado}
+                            required
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Seleccionar caballo" />
                             </SelectTrigger>
                             <SelectContent>
                               {caballos
-                                .filter((c: Caballo) => c.disponible)
+                                .filter((c: Caballo) =>
+                                  tipoPensionSeleccionada === "CABALLO_PROPIO"
+                                    ? c.tipo === "PRIVADO"
+                                    : c.tipo === "ESCUELA",
+                                )
                                 .map((caballo: Caballo) => (
                                   <SelectItem
                                     key={caballo.id}
                                     value={String(caballo.id)}
                                   >
-                                    {caballo.nombre} (
-                                    {caballo.tipo === "ESCUELA"
-                                      ? "Escuela"
-                                      : "Privado"}
-                                    )
+                                    {caballo.nombre}
                                   </SelectItem>
                                 ))}
                             </SelectContent>
                           </Select>
                         </div>
-                      )}
-                      {editingAlumno && (
-                        <div className="flex items-center gap-3 py-2">
-                          <Switch
-                            id="activo"
-                            name="activo"
-                            defaultChecked={editingAlumno.activo ?? true}
-                          />
-                          <Label
-                            htmlFor="activo"
-                            className="flex items-center gap-1"
-                          >
-                            Está activo
-                            <HelpTooltip
-                              content={CommonTooltips.alumno.activo}
-                            />
-                          </Label>
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                   <DialogFooter>
                     <Button

@@ -40,6 +40,9 @@ export function CalendarControls({
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       {/* Navegación */}
       <div className="flex items-center gap-2">
+        <h2 className="ml-4 font-display text-xl font-semibold capitalize">
+          {getViewTitle()}
+        </h2>
         <Button
           variant="outline"
           size="icon"
@@ -57,9 +60,6 @@ export function CalendarControls({
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
-        <h2 className="ml-4 font-display text-xl font-semibold capitalize">
-          {getViewTitle()}
-        </h2>
       </div>
 
       {/* Selector de Vista */}

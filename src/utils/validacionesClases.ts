@@ -54,10 +54,11 @@ export const filtrarCaballosDisponibles = (
  */
 export const validarClasePrueba = (
   clases: Clase[],
-  alumno: Alumno,
+  alumno: Alumno | null, // ← acepta null
   especialidad: string,
   claseActualId?: number,
 ): { esValido: boolean; mensaje: string } => {
+  if (!alumno) return { esValido: true, mensaje: "" };
   // Regla 1: No puede tener clase de prueba si ya tiene esa especialidad activa
   const yaTomoEspecialidad = clases.some(
     (c) =>
