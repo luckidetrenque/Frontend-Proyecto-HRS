@@ -421,11 +421,20 @@ export default function CalendarioPage() {
                         <SelectValue placeholder="Seleccionar alumno" />
                       </SelectTrigger>
                       <SelectContent>
-                        {alumnos.map((alumno: Alumno) => (
-                          <SelectItem key={alumno.id} value={String(alumno.id)}>
-                            {alumno.nombre} {alumno.apellido}
-                          </SelectItem>
-                        ))}
+                        {alumnos
+                          .filter((alumno: Alumno) =>
+                            especialidadSeleccionada === "MONTA"
+                              ? alumno.id === 1
+                              : alumno.id !== 1,
+                          )
+                          .map((alumno: Alumno) => (
+                            <SelectItem
+                              key={alumno.id}
+                              value={String(alumno.id)}
+                            >
+                              {alumno.nombre} {alumno.apellido}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   )}

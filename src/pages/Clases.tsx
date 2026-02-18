@@ -148,6 +148,8 @@ export default function ClasesPage() {
   const [especialidadSeleccionada, setEspecialidadSeleccionada] =
     useState<string>("");
   const [alumnoIdSeleccionado, setAlumnoIdSeleccionado] = useState<string>("");
+  const [caballoIdSeleccionado, setCaballoIdSeleccionado] =
+    useState<string>("");
 
   // 🔍 QUERY UNIFICADA
   const { data: clases = [], isLoading } = useQuery({
@@ -185,6 +187,24 @@ export default function ClasesPage() {
       );
     });
   }, [alumnos]);
+
+  useEffect(() => {
+    if (!claseToEdit && alumnoIdSeleccionado) {
+      const alumno = alumnosValidos.find(
+        (a: Alumno) => a.id === Number(alumnoIdSeleccionado),
+      );
+
+      if (alumno?.caballoPropio) {
+        const caballoId =
+          typeof alumno.caballoPropio === "number"
+            ? alumno.caballoPropio
+            : alumno.caballoPropio.id;
+        setCaballoIdSeleccionado(String(caballoId));
+      } else {
+        setCaballoIdSeleccionado("");
+      }
+    }
+  }, [alumnoIdSeleccionado, claseToEdit, alumnosValidos]);
 
   const { data: instructores = [] } = useQuery({
     queryKey: ["instructores"],
@@ -530,6 +550,10 @@ export default function ClasesPage() {
     return caballo?.nombre || "-";
   };
 
+  const isReadonly =
+    especialidadSeleccionada === "MONTA" ||
+    (esPruebaChecked && tipoPrueba === "persona_nueva");
+
   const columns = [
     {
       header: "Dia",
@@ -759,11 +783,7 @@ export default function ClasesPage() {
                           </div>
                         ) : (
                           <Select
-                            name={
-                              especialidadSeleccionada === "MONTA"
-                                ? ""
-                                : "alumnoId"
-                            }
+                            name="alumnoId"
                             required={
                               especialidadSeleccionada !== "MONTA" &&
                               !(
@@ -771,29 +791,38 @@ export default function ClasesPage() {
                                 tipoPrueba === "persona_nueva"
                               )
                             }
-                            value={alumnoIdSeleccionado || ""}
+                            value={alumnoIdSeleccionado || "1"}
                             onValueChange={setAlumnoIdSeleccionado}
-                            disabled={
-                              especialidadSeleccionada === "MONTA" ||
-                              (esPruebaChecked &&
-                                tipoPrueba === "persona_nueva")
-                            }
+                            disabled={isReadonly}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Seleccionar alumno" />
                             </SelectTrigger>
                             <SelectContent>
-                              {alumnosValidos.map((alumno: Alumno) => (
-                                <SelectItem
-                                  key={alumno.id}
-                                  value={String(alumno.id)}
-                                >
-                                  {alumno.nombre} {alumno.apellido}
-                                </SelectItem>
-                              ))}
+                              {alumnosValidos
+                                .filter((alumno: Alumno) =>
+                                  especialidadSeleccionada === "MONTA"
+                                    ? alumno.id === 1
+                                    : alumno.id !== 1,
+                                )
+                                .map((alumno: Alumno) => (
+                                  <SelectItem
+                                    key={alumno.id}
+                                    value={String(alumno.id)}
+                                  >
+                                    {alumno.nombre} {alumno.apellido}
+                                  </SelectItem>
+                                ))}
                             </SelectContent>
                           </Select>
                         )}
+                        {/* {isReadonly && (
+                          <input
+                            type="hidden"
+                            name="alumnoId"
+                            value={alumnoIdSeleccionado || ""}
+                          />
+                        )} */}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="caballoId">
@@ -822,22 +851,12 @@ export default function ClasesPage() {
                         </Label>
                         <Select
                           name="caballoId"
+                          value={caballoIdSeleccionado}
+                          onValueChange={setCaballoIdSeleccionado}
                           defaultValue={
                             claseToEdit
                               ? String(claseToEdit.caballoId)
-                              : (() => {
-                                  const alumno = alumnosValidos.find(
-                                    (a: Alumno) =>
-                                      a.id === Number(alumnoIdSeleccionado),
-                                  );
-                                  return alumno?.caballoPropio
-                                    ? String(
-                                        typeof alumno.caballoPropio === "number"
-                                          ? alumno.caballoPropio
-                                          : alumno.caballoPropio.id,
-                                      )
-                                    : "";
-                                })()
+                              : undefined
                           }
                         >
                           <SelectTrigger>

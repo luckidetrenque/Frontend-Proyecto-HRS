@@ -1,18 +1,18 @@
 // src/pages/ClaseDetalle.tsx
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Accessibility,
   AlertCircle,
   ArrowLeft,
   Calendar,
   CheckCircle2,
+  ChessKnight,
   Clock,
   Edit,
   GraduationCap,
   Info,
   User,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -72,6 +72,10 @@ export default function ClaseDetalle() {
   const claseId = parseInt(id || "0");
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const [especialidadSeleccionada, setEspecialidadSeleccionada] =
+    useState<string>("");
+  const [alumnoIdSeleccionado, setAlumnoIdSeleccionado] = useState<string>("");
 
   // Queries adicionales para los selectores
   const { data: alumnos = [] } = useQuery({
@@ -155,6 +159,17 @@ export default function ClaseDetalle() {
     queryFn: () => caballosApi.obtener(clase!.caballoId),
     enabled: !!clase?.caballoId,
   });
+
+  const [caballoIdSeleccionado, setCaballoIdSeleccionado] =
+    useState<string>("");
+
+  useEffect(() => {
+    if (especialidadSeleccionada === "MONTA") {
+      setAlumnoIdSeleccionado("1"); // ID del alumno comodín
+    } else if (!clase?.alumnoId) {
+      setAlumnoIdSeleccionado("");
+    }
+  }, [especialidadSeleccionada, clase?.alumnoId]);
 
   // Mutation para cambiar el estado
   const cambiarEstadoMutation = useMutation({
@@ -405,7 +420,7 @@ export default function ClaseDetalle() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
-                    <Accessibility className="h-5 w-5 text-success" />
+                    <ChessKnight className="h-5 w-5 text-success" />
                   </div>
                   <div>
                     <CardTitle className="text-lg">Caballo</CardTitle>
@@ -581,6 +596,11 @@ export default function ClaseDetalle() {
                   ser clase de prueba sin alumno asignado */}
                   <Label htmlFor="alumnoId">
                     Alumno
+                    {especialidadSeleccionada === "MONTA" && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        (Asignado automáticamente)
+                      </span>
+                    )}
                     {clase?.esPrueba && !clase?.alumnoId && (
                       <span className="ml-2 text-xs text-orange-600">
                         (Clase de prueba)
@@ -605,17 +625,29 @@ export default function ClaseDetalle() {
                   ) : (
                     <Select
                       name="alumnoId"
+                      value={alumnoIdSeleccionado}
+                      onValueChange={setAlumnoIdSeleccionado}
+                      disabled={especialidadSeleccionada === "MONTA"}
                       defaultValue={String(clase?.alumnoId || "")}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar alumno" />
                       </SelectTrigger>
                       <SelectContent>
-                        {alumnos.map((alumno: Alumno) => (
-                          <SelectItem key={alumno.id} value={String(alumno.id)}>
-                            {alumno.nombre} {alumno.apellido}
-                          </SelectItem>
-                        ))}
+                        {alumnos
+                          .filter((alumno: Alumno) =>
+                            especialidadSeleccionada === "MONTA"
+                              ? alumno.id === 1
+                              : alumno.id !== 1,
+                          )
+                          .map((alumno: Alumno) => (
+                            <SelectItem
+                              key={alumno.id}
+                              value={String(alumno.id)}
+                            >
+                              {alumno.nombre} {alumno.apellido}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   )}
@@ -624,7 +656,6 @@ export default function ClaseDetalle() {
                   <Label htmlFor="caballoId">
                     Caballo
                     {(() => {
-                      // Usar el alumno cargado de la clase actual
                       if (alumno?.caballoPropio) {
                         const caballoPredeterminado = caballos.find(
                           (c: Caballo) =>
@@ -694,6 +725,8 @@ export default function ClaseDetalle() {
                   <Label htmlFor="especialidad">Especialidad</Label>
                   <Select
                     name="especialidad"
+                    value={especialidadSeleccionada}
+                    onValueChange={setEspecialidadSeleccionada}
                     defaultValue={clase?.especialidad || ""}
                   >
                     <SelectTrigger>

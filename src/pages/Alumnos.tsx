@@ -142,10 +142,25 @@ export default function AlumnosPage() {
       // Al abrir para editar, cargar DNI y DESHABILITAR validación
       setDniInput(editingAlumno.dni);
       setValidacionHabilitada(false);
+
+      // ✅ FIX 1: Cargar el caballoId cuando se abre el diálogo de edición
+      if (editingAlumno.caballoPropio) {
+        const caballoId =
+          typeof editingAlumno.caballoPropio === "number"
+            ? editingAlumno.caballoPropio
+            : editingAlumno.caballoPropio.id;
+        setCaballoIdSeleccionado(String(caballoId));
+      } else {
+        setCaballoIdSeleccionado("");
+      }
+
+      setTipoPensionSeleccionada(editingAlumno.tipoPension ?? "SIN_CABALLO");
     } else {
       // Al abrir para crear, limpiar y HABILITAR validación
       setDniInput("");
       setValidacionHabilitada(true);
+      setCaballoIdSeleccionado("");
+      setTipoPensionSeleccionada("SIN_CABALLO");
     }
   }, [editingAlumno]);
 
@@ -742,9 +757,12 @@ export default function AlumnosPage() {
                           <Label htmlFor="caballoId">Caballo</Label>
                           <Select
                             name="caballoId"
-                            value={caballoIdSeleccionado}
-                            onValueChange={setCaballoIdSeleccionado}
-                            required
+                            defaultValue={String(
+                              editingAlumno?.caballoPropio &&
+                                typeof editingAlumno.caballoPropio === "object"
+                                ? editingAlumno.caballoPropio.id
+                                : "",
+                            )}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Seleccionar caballo" />
