@@ -189,6 +189,16 @@ export function useCalendar() {
       toast.error(error.message || "Error al eliminar la clase"),
   });
 
+  const statusMutation = useMutation({
+    mutationFn: ({ id, estado }: { id: number; estado: Clase["estado"] }) =>
+      clasesApi.cambiarEstado(id, estado),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clases"] });
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al cambiar el estado"),
+  });
+
   const copyWeekMutation = useMutation({
     mutationFn: (datos: {
       diaInicioOrigen: string;
@@ -360,7 +370,7 @@ export function useCalendar() {
 
     // Validar horario límite
     const horaValor = (formData.get("hora") as string).slice(0, 5);
-    const duracionValor = Number(formData.get("duracion")) || 60;
+    const duracionValor = Number(formData.get("duracion")) || 30;
     const { esValido: horarioOk, mensaje: mensajeHorario } =
       validarHorarioLimite(horaValor, duracionValor);
     if (!horarioOk) {
@@ -391,7 +401,7 @@ export function useCalendar() {
   };
 
   const handleStatusChange = (claseId: number, newStatus: Clase["estado"]) => {
-    updateMutation.mutate({ id: claseId, data: { estado: newStatus } });
+    statusMutation.mutate({ id: claseId, estado: newStatus });
   };
 
   const handleBulkCancel = (claseIds: number[], observaciones: string) => {
@@ -577,6 +587,7 @@ export function useCalendar() {
     copyWeekMutation,
     deleteWeekMutation,
     bulkCancelMutation,
+    statusMutation,
 
     // Handlers
     navigate,

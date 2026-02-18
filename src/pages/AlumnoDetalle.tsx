@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Accessibility,
   AlertCircle,
   ArrowLeft,
   Calendar,
   CheckCircle2,
+  ChessKnight,
   ChevronRight,
   Clock,
   Edit,
@@ -338,7 +338,7 @@ export default function AlumnoDetalle() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
-                  <Accessibility className="h-5 w-5 text-accent" />
+                  <ChessKnight className="h-5 w-5 text-accent" />
                 </div>
                 <div>
                   <CardTitle className="text-lg">Caballo</CardTitle>
@@ -357,7 +357,8 @@ export default function AlumnoDetalle() {
               {alumno.tipoPension === "SIN_CABALLO" ? (
                 <div className="text-center py-8">
                   <div className="rounded-lg bg-muted/50 p-6">
-                    <Accessibility className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <ChessKnight className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+
                     <p className="font-medium mb-1">Sin caballo asignado</p>
                     <p className="text-sm text-muted-foreground">
                       Se le asigna un caballo de la escuela en cada clase
@@ -446,11 +447,11 @@ export default function AlumnoDetalle() {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <Accessibility className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <ChessKnight className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                   <p className="text-sm text-muted-foreground">
                     {alumno.tipoPension === "RESERVA_ESCUELA"
-                      ? "No se encontró caballo de escuela registrado"
-                      : "No se encontró caballo privado registrado"}
+                      ? "No hay caballo de escuela asignado aún"
+                      : "No hay caballo privado asignado aún"}
                   </p>
                 </div>
               )}

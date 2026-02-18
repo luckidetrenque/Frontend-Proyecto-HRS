@@ -1,11 +1,11 @@
 // src/pages/CaballoDetalle.tsx
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Accessibility,
   AlertCircle,
   ArrowLeft,
   Calendar,
   CheckCircle2,
+  ChessKnight,
   ChevronRight,
   Clock,
   Edit,
@@ -49,14 +49,7 @@ import {
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Switch } from "@/components/ui/switch";
-import {
-  Alumno,
-  alumnosApi,
-  Caballo,
-  caballosApi,
-  Clase,
-  clasesApi,
-} from "@/lib/api";
+import { Alumno, Caballo, caballosApi, Clase, clasesApi } from "@/lib/api";
 
 export default function CaballoDetalle() {
   const { id } = useParams<{ id: string }>();
@@ -111,20 +104,6 @@ export default function CaballoDetalle() {
     // Pasa el ID directamente, no como objeto
     queryFn: () => clasesApi.buscarPorCaballo(caballoId!),
     enabled: !!caballoId,
-  });
-
-  // Query para obtener el alumno propietario (si es privado)
-  const { data: alumnoPropietario, isLoading: loadingAlumno } = useQuery({
-    queryKey: ["alumno-propietario", caballo?.propietarios],
-    queryFn: () => {
-      const primerPropietario = caballo!.propietarios![0];
-      const propietarioId =
-        typeof primerPropietario === "number"
-          ? primerPropietario
-          : primerPropietario.id;
-      return alumnosApi.obtener(propietarioId);
-    },
-    enabled: !!caballo?.propietarios && caballo.tipo === "PRIVADO",
   });
 
   // Calcular estadísticas
@@ -245,7 +224,7 @@ export default function CaballoDetalle() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <Accessibility className="h-5 w-5 text-primary" />
+                  <ChessKnight className="h-5 w-5 text-primary" />
                 </div>
                 <div>
                   <CardTitle className="text-lg">
@@ -302,7 +281,7 @@ export default function CaballoDetalle() {
             </CardContent>
           </Card>
 
-          {/* Card del Propietario */}
+          {/* Card de Propietario/s — 3 casos según tipoPension de los alumnos vinculados */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -310,31 +289,62 @@ export default function CaballoDetalle() {
                   <User className="h-5 w-5 text-accent" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Propietarios</CardTitle>
+                  <CardTitle className="text-lg">Propietario/s</CardTitle>
                   <CardDescription>
-                    {caballo.tipo === "PRIVADO"
-                      ? "Detalle de los dueños"
-                      : "Caballo de la escuela"}
+                    {(() => {
+                      const vinculados = (caballo.propietarios ?? []).filter(
+                        (p): p is Alumno => typeof p === "object" && p !== null,
+                      );
+                      if (vinculados.length === 0)
+                        return "Caballo de la escuela";
+                      const tienePropietario = vinculados.some(
+                        (p) => p.tipoPension === "CABALLO_PROPIO",
+                      );
+                      const tieneReserva = vinculados.some(
+                        (p) => p.tipoPension === "RESERVA_ESCUELA",
+                      );
+                      if (tienePropietario) return "Caballo privado";
+                      if (tieneReserva) return "Reserva de alumno";
+                      return "Caballo de la escuela";
+                    })()}
                   </CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              {caballo.tipo === "PRIVADO" ? (
-                loadingAlumno ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  </div>
-                ) : caballo.propietarios && caballo.propietarios.length > 0 ? (
+              {(() => {
+                const vinculados = (caballo.propietarios ?? []).filter(
+                  (p): p is Alumno => typeof p === "object" && p !== null,
+                );
+
+                // CASO 1: Sin alumnos vinculados → caballo de uso general
+                if (vinculados.length === 0) {
+                  return (
+                    <div className="text-center py-8">
+                      <div className="rounded-lg bg-muted/50 p-6">
+                        <ChessKnight className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                        <p className="font-medium mb-1">
+                          Caballo de la Escuela
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Uso general — se asigna a cualquier alumno
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // CASO 2 y 3: Hay alumnos vinculados (propietarios o reservas)
+                return (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <tbody className="divide-y">
-                        {caballo.propietarios
-                          .filter(
-                            (p): p is Alumno =>
-                              typeof p === "object" && p !== null,
-                          )
-                          .map((p) => (
+                        {vinculados.map((p) => {
+                          const esPropietario =
+                            p.tipoPension === "CABALLO_PROPIO";
+                          const esReserva = p.tipoPension === "RESERVA_ESCUELA";
+
+                          return (
                             <tr
                               key={p.id}
                               className="hover:bg-muted/30 transition-colors"
@@ -345,16 +355,24 @@ export default function CaballoDetalle() {
                                 </InfoField>
                               </td>
                               <td className="p-3">
-                                <InfoField label="DNI">{p.dni}</InfoField>
-                              </td>
-                              <td className="p-3">
-                                <InfoField label="Email">
-                                  {p.email || "-"}
+                                <InfoField label="Relación">
+                                  <StatusBadge
+                                    status={esPropietario ? "warning" : "info"}
+                                  >
+                                    {esPropietario
+                                      ? "Propietario"
+                                      : esReserva
+                                        ? "Reserva"
+                                        : "-"}
+                                  </StatusBadge>
                                 </InfoField>
                               </td>
                               <td className="p-3">
+                                <InfoField label="DNI">{p.dni}</InfoField>
+                              </td>
+                              <td className="p-3">
                                 <InfoField label="Teléfono">
-                                  {p.telefono}
+                                  {p.telefono || "-"}
                                 </InfoField>
                               </td>
                               <td className="p-3 text-right align-bottom">
@@ -368,27 +386,13 @@ export default function CaballoDetalle() {
                                 </Button>
                               </td>
                             </tr>
-                          ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <User className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">
-                      No se encontró información
-                    </p>
-                  </div>
-                )
-              ) : (
-                <div className="text-center py-8">
-                  <div className="rounded-lg bg-muted/50 p-6">
-                    <Accessibility className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="font-medium mb-1">Caballo de la Escuela</p>
-                    <p className="text-sm text-muted-foreground">Uso general</p>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </CardContent>
           </Card>
         </div>
@@ -510,7 +514,7 @@ export default function CaballoDetalle() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="nombre">Nombre</Label>
+                <Label htmlFor="nombre">Nombre/s</Label>
                 <Input
                   id="nombre"
                   name="nombre"
@@ -537,7 +541,7 @@ export default function CaballoDetalle() {
                   name="disponible"
                   defaultChecked={caballo?.disponible}
                 />
-                <Label htmlFor="disponible">Disponible</Label>
+                <Label htmlFor="disponible">Está disponible</Label>
               </div>
             </div>
             <DialogFooter>

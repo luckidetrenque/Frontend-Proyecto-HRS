@@ -1,4 +1,4 @@
-import { Update } from "vite/types/hmrPayload.js";
+import { ApiErrorResponse } from "@/lib/api";
 
 export const API_BASE_URL = "http://localhost:8080/api/v1/auth";
 
@@ -77,6 +77,30 @@ export const clearCredentials = (): void => {
   sessionStorage.removeItem("user");
 };
 
+// ✅ Helper para parsear errores del backend de forma consistente
+const parseApiError = async (response: Response): Promise<never> => {
+  try {
+    const errorData: ApiErrorResponse = await response.json();
+
+    // Si hay errores de validación de campos (@Valid)
+    if (errorData.errores) {
+      throw new Error(Object.values(errorData.errores).join(". "));
+    }
+    // Mensaje de negocio (ConflictException, UnauthorizedException, etc.)
+    if (errorData.mensaje) {
+      throw new Error(errorData.mensaje);
+    }
+    // Fallback al campo error
+    throw new Error(errorData.error || `Error ${response.status}`);
+  } catch (e) {
+    if (e instanceof SyntaxError) {
+      // Si no era JSON
+      throw new Error(`Error ${response.status}`);
+    }
+    throw e;
+  }
+};
+
 // Login con Basic Auth
 export const login = async (credentials: LoginCredentials): Promise<User> => {
   const encoded = encodeCredentials(credentials.username, credentials.password);
@@ -90,8 +114,7 @@ export const login = async (credentials: LoginCredentials): Promise<User> => {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Credenciales incorrectas");
+    await parseApiError(response);
   }
 
   const user = await response.json();
@@ -112,8 +135,7 @@ export const register = async (data: RegisterData): Promise<User> => {
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || "Error al registrar usuario");
+    await parseApiError(response);
   }
 
   return response.json();
@@ -133,8 +155,7 @@ export const update = async (data: UpdateData): Promise<User> => {
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || "Error al actualizar usuario");
+    await parseApiError(response);
   }
 
   const updatedUser = await response.json();
@@ -177,8 +198,7 @@ export const updateProfile = async (
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || "Error al actualizar perfil");
+    await parseApiError(response);
   }
 
   const updatedUser = await response.json();

@@ -129,7 +129,7 @@ export interface ApiErrorResponse {
   error: string;
   mensaje: string;
   path: string;
-  errores?: Record<string, string>; // Aquí vienen los mensajes de validación
+  errores?: Record<string, string>;
 }
 
 // Helper function to make API requests with authentication

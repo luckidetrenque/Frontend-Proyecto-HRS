@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { Info, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -61,6 +61,7 @@ import {
   ClaseSearchFilters,
   Instructor,
   instructoresApi,
+  PersonaPrueba,
   personasPruebaApi,
 } from "@/lib/api";
 import {
@@ -166,6 +167,11 @@ export default function ClasesPage() {
   const { data: alumnos = [] } = useQuery({
     queryKey: ["alumnos"],
     queryFn: alumnosApi.listar,
+  });
+
+  const { data: personasPrueba = [] } = useQuery({
+    queryKey: ["personas_prueba"],
+    queryFn: personasPruebaApi.listar,
   });
 
   // 🔧 Filtrar solo objetos válidos de Alumno
@@ -463,7 +469,7 @@ export default function ClasesPage() {
 
     // Validar horario límite
     const horaValor = (formData.get("hora") as string).slice(0, 5);
-    const duracionValor = Number(formData.get("duracion")) || 60;
+    const duracionValor = Number(formData.get("duracion")) || 30;
     const { esValido: horarioOk, mensaje: mensajeHorario } =
       validarHorarioLimite(horaValor, duracionValor);
     if (!horarioOk) {
@@ -476,7 +482,7 @@ export default function ClasesPage() {
       dia: formData.get("dia") as string,
       hora: parsearHoraParaApi(formData.get("hora") as string),
       duracion: Number(formData.get("duracion")) || 30,
-      estado: (formData.get("estado") as Clase["estado"]) || "PROGRAMADA",
+      estado: claseToEdit?.estado || "PROGRAMADA",
       observaciones: formData.get("observaciones") as string,
       instructorId: Number(formData.get("instructorId")),
       caballoId,
@@ -503,6 +509,17 @@ export default function ClasesPage() {
     return alumno ? `${alumno.nombre} ${alumno.apellido}` : "-";
   };
 
+  const getNombreParaClase = (clase: Clase): string => {
+    if (clase.alumnoId) {
+      const alumno = alumnosValidos.find(
+        (a: Alumno) => a.id === clase.alumnoId,
+      );
+      return alumno ? `${alumno.nombre} ${alumno.apellido}` : "-";
+    }
+    // Para clases de prueba: usar el campo que ya viene del servidor
+    return clase.personaPruebaNombreCompleto ?? "-";
+  };
+
   const getInstructorNombre = (id: number) => {
     const instructor = instructores.find((i: Instructor) => i.id === id);
     return instructor ? `${instructor.nombre} ${instructor.apellido}` : "-";
@@ -527,7 +544,7 @@ export default function ClasesPage() {
     },
     {
       header: "Alumno",
-      cell: (row: Clase) => getAlumnoNombre(row.alumnoId),
+      cell: (row: Clase) => getNombreParaClase(row),
     },
     {
       header: "Instructor",
@@ -662,6 +679,14 @@ export default function ClasesPage() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
+                    {claseToEdit?.esPrueba && (
+                      <div className="flex items-center gap-2 ml-4">
+                        <span className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-orange-300 bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-800">
+                          <Info className="h-3 w-3 text-orange-600" />
+                          Clase de Prueba
+                        </span>
+                      </div>
+                    )}
                     {/* FILA 1: Día + Hora */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -696,54 +721,80 @@ export default function ClasesPage() {
 
                     {/* FILA 2: Alumno + Caballo */}
                     <div className="grid grid-cols-2 gap-4">
-                      {claseToEdit?.esPrueba && !claseToEdit?.alumnoId ? (
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input
-                            value={claseToEdit.personaPruebaNombre ?? ""}
-                            disabled
-                            className="bg-muted text-muted-foreground"
-                            placeholder="Nombre"
+                      <div className="space-y-2">
+                        <Label htmlFor="alumnoId">
+                          Alumno
+                          {especialidadSeleccionada === "MONTA" && (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              (Asignado automáticamente)
+                            </span>
+                          )}
+                          {claseToEdit?.esPrueba && !claseToEdit?.alumnoId && (
+                            <span className="ml-2 text-xs text-orange-600">
+                              (Clase de prueba)
+                            </span>
+                          )}
+                        </Label>
+                        {especialidadSeleccionada === "MONTA" && (
+                          <input
+                            type="hidden"
+                            name="alumnoId"
+                            value={alumnoIdSeleccionado}
                           />
-                          <Input
-                            value={claseToEdit.personaPruebaApellido ?? ""}
-                            disabled
-                            className="bg-muted text-muted-foreground"
-                            placeholder="Apellido"
-                          />
-                        </div>
-                      ) : (
-                        <Select
-                          name={
-                            especialidadSeleccionada === "MONTA"
-                              ? ""
-                              : "alumnoId"
-                          }
-                          required={
-                            especialidadSeleccionada !== "MONTA" &&
-                            !(esPruebaChecked && tipoPrueba === "persona_nueva")
-                          }
-                          value={alumnoIdSeleccionado || ""}
-                          onValueChange={setAlumnoIdSeleccionado}
-                          disabled={
-                            especialidadSeleccionada === "MONTA" ||
-                            (esPruebaChecked && tipoPrueba === "persona_nueva")
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar alumno" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {alumnosValidos.map((alumno: Alumno) => (
-                              <SelectItem
-                                key={alumno.id}
-                                value={String(alumno.id)}
-                              >
-                                {alumno.nombre} {alumno.apellido}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
+                        )}
+                        {claseToEdit?.esPrueba && !claseToEdit?.alumnoId ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              value={claseToEdit.personaPruebaNombre ?? ""}
+                              // disabled
+                              // className="bg-muted text-muted-foreground"
+                              placeholder="Nombre"
+                            />
+                            <Input
+                              value={claseToEdit.personaPruebaApellido ?? ""}
+                              // disabled
+                              // className="bg-muted text-muted-foreground"
+                              placeholder="Apellido"
+                            />
+                          </div>
+                        ) : (
+                          <Select
+                            name={
+                              especialidadSeleccionada === "MONTA"
+                                ? ""
+                                : "alumnoId"
+                            }
+                            required={
+                              especialidadSeleccionada !== "MONTA" &&
+                              !(
+                                esPruebaChecked &&
+                                tipoPrueba === "persona_nueva"
+                              )
+                            }
+                            value={alumnoIdSeleccionado || ""}
+                            onValueChange={setAlumnoIdSeleccionado}
+                            disabled={
+                              especialidadSeleccionada === "MONTA" ||
+                              (esPruebaChecked &&
+                                tipoPrueba === "persona_nueva")
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar alumno" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {alumnosValidos.map((alumno: Alumno) => (
+                                <SelectItem
+                                  key={alumno.id}
+                                  value={String(alumno.id)}
+                                >
+                                  {alumno.nombre} {alumno.apellido}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
                       <div className="space-y-2">
                         <Label htmlFor="caballoId">
                           Caballo
@@ -864,26 +915,28 @@ export default function ClasesPage() {
 
                     {/* FILA 4: Estado + Tipo de Clase (crear) / Observaciones (editar) */}
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="estado">Estado</Label>
-                        <Select
-                          name="estado"
-                          required
-                          defaultValue={claseToEdit?.estado || "PROGRAMADA"}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar estado" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ESTADOS.map((estado) => (
-                              <SelectItem key={estado} value={estado}>
-                                {estado.charAt(0).toUpperCase() +
-                                  estado.slice(1).toLowerCase()}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {claseToEdit && (
+                        <div className="space-y-2">
+                          <Label htmlFor="estado">Estado</Label>
+                          <Select
+                            name="estado"
+                            required
+                            defaultValue={claseToEdit.estado}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ESTADOS.map((estado) => (
+                                <SelectItem key={estado} value={estado}>
+                                  {estado.charAt(0).toUpperCase() +
+                                    estado.slice(1).toLowerCase()}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
 
                       {!claseToEdit ? (
                         <div className="space-y-2">
@@ -941,7 +994,7 @@ export default function ClasesPage() {
                         <Select
                           name="duracion"
                           required
-                          defaultValue={String(claseToEdit?.duracion || 60)}
+                          defaultValue={String(claseToEdit?.duracion || 30)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccionar duración" />
@@ -952,26 +1005,28 @@ export default function ClasesPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm text-muted-foreground">
-                          Fin estimado
-                        </Label>
-                        <p className="flex h-10 items-center text-sm text-muted-foreground">
-                          {claseToEdit?.diaHoraCompleto
-                            ? (() => {
-                                const horaInicio = obtenerHoraArgentina(
-                                  claseToEdit.diaHoraCompleto,
-                                );
-                                const [h, m] = horaInicio
-                                  .split(":")
-                                  .map(Number);
-                                const durMin = claseToEdit.duracion || 60;
-                                const totalMin = h * 60 + m + durMin;
-                                return `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
-                              })()
-                            : "—"}
-                        </p>
-                      </div>
+                      {claseToEdit && (
+                        <div className="space-y-2">
+                          <Label className="text-sm text-muted-foreground">
+                            Fin estimado
+                          </Label>
+                          <p className="flex h-10 items-center text-sm text-muted-foreground">
+                            {claseToEdit?.diaHoraCompleto
+                              ? (() => {
+                                  const horaInicio = obtenerHoraArgentina(
+                                    claseToEdit.diaHoraCompleto,
+                                  );
+                                  const [h, m] = horaInicio
+                                    .split(":")
+                                    .map(Number);
+                                  const durMin = claseToEdit.duracion || 30;
+                                  const totalMin = h * 60 + m + durMin;
+                                  return `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
+                                })()
+                              : "—"}
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* FILA 6: Observaciones al crear (span completo) */}
@@ -1132,7 +1187,7 @@ export default function ClasesPage() {
                     label: "Hora",
                     value: formatearConZona(clase.diaHoraCompleto),
                   },
-                  { label: "Alumno", value: getAlumnoNombre(clase.alumnoId) },
+                  { label: "Alumno", value: getNombreParaClase(clase) },
                   {
                     label: "Instructor",
                     value: getInstructorNombre(clase.instructorId),

@@ -1,24 +1,19 @@
 import {
   BarChart,
   CalendarDays,
+  ChessKnight,
   ChevronRight,
-  Landmark,
+  CircleDollarSign,
+  GraduationCap,
   Menu,
-  UserCheck,
-  Users,
+  NotebookPen,
+  User,
   X,
 } from "lucide-react";
 import { ReactNode, useCallback, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { HelpSystem } from "@/components/HelpSystem";
-import {
-  AlumnoIcon,
-  CaballoIcon,
-  CalendarioIcon,
-  ClaseIcon,
-  InstructorIcon,
-} from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import SmartSearch from "@/components/ui/smart-search";
 import { UserDropdown } from "@/components/UserDropdown";
@@ -31,12 +26,13 @@ interface LayoutProps {
 }
 
 const navigation = [
-  { name: "Alumnos", href: "/alumnos", icon: Users },
-  { name: "Instructores", href: "/instructores", icon: UserCheck },
-  { name: "Caballos", href: "/caballos", icon: Landmark },
-  { name: "Clases", href: "/clases", icon: CalendarDays },
+  { name: "Alumnos", href: "/alumnos", icon: User },
+  { name: "Instructores", href: "/instructores", icon: GraduationCap },
+  { name: "Caballos", href: "/caballos", icon: ChessKnight },
+  { name: "Clases", href: "/clases", icon: NotebookPen },
   { name: "Calendario", href: "/calendario", icon: CalendarDays },
   { name: "Reportes", href: "/reportes", icon: BarChart },
+  { name: "Finanzas", href: "/finanzas", icon: CircleDollarSign },
 ];
 
 export function Layout({ children }: LayoutProps) {
@@ -73,7 +69,7 @@ export function Layout({ children }: LayoutProps) {
         <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Landmark className="h-5 w-5 text-primary-foreground" />
+              <ChessKnight className="h-5 w-5 text-primary-foreground" />
             </div>
             <div className="hidden lg:block">
               {" "}

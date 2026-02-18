@@ -1,11 +1,12 @@
 import {
   ArrowRight,
   BarChart,
-  Calendar,
   CalendarDays,
-  Landmark,
-  UserCheck,
-  Users,
+  ChessKnight,
+  CircleDollarSign,
+  GraduationCap,
+  NotebookPen,
+  User,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -22,35 +23,35 @@ const modules = [
   {
     title: "Alumnos",
     description: "Gestiona los alumnos inscriptos en la escuela",
-    icon: Users,
+    icon: User,
     href: "/alumnos",
     color: "bg-primary",
   },
   {
     title: "Instructores",
     description: "Administra el equipo de instructores",
-    icon: UserCheck,
+    icon: GraduationCap,
     href: "/instructores",
     color: "bg-accent",
   },
   {
     title: "Caballos",
     description: "Control de caballos de la escuela y privados",
-    icon: Landmark,
+    icon: ChessKnight,
     href: "/caballos",
     color: "bg-success",
   },
   {
     title: "Clases",
     description: "Programa y gestiona las clases de equitación",
-    icon: CalendarDays,
+    icon: NotebookPen,
     href: "/clases",
     color: "bg-info",
   },
   {
     title: "Calendario",
     description: "Vista visual interactiva de todas las clases",
-    icon: Calendar,
+    icon: CalendarDays,
     href: "/calendario",
     color: "bg-primary",
   },
@@ -61,6 +62,13 @@ const modules = [
     href: "/reportes",
     color: "bg-warning",
   },
+  {
+    title: "Finanzas",
+    description: "Gestión de ingresos y egresos de la escuela",
+    icon: CircleDollarSign,
+    href: "/finanzas",
+    color: "bg-success",
+  },
 ];
 
 const Index = () => {
@@ -68,12 +76,12 @@ const Index = () => {
     <Layout>
       {/* Hero Section */}
       <div className="mb-12 text-center animate-fade-in">
-        <h1 className="font-display text-4xl font-bold text-foreground md:text-5xl lg:text-6xl">
-          Bienvenido
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+          Sistema de Gestión de la Escuela de Equitación
         </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-          Sistema de gestión para la Escuela de Equitación. Administra alumnos,
-          instructores, caballos y clases desde un solo lugar.
+        <p className="text-muted-foreground">
+          Administra alumnos, instructores, caballos, clases, calendario,
+          reportes y finanzas desde un solo lugar.
         </p>
       </div>
 
@@ -116,7 +124,7 @@ const Index = () => {
       >
         <div className="flex flex-col items-center gap-4 text-center md:flex-row md:text-left">
           <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-primary">
-            <Landmark className="h-8 w-8 text-primary-foreground" />
+            <ChessKnight className="h-8 w-8 text-primary-foreground" />
           </div>
           <div>
             <h2 className="font-display text-xl font-semibold text-foreground">

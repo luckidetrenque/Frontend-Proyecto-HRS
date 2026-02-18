@@ -252,7 +252,7 @@ export default function InstructoresPage() {
       fechaNacimiento: formData.get("fechaNacimiento") as string,
       telefono: formData.get("telefono") as string,
       email: formData.get("email") as string,
-      activo: formData.get("activo") === "on",
+      activo: editingInstructor ? formData.get("activo") === "on" : true,
       color: instructorColor,
     };
 
@@ -502,14 +502,17 @@ export default function InstructoresPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <Switch
-                        id="activo"
-                        name="activo"
-                        defaultChecked={editingInstructor?.activo ?? true}
-                      />
-                      <Label htmlFor="activo">Instructor activo</Label>
-                    </div>
+                    {/* Activo: solo visible al editar */}
+                    {editingInstructor && (
+                      <div className="flex items-center gap-3">
+                        <Switch
+                          id="activo"
+                          name="activo"
+                          defaultChecked={editingInstructor.activo ?? true}
+                        />
+                        <Label htmlFor="activo">Está activo</Label>
+                      </div>
+                    )}
                   </div>
                   <DialogFooter>
                     <Button

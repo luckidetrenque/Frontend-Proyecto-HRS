@@ -11,8 +11,8 @@ import {
   Mail,
   MessageCircle,
   Phone,
+  Presentation,
   TrendingUp,
-  User,
   XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -262,7 +262,7 @@ export default function InstructorDetalle() {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <User className="h-5 w-5 text-primary" />
+                    <GraduationCap className="h-5 w-5 text-primary" />
                   </div>
                   <div>
                     <CardTitle className="text-lg">
@@ -343,7 +343,7 @@ export default function InstructorDetalle() {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
-                    <GraduationCap className="h-5 w-5 text-accent" />
+                    <Presentation className="h-5 w-5 text-accent" />
                   </div>
                   <div>
                     <CardTitle className="text-lg">Especialidades</CardTitle>
@@ -623,7 +623,7 @@ export default function InstructorDetalle() {
                     name="activo"
                     defaultChecked={instructor?.activo}
                   />
-                  <Label htmlFor="activo">Instructor activo</Label>
+                  <Label htmlFor="activo">Está activo</Label>
                 </div>
               </div>
               <DialogFooter>

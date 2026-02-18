@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { Info } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { CalendarControls } from "@/components/calendar/CalendarControls";
@@ -8,6 +9,7 @@ import {
   ALUMNO_COMODIN_ID,
   ESPECIALIDADES,
   ESTADOS,
+  obtenerHoraArgentina,
 } from "@/components/calendar/clases.constants";
 import { DayView } from "@/components/calendar/DayView";
 import { MonthView } from "@/components/calendar/MonthView";
@@ -107,6 +109,8 @@ export default function CalendarioPage() {
   const [especialidadSeleccionada, setEspecialidadSeleccionada] =
     useState<string>("");
   const [alumnoIdSeleccionado, setAlumnoIdSeleccionado] = useState<string>("");
+  const [duracionSeleccionada, setDuracionSeleccionada] = useState<number>(30);
+  const [horaSeleccionada, setHoraSeleccionada] = useState<string>("09:00");
 
   // Filtrar caballos según alumno seleccionado
 
@@ -123,11 +127,17 @@ export default function CalendarioPage() {
       setAlumnoIdSeleccionado(
         claseToEdit.alumnoId ? String(claseToEdit.alumnoId) : "",
       );
+      setDuracionSeleccionada(claseToEdit.duracion || 30);
+      setHoraSeleccionada(claseToEdit.hora.slice(0, 5));
+    } else if (isDialogOpen && prefilledHora) {
+      setHoraSeleccionada(prefilledHora);
     } else if (!isDialogOpen) {
       setEspecialidadSeleccionada("");
       setAlumnoIdSeleccionado("");
+      setDuracionSeleccionada(30);
+      setHoraSeleccionada("09:00");
     }
-  }, [isDialogOpen, claseToEdit]);
+  }, [isDialogOpen, claseToEdit, prefilledHora]);
 
   // Manejador para cambio de especialidad
   const handleEspecialidadChange = (value: string) => {
@@ -327,6 +337,14 @@ export default function CalendarioPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              {claseToEdit?.esPrueba && (
+                <div className="flex items-center gap-2 ml-4">
+                  <span className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-orange-300 bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-800">
+                    <Info className="h-3 w-3 text-orange-600" />
+                    Clase de Prueba
+                  </span>
+                </div>
+              )}
               {/* ✅ FILA 1: Hora de Inicio - Alumno */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -335,11 +353,8 @@ export default function CalendarioPage() {
                     id="hora"
                     name="hora"
                     type="time"
-                    defaultValue={
-                      claseToEdit
-                        ? claseToEdit.hora.slice(0, 5)
-                        : prefilledHora || "09:00"
-                    }
+                    value={horaSeleccionada}
+                    onChange={(e) => setHoraSeleccionada(e.target.value)}
                     required
                   />
                 </div>
@@ -372,14 +387,14 @@ export default function CalendarioPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <Input
                         value={claseToEdit.personaPruebaNombre ?? ""}
-                        disabled
-                        className="bg-muted text-muted-foreground"
+                        // disabled
+                        // className="bg-muted text-muted-foreground"
                         placeholder="Nombre"
                       />
                       <Input
                         value={claseToEdit.personaPruebaApellido ?? ""}
-                        disabled
-                        className="bg-muted text-muted-foreground"
+                        // disabled
+                        // className="bg-muted text-muted-foreground"
                         placeholder="Apellido"
                       />
                     </div>
@@ -424,7 +439,10 @@ export default function CalendarioPage() {
                   <Select
                     name="duracion"
                     required
-                    defaultValue={String(claseToEdit?.duracion || 60)}
+                    value={String(duracionSeleccionada)}
+                    onValueChange={(value) =>
+                      setDuracionSeleccionada(Number(value))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar duración" />
@@ -441,7 +459,12 @@ export default function CalendarioPage() {
                       Fin estimado
                     </Label>
                     <p className="flex h-10 items-center text-sm text-muted-foreground">
-                      {/* Calculado visualmente, solo informativo */}
+                      {(() => {
+                        const [h, m] = horaSeleccionada.split(":").map(Number);
+                        const durMin = duracionSeleccionada;
+                        const totalMin = h * 60 + m + durMin;
+                        return `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
+                      })()}
                     </p>
                   </div>
                 )}

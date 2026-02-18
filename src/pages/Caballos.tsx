@@ -229,7 +229,7 @@ export default function CaballosPage() {
     const data = {
       nombre: formData.get("nombre") as string,
       tipo: formData.get("tipo") as "ESCUELA" | "PRIVADO",
-      disponible: formData.get("disponible") === "on",
+      disponible: editingCaballo ? formData.get("disponible") === "on" : true,
     };
 
     const nombreDuplicado = caballos.some(
@@ -383,14 +383,17 @@ export default function CaballosPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Switch
-                        id="disponible"
-                        name="disponible"
-                        defaultChecked={editingCaballo?.disponible ?? true}
-                      />
-                      <Label htmlFor="disponible">Disponible</Label>
-                    </div>
+                    {/* Activo: solo visible al editar */}
+                    {editingCaballo && (
+                      <div className="flex items-center gap-3">
+                        <Switch
+                          id="disponible"
+                          name="disponible"
+                          defaultChecked={editingCaballo.disponible ?? true}
+                        />
+                        <Label htmlFor="disponible">Está disponible</Label>
+                      </div>
+                    )}
                   </div>
                   <DialogFooter>
                     <Button

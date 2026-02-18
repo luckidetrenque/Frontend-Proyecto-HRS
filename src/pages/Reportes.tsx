@@ -2,14 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import {
-  Calendar,
+  ChessKnight,
   DollarSign,
   Download,
-  Landmark,
+  GraduationCap,
+  NotebookPen,
   PieChart as PieIcon,
   TrendingUp,
-  UserCheck,
-  Users,
+  User,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -335,7 +335,7 @@ export default function ReportesPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
+              <NotebookPen className="h-5 w-5" />
               Período de Análisis
             </CardTitle>
             <CardDescription>
@@ -377,7 +377,7 @@ export default function ReportesPage() {
               <CardTitle className="text-sm font-medium">
                 Alumnos Activos
               </CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <User className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -394,7 +394,7 @@ export default function ReportesPage() {
               <CardTitle className="text-sm font-medium">
                 Total Clases
               </CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <NotebookPen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -411,7 +411,7 @@ export default function ReportesPage() {
               <CardTitle className="text-sm font-medium">
                 Instructores
               </CardTitle>
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
+              <GraduationCap className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -569,7 +569,7 @@ export default function ReportesPage() {
                       </p>
                     </div>
                     <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center">
-                      <Users className="h-8 w-8 text-success" />
+                      <User className="h-8 w-8 text-success" />
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
@@ -731,7 +731,7 @@ export default function ReportesPage() {
                       <p className="text-sm text-muted-foreground">Clases</p>
                     </div>
                     <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Calendar className="h-8 w-8 text-primary" />
+                      <NotebookPen className="h-8 w-8 text-primary" />
                     </div>
                   </div>
                 </CardContent>
@@ -940,7 +940,7 @@ export default function ReportesPage() {
                     </p>
                   </div>
                   <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <UserCheck className="h-8 w-8 text-primary" />
+                    <GraduationCap className="h-8 w-8 text-primary" />
                   </div>
                 </div>
               </CardContent>
@@ -1053,7 +1053,7 @@ export default function ReportesPage() {
                       </p>
                     </div>
                     <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center">
-                      <Landmark className="h-8 w-8 text-success" />
+                      <ChessKnight className="h-8 w-8 text-success" />
                     </div>
                   </div>
                   <div className="flex justify-between items-center">

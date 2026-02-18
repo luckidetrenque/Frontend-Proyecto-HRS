@@ -207,6 +207,11 @@ export default function ClaseDetalle() {
     );
   }
 
+  const getAlumnoNombreCompleto = (id: number) => {
+    const alumno = alumnos.find((a: Alumno) => a.id === id);
+    return alumno ? `${alumno.nombre} ${alumno.apellido}` : "-";
+  };
+
   return (
     <Layout>
       <div className="flex items-center gap-3 mb-6">
@@ -293,7 +298,9 @@ export default function ClaseDetalle() {
                         Clase de Prueba
                       </p>
                       <p className="text-sm text-orange-700">
-                        Esta es una clase de prueba para un alumno nuevo.
+                        {clase.alumnoId
+                          ? "Esta es una clase de prueba de un alumno existente en otra especialidad."
+                          : "Esta es una clase de prueba para una persona sin cuenta de alumno."}
                       </p>
                     </div>
                   </div>
@@ -305,7 +312,7 @@ export default function ClaseDetalle() {
 
         {/* Participantes */}
         <div className="grid gap-6 md:grid-cols-3">
-          {/* Card del Alumno */}
+          {/* Card del Alumno / Persona de Prueba */}
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -314,10 +321,15 @@ export default function ClaseDetalle() {
                     <User className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg">Alumno</CardTitle>
+                    <CardTitle className="text-lg">
+                      {clase.esPrueba && !clase.alumnoId
+                        ? "Persona de Prueba"
+                        : "Alumno"}
+                    </CardTitle>
                     <CardDescription>Participante</CardDescription>
                   </div>
                 </div>
+                {/* Botón Ver Perfil solo para alumnos registrados */}
                 {alumno && (
                   <Button
                     variant="ghost"
@@ -331,7 +343,13 @@ export default function ClaseDetalle() {
               </div>
             </CardHeader>
             <CardContent>
-              {alumno ? (
+              {clase.esPrueba && !clase.alumnoId ? (
+                // Clase de prueba con persona nueva — datos vienen directo en clase
+                <InfoField label="Nombre">
+                  {clase.personaPruebaNombreCompleto ?? "-"}
+                </InfoField>
+              ) : alumno ? (
+                // Alumno registrado
                 <InfoField label="Nombre">
                   {alumno.nombre} {alumno.apellido}
                 </InfoField>
@@ -408,7 +426,17 @@ export default function ClaseDetalle() {
             </CardHeader>
             <CardContent>
               {caballo ? (
-                <InfoField label="Nombre">{caballo.nombre}</InfoField>
+                <>
+                  <InfoField label="Nombre">{caballo.nombre}</InfoField>
+                  {alumno?.caballoPropio &&
+                    (typeof alumno.caballoPropio === "number"
+                      ? alumno.caballoPropio === caballo.id
+                      : alumno.caballoPropio.id === caballo.id) && (
+                      <div className="mt-2 text-xs font-medium text-success">
+                        ✓ Predeterminado
+                      </div>
+                    )}
+                </>
               ) : (
                 <div className="text-center py-4 text-sm text-muted-foreground">
                   Cargando...
@@ -509,10 +537,18 @@ export default function ClaseDetalle() {
             <DialogHeader>
               <DialogTitle className="font-display">Editar Clase</DialogTitle>
               <DialogDescription>
-                Modifica los datos de la clase
+                Editando clase de {getAlumnoNombreCompleto(clase.alumnoId)}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              {clase?.esPrueba && (
+                <div className="flex items-center gap-2 ml-4">
+                  <span className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-orange-300 bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-800">
+                    <Info className="h-3 w-3 text-orange-600" />
+                    Clase de Prueba
+                  </span>
+                </div>
+              )}
               {/* FILA 1: Día + Hora */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -540,6 +576,9 @@ export default function ClaseDetalle() {
               {/* FILA 2: Alumno + Caballo */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  {/* TODO: label dinámico "Alumno" vs "Persona de Prueba" según
+                  corresponda, y mostrar campos de nombre/apellido en caso de
+                  ser clase de prueba sin alumno asignado */}
                   <Label htmlFor="alumnoId">
                     Alumno
                     {clase?.esPrueba && !clase?.alumnoId && (
@@ -548,19 +587,18 @@ export default function ClaseDetalle() {
                       </span>
                     )}
                   </Label>
-
                   {clase?.esPrueba && !clase?.alumnoId ? (
                     <div className="grid grid-cols-2 gap-2">
                       <Input
                         value={clase.personaPruebaNombre ?? ""}
-                        disabled
-                        className="bg-muted text-muted-foreground"
+                        // disabled
+                        // className="bg-muted text-muted-foreground"
                         placeholder="Nombre"
                       />
                       <Input
                         value={clase.personaPruebaApellido ?? ""}
-                        disabled
-                        className="bg-muted text-muted-foreground"
+                        // disabled
+                        // className="bg-muted text-muted-foreground"
                         placeholder="Apellido"
                       />
                     </div>
@@ -583,7 +621,27 @@ export default function ClaseDetalle() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="caballoId">Caballo</Label>
+                  <Label htmlFor="caballoId">
+                    Caballo
+                    {(() => {
+                      // Usar el alumno cargado de la clase actual
+                      if (alumno?.caballoPropio) {
+                        const caballoPredeterminado = caballos.find(
+                          (c: Caballo) =>
+                            c.id ===
+                            (typeof alumno.caballoPropio === "number"
+                              ? alumno.caballoPropio
+                              : alumno.caballoPropio.id),
+                        );
+                        return caballoPredeterminado ? (
+                          <span className="ml-2 text-xs font-medium text-success">
+                            ✓ Predeterminado: {caballoPredeterminado.nombre}
+                          </span>
+                        ) : null;
+                      }
+                      return null;
+                    })()}
+                  </Label>
                   <Select
                     name="caballoId"
                     defaultValue={String(clase?.caballoId || "")}
@@ -675,13 +733,16 @@ export default function ClaseDetalle() {
                     </SelectContent>
                   </Select>
                 </div>
-                {clase?.esPrueba && (
-                  <div className="flex items-center gap-2 pt-6">
-                    <span className="inline-flex items-center gap-1.5 rounded-md border border-orange-300 bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-800">
-                      🎓 Clase de Prueba
-                    </span>
-                  </div>
-                )}
+                {/* FILA 6: Observaciones (span completo) */}
+                <div className="space-y-2">
+                  <Label htmlFor="observaciones">Observaciones</Label>
+                  <Input
+                    id="observaciones"
+                    name="observaciones"
+                    defaultValue={clase?.observaciones || ""}
+                    placeholder="Ej. Lluvia, Feriado, etc"
+                  />
+                </div>
               </div>
 
               {/* FILA 5: Duración + Fin estimado */}
@@ -720,17 +781,6 @@ export default function ClaseDetalle() {
                       : "—"}
                   </p>
                 </div>
-              </div>
-
-              {/* FILA 6: Observaciones (span completo) */}
-              <div className="space-y-2">
-                <Label htmlFor="observaciones">Observaciones</Label>
-                <Input
-                  id="observaciones"
-                  name="observaciones"
-                  defaultValue={clase?.observaciones || ""}
-                  placeholder="Ej. Lluvia, Feriado, etc"
-                />
               </div>
             </div>
             <DialogFooter>

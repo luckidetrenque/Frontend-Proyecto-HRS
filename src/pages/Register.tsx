@@ -72,27 +72,12 @@ const Register: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // const { username, email, password, confirmPassword, nombre, apellido } = formData;
     const { username, email, password, confirmPassword } = formData;
 
-    setError(""); // Limpiar errores previos
+    setError("");
 
     if (!username.trim() || !password.trim()) {
       setError("El usuario y la contraseña son obligatorios");
-      return;
-    }
-
-    if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
-      setError("Ingresa un correo electrónico válido");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("Las contraseñas no coinciden");
-      return;
-    }
-
-    if (password.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres");
       return;
     }
 
@@ -105,6 +90,21 @@ const Register: React.FC = () => {
         description: "Este correo no está en la lista de usuarios autorizados",
         variant: "destructive",
       });
+      return;
+    }
+
+    if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
+      setError("Ingresa un correo electrónico válido");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres");
       return;
     }
 

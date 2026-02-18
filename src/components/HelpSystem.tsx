@@ -8,8 +8,25 @@
  * 3. El botón flotante aparecerá automáticamente en todas las páginas
  */
 
-import { useState, useEffect } from 'react';
+import {
+  BarChart,
+  BookOpen,
+  Calendar,
+  CalendarDays,
+  ChevronRight,
+  HelpCircle,
+  Landmark,
+  Lightbulb,
+  Search,
+  UserCheck,
+  Users,
+  X,
+} from 'lucide-react';
+import { useEffect,useState } from 'react';
 import { useLocation } from 'react-router-dom';
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -17,23 +34,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  HelpCircle,
-  X,
-  Search,
-  Users,
-  UserCheck,
-  Landmark,
-  CalendarDays,
-  Calendar,
-  BarChart,
-  ChevronRight,
-  Lightbulb,
-  BookOpen,
-} from 'lucide-react';
 
 // 📚 CONTENIDO DE AYUDA ESPECÍFICO PARA CADA PÁGINA
 const helpContent = {
