@@ -44,6 +44,19 @@ export default function CaballosPage() {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [editingCaballo, setEditingCaballo] = useState<Caballo | null>(null);
+
+  const [nombre, setNombre] = useState<Caballo["nombre"]>(
+    editingCaballo?.nombre ?? "",
+  );
+
+  const [tipo, setTipo] = useState<Caballo["tipo"]>(
+    editingCaballo?.tipo ?? "ESCUELA",
+  );
+
+  const [disponible, setDisponible] = useState<Caballo["disponible"]>(
+    editingCaballo?.disponible ?? true,
+  );
+
   const [caballoToDelete, setCaballoToDelete] = useState<Caballo | null>(null);
 
   const navigate = useNavigate();
@@ -75,6 +88,15 @@ export default function CaballosPage() {
     setSearchFilters(typedFilters);
     setCurrentPage(1);
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      // Si hay entidad, cargar sus datos; si no, limpiar
+      setNombre(editingCaballo?.nombre ?? "");
+      setTipo(editingCaballo?.tipo ?? "ESCUELA");
+      setDisponible(editingCaballo?.disponible ?? true);
+    }
+  }, [isOpen, editingCaballo]);
 
   // ✅ NUEVO: Escuchar evento de búsqueda global desde el Layout
   useEffect(() => {
@@ -225,16 +247,17 @@ export default function CaballosPage() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const data = {
-      nombre: formData.get("nombre") as string,
-      tipo: formData.get("tipo") as "ESCUELA" | "PRIVADO",
-      disponible: editingCaballo ? formData.get("disponible") === "on" : true,
-    };
 
+    // 1️⃣ Validación básica
+    if (!nombre.trim()) {
+      toast.error("El nombre es obligatorio");
+      return;
+    }
+
+    // 2️⃣ Validación de duplicado
     const nombreDuplicado = caballos.some(
       (c) =>
-        c.nombre.toLowerCase() === data.nombre.toLowerCase() &&
+        c.nombre.toLowerCase().trim() === nombre.toLowerCase().trim() &&
         c.id !== editingCaballo?.id,
     );
 
@@ -243,6 +266,14 @@ export default function CaballosPage() {
       return;
     }
 
+    // 3️⃣ Construcción del objeto
+    const data: Omit<Caballo, "id"> = {
+      nombre: nombre.trim(),
+      tipo,
+      disponible,
+    };
+
+    // 4️⃣ Create o Update
     if (editingCaballo) {
       updateMutation.mutate({ id: editingCaballo.id, data });
     } else {
@@ -362,19 +393,23 @@ export default function CaballosPage() {
                       <Label htmlFor="nombre">Nombre/s</Label>
                       <Input
                         id="nombre"
-                        name="nombre"
-                        defaultValue={editingCaballo?.nombre}
-                        placeholder="Nombre/s del caballo"
+                        type="text"
+                        autoComplete="given-name"
+                        placeholder="Nombre del caballo"
+                        value={nombre}
+                        onChange={(e) => setNombre(e.target.value)}
                         required
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="tipo">Tipo</Label>
                       <Select
-                        name="tipo"
-                        defaultValue={editingCaballo?.tipo || "ESCUELA"}
+                        value={tipo}
+                        onValueChange={(value) =>
+                          setTipo(value as "ESCUELA" | "PRIVADO")
+                        }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger id="tipo">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -388,8 +423,8 @@ export default function CaballosPage() {
                       <div className="flex items-center gap-3">
                         <Switch
                           id="disponible"
-                          name="disponible"
-                          defaultChecked={editingCaballo.disponible ?? true}
+                          checked={disponible}
+                          onCheckedChange={setDisponible}
                         />
                         <Label htmlFor="disponible">Está disponible</Label>
                       </div>

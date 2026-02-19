@@ -315,16 +315,27 @@ export function useCalendar() {
     setApellidoPrueba("");
   };
 
-  const handleSubmitClase = async (e: React.FormEvent<HTMLFormElement>) => {
+  // useCalendar.ts — nueva firma
+  const handleSubmitClase = async (
+    e: React.FormEvent<HTMLFormElement>,
+    formValues: {
+      especialidad: string;
+      alumnoId: string;
+      caballoId: string;
+      instructorId: string;
+      hora: string;
+      duracion: number;
+      dia?: string;
+      estado?: Clase["estado"];
+      observaciones?: string;
+    },
+  ) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const esPrueba = formData.get("esPrueba") === "on";
-    const especialidad = formData.get("especialidad") as Clase["especialidad"];
 
-    let alumnoId: number | null = null;
+    let alumnoIdFinal: number | null = null;
     let personaPruebaId: number | null = null;
 
-    if (esPrueba && tipoPrueba === "persona_nueva") {
+    if (esPruebaChecked && tipoPrueba === "persona_nueva") {
       if (!nombrePrueba.trim() || !apellidoPrueba.trim()) {
         toast.error("Ingresá nombre y apellido de la persona de prueba");
         return;
@@ -340,19 +351,18 @@ export function useCalendar() {
         return;
       }
     } else {
-      alumnoId = Number(formData.get("alumnoId"));
+      alumnoIdFinal = Number(formValues.alumnoId) || null;
     }
 
-    const alumno = alumnoId
-      ? alumnos.find((a: Alumno) => a.id === alumnoId)
+    const alumno = alumnoIdFinal
+      ? alumnos.find((a: Alumno) => a.id === alumnoIdFinal)
       : undefined;
 
-    // Validación de clase de prueba para alumno existente
-    if (!claseToEdit && esPrueba && alumno) {
+    if (!claseToEdit && esPruebaChecked && alumno) {
       const { esValido, mensaje } = validarClasePrueba(
         clases,
         alumno,
-        especialidad,
+        formValues.especialidad as Clase["especialidad"],
         claseToEdit?.id,
       );
       if (!esValido) {
@@ -361,36 +371,38 @@ export function useCalendar() {
       }
     }
 
-    // Resolver caballo
-    const caballoId = resolverCaballoId(formData.get("caballoId"), alumno);
-    if (!caballoId) {
+    // Resolver caballo desde el estado
+    const caballoIdFinal = formValues.caballoId
+      ? Number(formValues.caballoId)
+      : alumno?.caballoPropio && typeof alumno.caballoPropio === "object"
+        ? alumno.caballoPropio.id
+        : 0;
+
+    if (!caballoIdFinal) {
       toast.error("Debe seleccionar un caballo");
       return;
     }
 
-    // Validar horario límite
-    const horaValor = (formData.get("hora") as string).slice(0, 5);
-    const duracionValor = Number(formData.get("duracion")) || 30;
     const { esValido: horarioOk, mensaje: mensajeHorario } =
-      validarHorarioLimite(horaValor, duracionValor);
+      validarHorarioLimite(formValues.hora, formValues.duracion);
     if (!horarioOk) {
       toast.error(mensajeHorario);
       return;
     }
 
     const data = {
-      especialidad,
-      dia: (formData.get("dia") as string) || format(currentDate, "yyyy-MM-dd"),
-      hora: parsearHoraParaApi(formData.get("hora") as string),
-      duracion: Number(formData.get("duracion")) || 30,
-      estado: claseToEdit?.estado || "PROGRAMADA",
-      observaciones: "",
-      instructorId: Number(formData.get("instructorId")),
-      caballoId,
+      especialidad: formValues.especialidad as Clase["especialidad"],
+      dia: formValues.dia ?? format(currentDate, "yyyy-MM-dd"),
+      hora: parsearHoraParaApi(formValues.hora),
+      duracion: formValues.duracion,
+      estado: claseToEdit?.estado ?? formValues.estado ?? "PROGRAMADA",
+      observaciones: formValues.observaciones ?? "",
+      instructorId: Number(formValues.instructorId),
+      caballoId: caballoIdFinal,
       diaHoraCompleto: "",
-      alumnoId,
+      alumnoId: alumnoIdFinal,
       personaPruebaId,
-      esPrueba,
+      esPrueba: esPruebaChecked,
     };
 
     if (claseToEdit) {

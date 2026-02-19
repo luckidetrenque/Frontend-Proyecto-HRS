@@ -180,7 +180,7 @@ export function DayView({
                         !esContinuacion &&
                         !hasConflict &&
                         onCellClick &&
-                        "cursor-pointer hover:bg-primary/10",
+                        "cursor-cell hover:bg-primary/10",
                     )}
                     title={
                       esContinuacion
@@ -189,8 +189,7 @@ export function DayView({
                           ? `Clase ${clase.estado.toLowerCase()} con el instructor ${getInstructorNombre(clase.instructorId)}`
                           : `Agregar clase para ${caballo.nombre} a las ${hora}`
                     }
-                    onClick={() => {
-                      // No permitir click en celdas de continuación ni en celdas con clase
+                    onDoubleClick={() => {
                       if (!clase && !esContinuacion && onCellClick) {
                         onCellClick(caballo, hora);
                       }

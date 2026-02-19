@@ -1,11 +1,19 @@
 /**
- * OnboardingTour.tsx
+ * OnboardingTour.tsx - VERSIÓN ACTUALIZADA Y COMPLETA
  * Tour guiado para nuevos usuarios del sistema
  * 
+ * ACTUALIZACIONES:
+ * ✅ Información sobre clases de prueba
+ * ✅ Tipos de pensión y cuotas
+ * ✅ Estados de clase extendidos (ACA/ASA)
+ * ✅ Validaciones del sistema
+ * ✅ Herramientas del calendario
+ * 
  * INSTRUCCIONES:
- * 1. Importar en tu página principal o Layout
- * 2. El tour se mostrará automáticamente la primera vez
- * 3. Se guarda en localStorage que el usuario ya lo vio
+ * 1. Importar en Layout.tsx: import { OnboardingTour } from '@/components/OnboardingTour';
+ * 2. Agregar al Layout: <OnboardingTour />
+ * 3. El tour se mostrará automáticamente la primera vez
+ * 4. Se guarda en localStorage que el usuario ya lo vio
  */
 
 import { useState, useEffect } from 'react';
@@ -31,102 +39,187 @@ import {
   ArrowLeft,
   X,
   Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 
 const TOUR_STEPS = [
   {
     title: '¡Bienvenido! 🎉',
-    description: 'Gracias por usar nuestro sistema de gestión de escuela de equitación. Este tour rápido te mostrará las funciones principales.',
+    description: 'Gracias por usar nuestro sistema de gestión de escuela de equitación. Este tour rápido te mostrará las funciones principales y características avanzadas del sistema.',
     icon: Sparkles,
     color: 'text-amber-500',
     image: null,
   },
   {
     title: 'Gestión de Alumnos 👥',
-    description: 'Registra alumnos, gestiona sus datos de contacto, planes de clases y disponibilidad. Contacta directamente por WhatsApp o email.',
+    description: 'Registra alumnos con planes flexibles (4, 8, 12 o 16 clases mensuales). Gestiona tipos de pensión: sin caballo, reserva de caballo de escuela, o caballo propio.',
     icon: Users,
     color: 'text-blue-500',
     path: '/alumnos',
     features: [
-      'Agregar y editar alumnos',
+      'Planes de 4, 8, 12 o 16 clases mensuales',
+      'Tipos de pensión: Sin caballo / Reserva escuela / Caballo propio',
+      'Cuotas de pensión: Entera, Media, Tercio',
       'Contacto directo (WhatsApp/Email)',
-      'Gestión de planes de clases',
+      'Validación automática de DNI duplicado',
+      'Gestión de alumnos activos e inactivos',
       'Filtros y búsqueda avanzada',
     ],
   },
   {
     title: 'Equipo de Instructores 👨‍🏫',
-    description: 'Administra tu equipo de instructores. Asigna colores únicos para identificarlos fácilmente en el calendario.',
+    description: 'Administra tu equipo de instructores. Cada uno tiene un color único que lo identifica visualmente en el calendario, facilitando la organización.',
     icon: UserCheck,
     color: 'text-green-500',
     path: '/instructores',
     features: [
-      'Registro de instructores',
-      'Sistema de colores para calendario',
-      'Control de disponibilidad',
+      'Registro completo de instructores',
+      'Sistema de colores único (7 colores disponibles)',
+      'Los colores se reflejan en las clases del calendario',
+      'Control de disponibilidad (activo/inactivo)',
+      'Validación de DNI duplicado',
     ],
   },
   {
     title: 'Caballos 🐴',
-    description: 'Gestiona los caballos de la escuela y privados. Controla su disponibilidad y tipo.',
+    description: 'Gestiona caballos de escuela (disponibles para todos) y caballos privados (exclusivos de su propietario). Control de disponibilidad para descanso o lesiones.',
     icon: Landmark,
     color: 'text-orange-500',
     path: '/caballos',
     features: [
-      'Caballos de escuela y privados',
-      'Control de disponibilidad',
-      'Asignación a clases',
+      'Caballos de ESCUELA: disponibles para cualquier alumno',
+      'Caballos PRIVADOS: solo para su propietario',
+      'Control de disponibilidad temporal',
+      'Asignación automática según tipo de pensión',
     ],
   },
   {
     title: 'Programación de Clases 📅',
-    description: 'Crea y gestiona clases con diferentes especialidades y estados. Soporte para clases de prueba.',
+    description: 'Crea clases regulares, clases de prueba para nuevos alumnos, y más. El sistema valida automáticamente horarios, conflictos y restricciones.',
     icon: CalendarDays,
     color: 'text-purple-500',
     path: '/clases',
     features: [
-      'Múltiples especialidades',
-      'Estados de clase (PROGRAMADA, COMPLETADA, etc.)',
-      'Clases de prueba',
-      'Filtros avanzados',
+      '🎓 Clases de Prueba para Persona Nueva (sin cuenta)',
+      '🎓 Clases de Prueba para Alumno Existente (inactivo)',
+      '4 Especialidades: Equitación, Adiestramiento, Equinoterapia, Monta',
+      'Duración: 30 o 60 minutos',
+      'Estados: PROGRAMADA, INICIADA, COMPLETADA, CANCELADA, ACA, ASA',
+      '⚠️ Validación automática: límite 18:30, conflictos, DNI duplicados',
+      'Restricción de edición en clases completadas',
+      'Filtros avanzados y búsqueda',
+    ],
+  },
+  {
+    title: 'Clases de Prueba 🎓',
+    description: 'Ofrece clases de prueba sin impactar la cuota mensual. Dos modalidades: persona nueva sin cuenta de alumno, o alumno existente probando nueva especialidad.',
+    icon: Sparkles,
+    color: 'text-orange-500',
+    path: '/clases',
+    features: [
+      'Persona Nueva: Solo necesitas nombre y apellido',
+      'Alumno Existente: Debe estar INACTIVO',
+      'NO cuentan para la cuota mensual',
+      'Validación: No repetir especialidad ya tomada',
+      'Identificación visual: 🎓 y borde naranja',
+      'Perfectas para evaluar nuevos estudiantes',
     ],
   },
   {
     title: 'Calendario Visual 🗓️',
-    description: 'Vista interactiva de todas las clases. Cambia entre mes, semana y día. Herramientas para copiar/eliminar semanas completas.',
+    description: 'Vista interactiva con 3 modos: Mes (resumen), Semana (7 días), y Día (estilo Excel). Herramientas avanzadas para copiar semanas, cancelar días completos y exportar a Excel.',
     icon: Calendar,
     color: 'text-cyan-500',
     path: '/calendario',
     features: [
-      'Vistas: Mes, Semana, Día',
-      'Crear clases con un clic',
-      'Copiar/Eliminar semanas',
-      'Exportar a Excel',
+      'Vista MES: Resumen mensual con indicadores',
+      'Vista SEMANA: 7 días con detalle',
+      'Vista DÍA: Estilo Excel, columnas por caballo',
+      '📋 Copiar Semana Completa a otra semana',
+      '🗑️ Eliminar Clases en Rango de fechas',
+      '❌ Cancelar Día Completo (con motivos: lluvia, feriado, etc)',
+      '📊 Exportar a Excel con formato profesional',
+      'Colores por instructor + bordes por estado',
+      'Crear clases con un clic en celdas vacías',
+    ],
+  },
+  {
+    title: 'Estados de Clase 🔄',
+    description: 'Sistema completo de estados para gestionar el ciclo de vida de cada clase, desde la programación hasta su finalización o cancelación.',
+    icon: ShieldCheck,
+    color: 'text-indigo-500',
+    path: '/clases',
+    features: [
+      '🟠 PROGRAMADA: Clase agendada, pendiente',
+      '🔵 INICIADA: Clase en progreso',
+      '🟢 COMPLETADA: Finalizada exitosamente',
+      '🔴 CANCELADA: Clase cancelada',
+      '🟣 ACA: Ausencia Con Aviso',
+      '🌸 ASA: Ausencia Sin Aviso',
+      'Cambio rápido de estado desde el calendario',
+      'Restricción: No editar clases completadas/iniciadas',
+    ],
+  },
+  {
+    title: 'Validaciones Inteligentes ⚠️',
+    description: 'El sistema valida automáticamente reglas de negocio críticas para garantizar la calidad de los datos y evitar errores.',
+    icon: ShieldCheck,
+    color: 'text-red-500',
+    path: '/clases',
+    features: [
+      '🔴 Horario límite: Ninguna clase termina después de las 18:30',
+      '🔴 DNI único: No permite duplicados en alumnos/instructores',
+      '🔴 Clase de prueba: Solo alumnos INACTIVOS',
+      '🔴 Especialidad nueva: No repetir clase de prueba',
+      '⚠️ Conflictos: Detecta caballo/instructor en 2 clases a la vez',
+      '⚠️ Restricción de edición: Clases completadas son históricas',
+      'ℹ️ Clases restantes: Monitorea cupo mensual del alumno',
     ],
   },
   {
     title: 'Reportes y Estadísticas 📊',
-    description: 'Análisis completo de tu operación. Métricas de alumnos, clases, instructores y caballos. Exporta todo a Excel.',
+    description: 'Análisis completo de la operación. KPIs en tiempo real, reportes por período, análisis de carga de trabajo y exportación profesional a Excel.',
     icon: BarChart,
     color: 'text-pink-500',
     path: '/reportes',
     features: [
-      'KPIs en tiempo real',
-      'Reportes por período',
-      'Análisis de carga de trabajo',
-      'Exportación a Excel',
+      'KPIs: Alumnos Activos, Total Clases, Instructores, Ingresos',
+      'Reportes por período personalizado',
+      'Análisis de asistencia por alumno',
+      'Distribución de clases por día y estado',
+      'Eficiencia de instructores',
+      'Uso de caballos',
+      'Exportación a Excel con formato profesional',
+      'Actualización en tiempo real',
+    ],
+  },
+  {
+    title: 'Herramientas del Calendario 🛠️',
+    description: 'Funciones avanzadas para gestionar semanas completas, eliminar rangos de fechas, cancelar días por motivos específicos y exportar calendarios.',
+    icon: Calendar,
+    color: 'text-teal-500',
+    path: '/calendario',
+    features: [
+      '📋 Copiar Semana: Replica lun-dom completo',
+      '🗑️ Eliminar Rango: Borra clases entre 2 fechas',
+      '❌ Cancelar Día: Con motivos (lluvia/feriado/emergencia)',
+      '📊 Exportar Excel: Calendario profesional listo para imprimir',
+      'Filtros por alumno y/o instructor',
+      'Todo con validaciones para no afectar historial',
     ],
   },
   {
     title: '¿Necesitas ayuda? 💡',
-    description: 'En cualquier momento, haz clic en el botón de ayuda (?) en la esquina inferior derecha. Cada página tiene guías específicas y consejos.',
+    description: 'En cualquier momento, haz clic en el botón de ayuda (?) flotante en la esquina inferior derecha. Cada página tiene guías paso a paso, validaciones y consejos específicos.',
     icon: Sparkles,
     color: 'text-amber-500',
     features: [
-      'Guías paso a paso en cada página',
-      'Consejos contextuales',
-      'Búsqueda de ayuda',
-      'Tooltips en formularios',
+      '📖 Guías paso a paso para cada acción',
+      '⚠️ Validaciones del sistema explicadas',
+      '💡 Consejos contextuales por página',
+      '🔍 Búsqueda en la ayuda',
+      'Tooltips inline en formularios',
+      'Tour interactivo (este mismo)',
     ],
   },
 ];
@@ -187,7 +280,7 @@ export function OnboardingTour() {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -232,8 +325,8 @@ export function OnboardingTour() {
               <ul className="space-y-1.5">
                 {step.features.map((feature, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-sm">
-                    <span className="text-primary mt-0.5">✓</span>
-                    <span>{feature}</span>
+                    <span className="text-primary mt-0.5 shrink-0">✓</span>
+                    <span className="flex-1">{feature}</span>
                   </li>
                 ))}
               </ul>
@@ -290,7 +383,9 @@ export function OnboardingTour() {
 }
 
 /**
- * 🎯 INTEGRACIÓN:
+ * ========================================
+ * 🎯 INTEGRACIÓN
+ * ========================================
  * 
  * 1. En tu Layout.tsx o página principal:
  * 
@@ -299,7 +394,8 @@ export function OnboardingTour() {
  * export function Layout({ children }) {
  *   return (
  *     <div>
- *       {children}
+ *       <Sidebar />
+ *       <main>{children}</main>
  *       <OnboardingTour />
  *     </div>
  *   );
@@ -311,19 +407,60 @@ export function OnboardingTour() {
  *    - Recarga la página
  * 
  * 3. Para personalizar los pasos:
- *    - Edita el array TOUR_STEPS
+ *    - Edita el array TOUR_STEPS en este archivo
  *    - Agrega o quita pasos según necesites
+ *    - Mantén el formato de objetos con title, description, icon, etc.
  * 
  * 4. Para cambiar el delay inicial:
  *    - En el useEffect, ajusta el valor en setTimeout (actualmente 1000ms)
+ * 
+ * 5. Para cambiar el storage key (si tienes múltiples instancias):
+ *    - Modifica STORAGE_KEY en la línea 112
  */
 
 /**
- * 💡 PERSONALIZACIÓN ADICIONAL:
+ * ========================================
+ * 💡 PERSONALIZACIÓN ADICIONAL
+ * ========================================
  * 
  * Puedes agregar:
- * - Screenshots de cada sección
- * - Videos demostrativos
- * - Links a documentación externa
- * - Botón para volver a ver el tour más tarde
+ * 
+ * 1. Screenshots o imágenes:
+ *    - Agrega propiedad 'image' a cada step con URL
+ *    - Renderiza <img src={step.image} /> en el contenido
+ * 
+ * 2. Videos demostrativos:
+ *    - Agrega propiedad 'video' con URL de YouTube/Vimeo
+ *    - Renderiza iframe o video player
+ * 
+ * 3. Links a documentación:
+ *    - Agrega propiedad 'docsUrl' a cada step
+ *    - Renderiza botón "Ver documentación"
+ * 
+ * 4. Botón "Ver más tarde":
+ *    - Agrega un estado para postponer el tour
+ *    - Guarda timestamp en localStorage
+ *    - Muestra el tour después de X días
+ * 
+ * 5. Métricas de uso:
+ *    - Registra qué pasos ve cada usuario
+ *    - Identifica dónde abandonan el tour
+ *    - Mejora los pasos menos visualizados
+ */
+
+/**
+ * ========================================
+ * 🔄 ACTUALIZACIONES FUTURAS
+ * ========================================
+ * 
+ * Si agregas nuevas funcionalidades al sistema:
+ * 
+ * 1. Agrega un nuevo paso al array TOUR_STEPS
+ * 2. Incluye: title, description, icon, color, path, features
+ * 3. Considera invalidar el localStorage si el cambio es muy importante:
+ *    - Cambia STORAGE_KEY a una nueva versión
+ *    - Los usuarios verán el tour actualizado
+ * 
+ * Ejemplo de versionado:
+ * const STORAGE_KEY = 'escuela-equitacion-tour-completed-v2';
  */

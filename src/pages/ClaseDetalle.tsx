@@ -1,5 +1,5 @@
-// src/pages/ClaseDetalle.tsx
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import {
   AlertCircle,
   ArrowLeft,
@@ -73,9 +73,22 @@ export default function ClaseDetalle() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const [especialidadSeleccionada, setEspecialidadSeleccionada] =
-    useState<string>("");
-  const [alumnoIdSeleccionado, setAlumnoIdSeleccionado] = useState<string>("");
+  const [tipoPrueba, setTipoPrueba] = useState<
+    "alumno_existente" | "persona_nueva"
+  >("persona_nueva");
+  const [nombrePrueba, setNombrePrueba] = useState("");
+  const [apellidoPrueba, setApellidoPrueba] = useState("");
+  const [esPruebaChecked, setEsPruebaChecked] = useState(false);
+
+  const [dia, setDia] = useState<string>("");
+  const [hora, setHora] = useState<string>("");
+  const [duracion, setDuracion] = useState<number>(30);
+  const [alumnoId, setAlumnoId] = useState<string>("");
+  const [instructorId, setInstructorId] = useState<string>("");
+  const [caballoId, setCaballoId] = useState<string>("");
+  const [estado, setEstado] = useState<Clase["estado"]>("PROGRAMADA");
+  const [observaciones, setObservaciones] = useState<string>("");
+  const [especialidad, setEspecialidad] = useState<string>("");
 
   // Queries adicionales para los selectores
   const { data: alumnos = [] } = useQuery({
@@ -112,21 +125,24 @@ export default function ClaseDetalle() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
 
     const data = {
-      especialidad: formData.get("especialidad") as Clase["especialidad"],
-      dia: formData.get("dia") as string,
-      hora: parsearHoraParaApi(formData.get("hora") as string),
-      duracion: Number(formData.get("duracion")) || 60,
-      estado: formData.get("estado") as Clase["estado"],
-      observaciones: formData.get("observaciones") as string,
-      // Si es clase de prueba con persona nueva, no enviar alumnoId
+      especialidad: especialidad as Clase["especialidad"],
+      dia: dia,
+      hora: parsearHoraParaApi(hora),
+      duracion: duracion,
+      estado: estado,
+      observaciones,
+      instructorId: Number(instructorId),
+      caballoId: Number(caballoId),
       ...(clase?.esPrueba && !clase?.alumnoId
-        ? { personaPruebaId: clase.personaPruebaId }
-        : { alumnoId: Number(formData.get("alumnoId")) }),
-      instructorId: Number(formData.get("instructorId")),
-      caballoId: Number(formData.get("caballoId")),
+        ? {
+            personaPruebaId: clase.personaPruebaId,
+            // Actualizar en backend
+            personaPruebaNombre: nombrePrueba,
+            personaPruebaApellido: apellidoPrueba,
+          }
+        : { alumnoId: Number(alumnoId) }),
     };
 
     updateMutation.mutate({ id: claseId, data });
@@ -160,16 +176,28 @@ export default function ClaseDetalle() {
     enabled: !!clase?.caballoId,
   });
 
-  const [caballoIdSeleccionado, setCaballoIdSeleccionado] =
-    useState<string>("");
+  useEffect(() => {
+    if (isDialogOpen && clase) {
+      setEspecialidad(clase.especialidad);
+      setAlumnoId(clase.alumnoId ? String(clase.alumnoId) : "");
+      setCaballoId(String(clase.caballoId));
+      setInstructorId(String(clase.instructorId));
+      setDia(clase.dia);
+      setHora(obtenerHoraArgentina(clase.diaHoraCompleto));
+      setDuracion(Number(clase.duracion) || 30);
+      setEstado(clase.estado);
+      setObservaciones(clase.observaciones ?? "");
+    }
+  }, [isDialogOpen, clase]);
 
   useEffect(() => {
-    if (especialidadSeleccionada === "MONTA") {
-      setAlumnoIdSeleccionado("1"); // ID del alumno comodín
+    if (!isDialogOpen) return;
+    if (especialidad === "MONTA") {
+      setAlumnoId("1");
     } else if (!clase?.alumnoId) {
-      setAlumnoIdSeleccionado("");
+      setAlumnoId("");
     }
-  }, [especialidadSeleccionada, clase?.alumnoId]);
+  }, [especialidad, clase?.alumnoId, isDialogOpen]);
 
   // Mutation para cambiar el estado
   const cambiarEstadoMutation = useMutation({
@@ -570,9 +598,9 @@ export default function ClaseDetalle() {
                   <Label htmlFor="dia">Día</Label>
                   <Input
                     id="dia"
-                    name="dia"
                     type="date"
-                    defaultValue={clase?.dia}
+                    value={dia}
+                    onChange={(e) => setDia(e.target.value)}
                     required
                   />
                 </div>
@@ -580,9 +608,9 @@ export default function ClaseDetalle() {
                   <Label htmlFor="hora">Hora de Inicio</Label>
                   <Input
                     id="hora"
-                    name="hora"
                     type="time"
-                    defaultValue={obtenerHoraArgentina(clase?.diaHoraCompleto)}
+                    value={hora}
+                    onChange={(e) => setHora(e.target.value)}
                     required
                   />
                 </div>
@@ -596,7 +624,7 @@ export default function ClaseDetalle() {
                   ser clase de prueba sin alumno asignado */}
                   <Label htmlFor="alumnoId">
                     Alumno
-                    {especialidadSeleccionada === "MONTA" && (
+                    {especialidad === "MONTA" && (
                       <span className="ml-2 text-xs text-muted-foreground">
                         (Asignado automáticamente)
                       </span>
@@ -610,25 +638,21 @@ export default function ClaseDetalle() {
                   {clase?.esPrueba && !clase?.alumnoId ? (
                     <div className="grid grid-cols-2 gap-2">
                       <Input
-                        value={clase.personaPruebaNombre ?? ""}
-                        // disabled
-                        // className="bg-muted text-muted-foreground"
+                        value={nombrePrueba}
+                        onChange={(e) => setNombrePrueba(e.target.value)}
                         placeholder="Nombre"
                       />
                       <Input
-                        value={clase.personaPruebaApellido ?? ""}
-                        // disabled
-                        // className="bg-muted text-muted-foreground"
+                        value={apellidoPrueba}
+                        onChange={(e) => setApellidoPrueba(e.target.value)}
                         placeholder="Apellido"
                       />
                     </div>
                   ) : (
                     <Select
-                      name="alumnoId"
-                      value={alumnoIdSeleccionado}
-                      onValueChange={setAlumnoIdSeleccionado}
-                      disabled={especialidadSeleccionada === "MONTA"}
-                      defaultValue={String(clase?.alumnoId || "")}
+                      value={alumnoId}
+                      onValueChange={setAlumnoId}
+                      disabled={especialidad === "MONTA"}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar alumno" />
@@ -636,7 +660,7 @@ export default function ClaseDetalle() {
                       <SelectContent>
                         {alumnos
                           .filter((alumno: Alumno) =>
-                            especialidadSeleccionada === "MONTA"
+                            especialidad === "MONTA"
                               ? alumno.id === 1
                               : alumno.id !== 1,
                           )
@@ -673,10 +697,7 @@ export default function ClaseDetalle() {
                       return null;
                     })()}
                   </Label>
-                  <Select
-                    name="caballoId"
-                    defaultValue={String(clase?.caballoId || "")}
-                  >
+                  <Select value={caballoId} onValueChange={setCaballoId}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar caballo" />
                     </SelectTrigger>
@@ -702,10 +723,7 @@ export default function ClaseDetalle() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="instructorId">Instructor</Label>
-                  <Select
-                    name="instructorId"
-                    defaultValue={String(clase?.instructorId || "")}
-                  >
+                  <Select value={instructorId} onValueChange={setInstructorId}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar instructor" />
                     </SelectTrigger>
@@ -723,12 +741,7 @@ export default function ClaseDetalle() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="especialidad">Especialidad</Label>
-                  <Select
-                    name="especialidad"
-                    value={especialidadSeleccionada}
-                    onValueChange={setEspecialidadSeleccionada}
-                    defaultValue={clase?.especialidad || ""}
-                  >
+                  <Select value={especialidad} onValueChange={setEspecialidad}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar especialidad" />
                     </SelectTrigger>
@@ -749,9 +762,9 @@ export default function ClaseDetalle() {
                 <div className="space-y-2">
                   <Label htmlFor="estado">Estado</Label>
                   <Select
-                    name="estado"
                     required
-                    defaultValue={clase?.estado || "PROGRAMADA"}
+                    value={estado}
+                    onValueChange={(v) => setEstado(v as Clase["estado"])}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar estado" />
@@ -771,9 +784,9 @@ export default function ClaseDetalle() {
                   <Label htmlFor="observaciones">Observaciones</Label>
                   <Input
                     id="observaciones"
-                    name="observaciones"
-                    defaultValue={clase?.observaciones || ""}
                     placeholder="Ej. Lluvia, Feriado, etc"
+                    value={observaciones}
+                    onChange={(e) => setObservaciones(e.target.value)}
                   />
                 </div>
               </div>
@@ -785,7 +798,8 @@ export default function ClaseDetalle() {
                   <Select
                     name="duracion"
                     required
-                    defaultValue={String(clase?.duracion || 60)}
+                    value={String(duracion)}
+                    onValueChange={(value) => setDuracion(Number(value))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar duración" />
@@ -801,14 +815,10 @@ export default function ClaseDetalle() {
                     Fin estimado
                   </Label>
                   <p className="flex h-10 items-center text-sm text-muted-foreground">
-                    {clase?.diaHoraCompleto
+                    {hora
                       ? (() => {
-                          const horaInicio = obtenerHoraArgentina(
-                            clase.diaHoraCompleto,
-                          );
-                          const [h, m] = horaInicio.split(":").map(Number);
-                          const durMin = clase.duracion || 60;
-                          const totalMin = h * 60 + m + durMin;
+                          const [h, m] = hora.split(":").map(Number);
+                          const totalMin = h * 60 + m + duracion;
                           return `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
                         })()
                       : "—"}

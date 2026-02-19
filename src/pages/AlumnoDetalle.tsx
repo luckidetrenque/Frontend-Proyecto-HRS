@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Switch } from "@/components/ui/switch";
+import { useValidarDniDuplicado } from "@/hooks/useValidarDniDuplicado";
 import { Alumno, alumnosApi, caballosApi, Clase, clasesApi } from "@/lib/api";
 import { CuotaPension, TipoPension } from "@/types/enums";
 
@@ -88,43 +89,107 @@ export default function AlumnoDetalle() {
     queryFn: caballosApi.listar,
   });
 
-  const [tipoPensionForm, setTipoPensionForm] =
-    useState<TipoPension>("SIN_CABALLO");
+  const [dniInput, setDniInput] = useState(alumno?.dni || "");
+  const [validacionHabilitada, setValidacionHabilitada] = useState(false);
+  const { data: validacionDni } = useValidarDniDuplicado(
+    "alumnos",
+    dniInput,
+    alumno?.id,
+  );
 
-  // Sincronizar tipoPensionForm cuando el alumno carga del servidor
+  const validacionActiva =
+    validacionHabilitada && dniInput.length >= 9
+      ? validacionDni
+      : { duplicado: false, mensaje: "" };
+
+  const [nombre, setNombre] = useState<Alumno["nombre"]>("");
+  const [apellido, setApellido] = useState<Alumno["apellido"]>("");
+  const [dni, setDni] = useState<Alumno["dni"]>("");
+  const [fechaNacimiento, setFechaNacimiento] =
+    useState<Alumno["fechaNacimiento"]>("");
+  const [telefono, setTelefono] = useState<Alumno["telefono"]>("");
+  const [email, setEmail] = useState<Alumno["email"]>("");
+  const [fechaInscripcion, setFechaInscripcion] =
+    useState<Alumno["fechaInscripcion"]>("");
+  const [activo, setActivo] = useState<Alumno["activo"]>(true);
+  const [cantidadClases, setCantidadClases] =
+    useState<Alumno["cantidadClases"]>(4);
+  const [tipoPension, setTipoPension] =
+    useState<Alumno["tipoPension"]>("SIN_CABALLO");
+  const [cuotaPension, setCuotaPension] =
+    useState<NonNullable<Alumno["cuotaPension"]>>("ENTERA");
+  const [caballoId, setCaballoId] = useState<string | null>(null);
+
+  const getCaballoId = (alumno?: Alumno): string => {
+    if (!alumno?.caballoPropio) return "";
+
+    return typeof alumno.caballoPropio === "number"
+      ? String(alumno.caballoPropio)
+      : String(alumno.caballoPropio.id);
+  };
+
   useEffect(() => {
-    if (alumno?.tipoPension) {
-      setTipoPensionForm(alumno.tipoPension);
+    if (isEditOpen && alumno) {
+      setNombre(alumno.nombre);
+      setApellido(alumno.apellido);
+      setDni(alumno.dni);
+      setDniInput(alumno.dni);
+      setFechaNacimiento(alumno.fechaNacimiento);
+      setTelefono(alumno.telefono);
+      setEmail(alumno.email ?? "");
+      setFechaInscripcion(alumno.fechaInscripcion);
+      setCantidadClases(alumno.cantidadClases);
+      setActivo(alumno.activo);
+      setTipoPension(alumno.tipoPension ?? "SIN_CABALLO");
+      setCuotaPension(alumno.cuotaPension ?? "ENTERA");
+      setCaballoId(getCaballoId(alumno));
+      setValidacionHabilitada(false);
     }
-  }, [alumno?.tipoPension]);
+  }, [isEditOpen, alumno]);
 
   // Resetear al cerrar el dialog
   const handleOpenChange = (open: boolean) => {
     setIsEditOpen(open);
     if (!open && alumno) {
-      setTipoPensionForm(alumno.tipoPension ?? "SIN_CABALLO");
+      setTipoPension(alumno.tipoPension ?? "SIN_CABALLO");
     }
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const data = {
-      dni: formData.get("dni") as string,
-      nombre: formData.get("nombre") as string,
-      apellido: formData.get("apellido") as string,
-      fechaNacimiento: formData.get("fechaNacimiento") as string,
-      telefono: formData.get("telefono") as string,
-      email: formData.get("email") as string,
-      fechaInscripcion: formData.get("fechaInscripcion") as string,
-      cantidadClases: Number(formData.get("cantidadClases")),
-      propietario: formData.get("tipoPension") !== "SIN_CABALLO", // derivado
-      tipoPension: formData.get("tipoPension") as TipoPension,
-      cuotaPension: (formData.get("cuotaPension") as CuotaPension) || null,
-      caballoId: formData.get("caballoId")
-        ? Number(formData.get("caballoId"))
-        : null,
-      activo: formData.get("activo") === "on",
+
+    // 1️⃣ Validación DNI duplicado
+    if (validacionActiva?.duplicado) {
+      toast.error("No se puede guardar: Ya existe un alumno con este DNI");
+      return;
+    }
+
+    // 2️⃣ Normalizar teléfono
+    let telefonoNormalizado = telefono;
+
+    if (telefonoNormalizado && !telefonoNormalizado.startsWith("+549")) {
+      telefonoNormalizado = `+549${telefonoNormalizado.replace(/^\+/, "")}`;
+    }
+
+    // 3️⃣ Derivados
+    const propietario = tipoPension === "CABALLO_PROPIO";
+
+    // 4️⃣ Armar payload
+    const data: Partial<Alumno> = {
+      nombre,
+      apellido,
+      dni,
+      fechaNacimiento,
+      telefono: telefonoNormalizado,
+      email,
+      fechaInscripcion,
+      cantidadClases,
+      tipoPension,
+      cuotaPension: tipoPension === "SIN_CABALLO" ? null : cuotaPension,
+      propietario,
+      activo,
+      caballoPropio:
+        tipoPension === "SIN_CABALLO" || !caballoId ? null : Number(caballoId),
     };
 
     updateMutation.mutate({ id: alumnoId, data });
@@ -582,10 +647,11 @@ export default function AlumnoDetalle() {
                     <Label htmlFor="nombre">Nombre/s</Label>
                     <Input
                       id="nombre"
-                      name="nombre"
                       type="text"
-                      defaultValue={alumno?.nombre}
+                      autoComplete="given-name"
                       placeholder="Nombre/s del alumno"
+                      value={nombre}
+                      onChange={(e) => setNombre(e.target.value)}
                       required
                     />
                   </div>
@@ -593,10 +659,11 @@ export default function AlumnoDetalle() {
                     <Label htmlFor="apellido">Apellido/s</Label>
                     <Input
                       id="apellido"
-                      name="apellido"
                       type="text"
-                      defaultValue={alumno?.apellido}
+                      autoComplete="family-name"
                       placeholder="Apellido/s del alumno"
+                      value={apellido}
+                      onChange={(e) => setApellido(e.target.value)}
                       required
                     />
                   </div>
@@ -606,10 +673,11 @@ export default function AlumnoDetalle() {
                     <Label htmlFor="dni">DNI</Label>
                     <Input
                       id="dni"
-                      name="dni"
-                      type="string"
-                      defaultValue={alumno?.dni}
+                      type="text"
+                      autoComplete="off"
                       placeholder="Solo números sin puntos"
+                      value={dni}
+                      onChange={(e) => setDni(e.target.value)}
                       required
                     />
                   </div>
@@ -617,9 +685,9 @@ export default function AlumnoDetalle() {
                     <Label htmlFor="fechaNacimiento">Fecha de Nacimiento</Label>
                     <Input
                       id="fechaNacimiento"
-                      name="fechaNacimiento"
                       type="date"
-                      defaultValue={alumno?.fechaNacimiento}
+                      value={fechaNacimiento}
+                      onChange={(e) => setFechaNacimiento(e.target.value)}
                       required
                     />
                   </div>
@@ -629,22 +697,22 @@ export default function AlumnoDetalle() {
                     <Label htmlFor="telefono">Teléfono</Label>
                     <Input
                       id="telefono"
-                      name="telefono"
                       type="tel"
-                      defaultValue={alumno?.telefono}
-                      placeholder="Sin el 0 ni el 15"
-                      pattern="\+?[0-9]*"
-                      required
+                      autoComplete="tel"
+                      placeholder="Teléfono de contacto"
+                      value={telefono}
+                      onChange={(e) => setTelefono(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
                       id="email"
-                      name="email"
                       type="email"
-                      defaultValue={alumno?.email}
+                      autoComplete="email"
                       placeholder="alumno@correo.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                     />
                   </div>
                 </div>
@@ -655,17 +723,19 @@ export default function AlumnoDetalle() {
                     </Label>
                     <Input
                       id="fechaInscripcion"
-                      name="fechaInscripcion"
                       type="date"
-                      defaultValue={alumno?.fechaInscripcion}
+                      value={fechaInscripcion}
+                      onChange={(e) => setFechaInscripcion(e.target.value)}
                       required
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="cantidadClases">Clases por Mes</Label>
                     <Select
-                      name="cantidadClases"
-                      defaultValue={String(alumno?.cantidadClases || 4)}
+                      value={String(cantidadClases)}
+                      onValueChange={(value) =>
+                        setCantidadClases(Number(value))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -683,12 +753,15 @@ export default function AlumnoDetalle() {
                   <div className="space-y-2">
                     <Label htmlFor="tipoPension">Pensión</Label>
                     <Select
-                      name="tipoPension"
-                      defaultValue={alumno?.tipoPension ?? "SIN_CABALLO"}
-                      value={tipoPensionForm}
-                      onValueChange={(value) =>
-                        setTipoPensionForm(value as TipoPension)
-                      }
+                      value={tipoPension}
+                      onValueChange={(v) => {
+                        const nuevo = v as Alumno["tipoPension"];
+                        setTipoPension(nuevo);
+                        if (nuevo === "SIN_CABALLO") {
+                          setCuotaPension("ENTERA"); // o el valor default que corresponda
+                          setCaballoId(""); // limpiar caballo también
+                        }
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Tipo de pensión" />
@@ -709,21 +782,23 @@ export default function AlumnoDetalle() {
                   <div className="flex items-center gap-3 pt-6">
                     <Switch
                       id="activo"
-                      name="activo"
-                      defaultChecked={alumno?.activo}
+                      checked={activo}
+                      onCheckedChange={setActivo}
                     />
                     <Label htmlFor="activo">Está activo</Label>
                   </div>
                 </div>
 
                 {/* Fila condicional: cuota + caballo, solo si tiene caballo */}
-                {tipoPensionForm !== "SIN_CABALLO" && (
+                {tipoPension !== "SIN_CABALLO" && (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="cuotaPension">Cuota de pensión</Label>
                       <Select
-                        name="cuotaPension"
-                        defaultValue={alumno?.cuotaPension ?? ""}
+                        value={cuotaPension}
+                        onValueChange={(value) =>
+                          setCuotaPension(value as CuotaPension)
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar cuota" />
@@ -737,22 +812,14 @@ export default function AlumnoDetalle() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="caballoId">Caballo</Label>
-                      <Select
-                        name="caballoId"
-                        defaultValue={String(
-                          alumno?.caballoPropio &&
-                            typeof alumno.caballoPropio === "object"
-                            ? alumno.caballoPropio.id
-                            : "",
-                        )}
-                      >
+                      <Select value={caballoId} onValueChange={setCaballoId}>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar caballo" />
                         </SelectTrigger>
                         <SelectContent>
                           {caballos
                             .filter((c) =>
-                              tipoPensionForm === "CABALLO_PROPIO"
+                              tipoPension === "CABALLO_PROPIO"
                                 ? c.tipo === "PRIVADO"
                                 : c.tipo === "ESCUELA",
                             )

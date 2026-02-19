@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/select";
 import { useCalendar } from "@/hooks/useCalendar";
 import { useClasesRestantes } from "@/hooks/useClasesRestantes";
-import { Alumno, Caballo, Instructor } from "@/lib/api";
+import { Alumno, Caballo, Clase, Instructor } from "@/lib/api";
 import {
   filtrarCaballosDisponibles,
   handleEspecialidadChangeEffect,
@@ -106,56 +106,84 @@ export default function CalendarioPage() {
   } = useCalendar();
 
   // Estados para controlar la especialidad y el alumno en el formulario
-  const [especialidadSeleccionada, setEspecialidadSeleccionada] =
-    useState<string>("");
-  const [alumnoIdSeleccionado, setAlumnoIdSeleccionado] = useState<string>("");
-  const [duracionSeleccionada, setDuracionSeleccionada] = useState<number>(30);
-  const [horaSeleccionada, setHoraSeleccionada] = useState<string>("09:00");
-
-  // Filtrar caballos según alumno seleccionado
+  const [especialidad, setEspecialidad] = useState<string>("");
+  const [alumnoId, setAlumnoId] = useState<string>("");
+  const [duracion, setDuracion] = useState<number>(30);
+  const [hora, setHora] = useState<string>("09:00");
+  const [estado, setEstado] = useState<Clase["estado"]>("PROGRAMADA");
+  const [instructorId, setInstructorId] = useState("");
+  const [caballoId, setCaballoId] = useState("");
+  const [observaciones, setObservaciones] = useState<string>("");
 
   // Verificar clases restantes del alumno
   const { estaAgotado } = useClasesRestantes(
-    alumnoIdSeleccionado ? Number(alumnoIdSeleccionado) : 0,
+    alumnoId ? Number(alumnoId) : 0,
     currentDate,
   );
 
   // Efecto para resetear los estados cuando se abre/cierra el diálogo
   useEffect(() => {
     if (isDialogOpen && claseToEdit) {
-      setEspecialidadSeleccionada(claseToEdit.especialidad);
-      setAlumnoIdSeleccionado(
-        claseToEdit.alumnoId ? String(claseToEdit.alumnoId) : "",
-      );
-      setDuracionSeleccionada(claseToEdit.duracion || 30);
-      setHoraSeleccionada(claseToEdit.hora.slice(0, 5));
+      setEspecialidad(claseToEdit.especialidad);
+      setAlumnoId(claseToEdit.alumnoId ? String(claseToEdit.alumnoId) : "");
+      setDuracion(claseToEdit.duracion || 30);
+      setHora(obtenerHoraArgentina(claseToEdit.diaHoraCompleto));
+      setEstado(claseToEdit.estado);
+      setInstructorId(String(claseToEdit.instructorId));
+      setCaballoId(String(claseToEdit.caballoId));
+      setObservaciones(claseToEdit.observaciones ?? "");
     } else if (isDialogOpen && prefilledHora) {
-      setHoraSeleccionada(prefilledHora);
+      setHora(prefilledHora);
+      if (prefilledCaballoId) {
+        setCaballoId(String(prefilledCaballoId));
+      }
     } else if (!isDialogOpen) {
-      setEspecialidadSeleccionada("");
-      setAlumnoIdSeleccionado("");
-      setDuracionSeleccionada(30);
-      setHoraSeleccionada("09:00");
+      setEspecialidad("");
+      setAlumnoId("");
+      setDuracion(30);
+      setHora("09:00");
+      setEstado("PROGRAMADA");
+      setInstructorId("");
+      setCaballoId("");
+      setObservaciones("");
     }
-  }, [isDialogOpen, claseToEdit, prefilledHora]);
+  }, [
+    isDialogOpen,
+    claseToEdit,
+    prefilledHora,
+    setNombrePrueba,
+    setApellidoPrueba,
+    prefilledCaballoId,
+  ]);
 
   // Manejador para cambio de especialidad
   const handleEspecialidadChange = (value: string) => {
     handleEspecialidadChangeEffect(
       value,
       ALUMNO_COMODIN_ID,
-      setEspecialidadSeleccionada,
-      setAlumnoIdSeleccionado,
+      setEspecialidad,
+      setAlumnoId,
     );
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (estaAgotado && !claseToEdit && !esPruebaChecked) {
-      const confirmar = window.confirm(`...`);
+      const confirmar = window.confirm(
+        `Este alumno ya agotó sus clases del mes. ¿Querés registrar una clase extra de todas formas?`,
+      );
       if (!confirmar) return;
     }
-    handleSubmitClase(e);
+    handleSubmitClase(e, {
+      especialidad,
+      alumnoId,
+      caballoId,
+      instructorId,
+      hora,
+      duracion,
+      estado,
+      observaciones,
+    });
   };
 
   // Configuración de filtros
@@ -353,8 +381,8 @@ export default function CalendarioPage() {
                     id="hora"
                     name="hora"
                     type="time"
-                    value={horaSeleccionada}
-                    onChange={(e) => setHoraSeleccionada(e.target.value)}
+                    value={hora}
+                    onChange={(e) => setHora(e.target.value)}
                     required
                   />
                 </div>
@@ -363,7 +391,7 @@ export default function CalendarioPage() {
                 <div className="space-y-2">
                   <Label htmlFor="alumnoId">
                     Alumno
-                    {especialidadSeleccionada === "MONTA" && (
+                    {especialidad === "MONTA" && (
                       <span className="ml-2 text-xs text-muted-foreground">
                         (Asignado automáticamente)
                       </span>
@@ -374,46 +402,38 @@ export default function CalendarioPage() {
                       </span>
                     )}
                   </Label>
-                  {especialidadSeleccionada === "MONTA" && (
-                    <input
-                      type="hidden"
-                      name="alumnoId"
-                      value={alumnoIdSeleccionado}
-                    />
+                  {especialidad === "MONTA" && (
+                    <input type="hidden" name="alumnoId" value={alumnoId} />
                   )}
 
                   {/* CASO: edición de clase de prueba con persona nueva */}
                   {claseToEdit?.esPrueba && !claseToEdit?.alumnoId ? (
                     <div className="grid grid-cols-2 gap-2">
                       <Input
-                        value={claseToEdit.personaPruebaNombre ?? ""}
-                        // disabled
-                        // className="bg-muted text-muted-foreground"
+                        value={nombrePrueba}
+                        onChange={(e) => setNombrePrueba(e.target.value)}
                         placeholder="Nombre"
                       />
                       <Input
-                        value={claseToEdit.personaPruebaApellido ?? ""}
-                        // disabled
-                        // className="bg-muted text-muted-foreground"
+                        value={apellidoPrueba}
+                        onChange={(e) => setApellidoPrueba(e.target.value)}
                         placeholder="Apellido"
                       />
                     </div>
                   ) : (
                     <Select
-                      name={
-                        especialidadSeleccionada === "MONTA" ? "" : "alumnoId"
-                      }
+                      name={especialidad === "MONTA" ? "" : "alumnoId"}
                       required={
-                        especialidadSeleccionada !== "MONTA" &&
+                        especialidad !== "MONTA" &&
                         !(esPruebaChecked && tipoPrueba === "persona_nueva")
                       }
-                      value={alumnoIdSeleccionado}
-                      onValueChange={setAlumnoIdSeleccionado}
+                      value={alumnoId}
+                      onValueChange={setAlumnoId}
                       defaultValue={
                         claseToEdit ? String(claseToEdit.alumnoId) : undefined
                       }
                       disabled={
-                        especialidadSeleccionada === "MONTA" ||
+                        especialidad === "MONTA" ||
                         (esPruebaChecked && tipoPrueba === "persona_nueva")
                       }
                     >
@@ -423,7 +443,7 @@ export default function CalendarioPage() {
                       <SelectContent>
                         {alumnos
                           .filter((alumno: Alumno) =>
-                            especialidadSeleccionada === "MONTA"
+                            especialidad === "MONTA"
                               ? alumno.id === 1
                               : alumno.id !== 1,
                           )
@@ -448,10 +468,8 @@ export default function CalendarioPage() {
                   <Select
                     name="duracion"
                     required
-                    value={String(duracionSeleccionada)}
-                    onValueChange={(value) =>
-                      setDuracionSeleccionada(Number(value))
-                    }
+                    value={String(duracion)}
+                    onValueChange={(value) => setDuracion(Number(value))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar duración" />
@@ -469,8 +487,8 @@ export default function CalendarioPage() {
                     </Label>
                     <p className="flex h-10 items-center text-sm text-muted-foreground">
                       {(() => {
-                        const [h, m] = horaSeleccionada.split(":").map(Number);
-                        const durMin = duracionSeleccionada;
+                        const [h, m] = hora.split(":").map(Number);
+                        const durMin = duracion;
                         const totalMin = h * 60 + m + durMin;
                         return `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
                       })()}
@@ -484,11 +502,9 @@ export default function CalendarioPage() {
                 <div className="space-y-2">
                   <Label htmlFor="instructorId">Instructor</Label>
                   <Select
-                    name="instructorId"
                     required
-                    defaultValue={
-                      claseToEdit ? String(claseToEdit.instructorId) : undefined
-                    }
+                    value={instructorId}
+                    onValueChange={setInstructorId}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar instructor" />
@@ -513,7 +529,7 @@ export default function CalendarioPage() {
                     {/* Mostrar si tiene caballo predeterminado */}
                     {(() => {
                       const alumno = alumnos.find(
-                        (a: Alumno) => a.id === Number(alumnoIdSeleccionado),
+                        (a: Alumno) => a.id === Number(alumnoId),
                       );
                       if (alumno?.caballoPropio) {
                         const caballoIdPred =
@@ -533,26 +549,9 @@ export default function CalendarioPage() {
                     })()}
                   </Label>
                   <Select
-                    name="caballoId"
                     required
-                    defaultValue={
-                      claseToEdit
-                        ? String(claseToEdit.caballoId)
-                        : prefilledCaballoId
-                          ? String(prefilledCaballoId)
-                          : (() => {
-                              const alumno = alumnos.find(
-                                (a: Alumno) =>
-                                  a.id === Number(alumnoIdSeleccionado),
-                              );
-                              if (!alumno?.caballoPropio) return undefined;
-                              const caballoIdPred =
-                                typeof alumno.caballoPropio === "number"
-                                  ? alumno.caballoPropio
-                                  : alumno.caballoPropio.id;
-                              return String(caballoIdPred);
-                            })()
-                    }
+                    value={caballoId}
+                    onValueChange={setCaballoId}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar caballo" />
@@ -582,7 +581,7 @@ export default function CalendarioPage() {
                   <Select
                     name="especialidad"
                     required
-                    value={especialidadSeleccionada}
+                    value={especialidad}
                     onValueChange={handleEspecialidadChange}
                     defaultValue={
                       claseToEdit ? claseToEdit.especialidad : undefined
@@ -634,41 +633,37 @@ export default function CalendarioPage() {
                       </div>
                     </>
                   ) : (
-                    <>
-                      <Label htmlFor="estado">Estado</Label>
-                      <Select
-                        name="estado"
-                        required
-                        defaultValue={claseToEdit.estado}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ESTADOS.map((estado) => (
-                            <SelectItem key={estado} value={estado}>
-                              {estado.charAt(0).toUpperCase() +
-                                estado.slice(1).toLowerCase()}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Label htmlFor="observaciones">Observaciones</Label>
-                      <Input
-                        id="observaciones"
-                        name="observaciones"
-                        defaultValue={claseToEdit?.observaciones || ""}
-                        placeholder="Ej. Lluvia, Feriado, etc"
-                      />
-                      <input
-                        type="checkbox"
-                        id="esPrueba"
-                        name="esPrueba"
-                        className="hidden"
-                        value="on"
-                        defaultChecked={claseToEdit?.esPrueba || false}
-                      />
-                    </>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="estado">Estado</Label>
+                        <Select
+                          required
+                          value={estado}
+                          onValueChange={(v) => setEstado(v as Clase["estado"])}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ESTADOS.map((e) => (
+                              <SelectItem key={e} value={e}>
+                                {e.charAt(0).toUpperCase() +
+                                  e.slice(1).toLowerCase()}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="observaciones">Observaciones</Label>
+                        <Input
+                          id="observaciones"
+                          placeholder="Ej. Lluvia, Feriado, etc"
+                          value={observaciones}
+                          onChange={(e) => setObservaciones(e.target.value)}
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -684,7 +679,7 @@ export default function CalendarioPage() {
                         checked={tipoPrueba === "persona_nueva"}
                         onChange={() => {
                           setTipoPrueba("persona_nueva");
-                          setAlumnoIdSeleccionado("");
+                          setAlumnoId("");
                         }}
                         className="text-orange-600"
                       />

@@ -106,7 +106,6 @@ export function Layout({ children }: LayoutProps) {
             })}
           </nav>
 
-          {/* User Dropdown + Mobile Menu Button */}
           <div className="flex items-center gap-2">
             {/* Buscador Global */}
             {entityType && (
@@ -117,6 +116,7 @@ export function Layout({ children }: LayoutProps) {
                 />
               </div>
             )}
+            {/* User Dropdown + Mobile Menu Button */}
             <UserDropdown />
             <Button
               variant="ghost"

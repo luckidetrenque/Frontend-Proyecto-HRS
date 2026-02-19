@@ -47,25 +47,29 @@ export default function InstructoresPage() {
   );
   const [instructorToDelete, setInstructorToDelete] =
     useState<Instructor | null>(null);
-  const [dniInput, setDniInput] = useState(editingInstructor?.dni || "");
-  const [validacionHabilitada, setValidacionHabilitada] = useState(false);
+  const [nombre, setNombre] = useState<Instructor["nombre"]>("");
+  const [apellido, setApellido] = useState<Instructor["apellido"]>("");
+  const [telefono, setTelefono] = useState<Instructor["telefono"]>("");
+  const [email, setEmail] = useState<Instructor["email"]>("");
+  const [fechaNacimiento, setFechaNacimiento] =
+    useState<Instructor["fechaNacimiento"]>("");
+  const [activo, setActivo] = useState<Instructor["activo"]>(true);
+  const [color, setColor] = useState<Instructor["color"]>(PRESET_COLORS[0]);
+  const [dni, setDni] = useState("");
 
+  const [validacionHabilitada, setValidacionHabilitada] = useState(false);
   const { data: validacionDni } = useValidarDniDuplicado(
     "instructores",
-    dniInput,
+    dni,
     editingInstructor?.id,
   );
 
   const validacionActiva =
-    validacionHabilitada && dniInput.length >= 9
+    validacionHabilitada && dni.length >= 9
       ? validacionDni
       : { duplicado: false, mensaje: "" };
 
   const navigate = useNavigate();
-
-  const [instructorColor, setInstructorColor] = useState<string>(
-    PRESET_COLORS[0],
-  );
 
   // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
   const [searchFilters, setSearchFilters] = useState<InstructorSearchFilters>(
@@ -244,16 +248,23 @@ export default function InstructoresPage() {
       toast.error("No se puede guardar: Ya existe un instructor con este DNI");
       return;
     }
-    const formData = new FormData(e.currentTarget);
-    const data = {
-      dni: formData.get("dni") as string,
-      nombre: formData.get("nombre") as string,
-      apellido: formData.get("apellido") as string,
-      fechaNacimiento: formData.get("fechaNacimiento") as string,
-      telefono: formData.get("telefono") as string,
-      email: formData.get("email") as string,
-      activo: editingInstructor ? formData.get("activo") === "on" : true,
-      color: instructorColor,
+
+    // Normalizar teléfono
+    let telefonoNormalizado = telefono;
+
+    if (telefonoNormalizado && !telefonoNormalizado.startsWith("+549")) {
+      telefonoNormalizado = `+549${telefonoNormalizado.replace(/^\+/, "")}`;
+    }
+
+    const data: Omit<Instructor, "id"> = {
+      dni: dni,
+      nombre,
+      apellido,
+      fechaNacimiento,
+      telefono: telefonoNormalizado,
+      email,
+      activo,
+      color: color,
     };
 
     if (editingInstructor) {
@@ -264,20 +275,16 @@ export default function InstructoresPage() {
   };
 
   useEffect(() => {
-    if (editingInstructor) {
-      setDniInput(editingInstructor.dni);
-      setInstructorColor(editingInstructor.color);
-      setValidacionHabilitada(false);
-    } else {
-      setDniInput("");
-      setInstructorColor(PRESET_COLORS[0]);
-      setValidacionHabilitada(true);
-    }
-  }, [editingInstructor]);
-
-  useEffect(() => {
     if (isOpen) {
-      setDniInput(editingInstructor?.dni || "");
+      setNombre(editingInstructor?.nombre ?? "");
+      setApellido(editingInstructor?.apellido ?? "");
+      setDni(editingInstructor?.dni ?? "");
+      setTelefono(editingInstructor?.telefono ?? "");
+      setEmail(editingInstructor?.email ?? "");
+      setFechaNacimiento(editingInstructor?.fechaNacimiento ?? "");
+      setActivo(editingInstructor?.activo ?? true);
+      setColor(editingInstructor?.color ?? PRESET_COLORS[0]);
+      setValidacionHabilitada(!editingInstructor);
     }
   }, [isOpen, editingInstructor]);
 
@@ -394,9 +401,11 @@ export default function InstructoresPage() {
                         <Label htmlFor="nombre">Nombre/s</Label>
                         <Input
                           id="nombre"
-                          name="nombre"
-                          defaultValue={editingInstructor?.nombre}
+                          type="text"
+                          autoComplete="given-name"
                           placeholder="Nombre/s del instructor"
+                          value={nombre}
+                          onChange={(e) => setNombre(e.target.value)}
                           required
                         />
                       </div>
@@ -404,9 +413,11 @@ export default function InstructoresPage() {
                         <Label htmlFor="apellido">Apellido/s</Label>
                         <Input
                           id="apellido"
-                          name="apellido"
-                          defaultValue={editingInstructor?.apellido}
-                          placeholder="Apellido/s del instructor"
+                          type="text"
+                          autoComplete="family-name"
+                          placeholder="Apellido del alumno"
+                          value={apellido}
+                          onChange={(e) => setApellido(e.target.value)}
                           required
                         />
                       </div>
@@ -417,10 +428,11 @@ export default function InstructoresPage() {
                         <Input
                           id="dni"
                           name="dni"
-                          type="string"
-                          value={dniInput}
+                          autoComplete="off"
+                          type="text"
+                          value={dni}
                           onChange={(e) => {
-                            setDniInput(e.target.value);
+                            setDni(e.target.value);
                             setValidacionHabilitada(true);
                           }}
                           placeholder="Solo números sin puntos"
@@ -441,9 +453,9 @@ export default function InstructoresPage() {
                         </Label>
                         <Input
                           id="fechaNacimiento"
-                          name="fechaNacimiento"
                           type="date"
-                          defaultValue={editingInstructor?.fechaNacimiento}
+                          value={fechaNacimiento}
+                          onChange={(e) => setFechaNacimiento(e.target.value)}
                           required
                         />
                       </div>
@@ -452,52 +464,56 @@ export default function InstructoresPage() {
                       <div className="space-y-2">
                         <Label htmlFor="telefono">Teléfono</Label>
                         <Input
-                          id="telefono"
-                          name="telefono"
-                          type="tel"
-                          defaultValue={editingInstructor?.telefono}
-                          placeholder="Sin el 0 ni el 15"
-                          pattern="\+?[0-9]*"
-                          required
+                          id="email"
+                          type="email"
+                          autoComplete="email"
+                          placeholder="Correo electrónico"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
                         <Input
                           id="email"
-                          name="email"
                           type="email"
-                          defaultValue={editingInstructor?.email}
-                          placeholder="instructor@correo.com"
+                          autoComplete="email"
+                          placeholder="Correo electrónico"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Color del Instructor</Label>
-                      <div className="flex gap-2 flex-wrap">
-                        {PRESET_COLORS.map((color) => (
+                      <Label htmlFor="color">Color del Instructor</Label>
+                      <div
+                        id="color-group"
+                        aria-labelledby="color-label"
+                        className="flex gap-2 flex-wrap"
+                      >
+                        {PRESET_COLORS.map((presetColor) => (
                           <button
                             type="button"
-                            key={color}
-                            onClick={() => setInstructorColor(color)}
+                            key={presetColor}
+                            onClick={() => setColor(presetColor)}
                             className={`w-10 h-10 rounded-full border-2 transition-all ${
-                              instructorColor === color
+                              color === presetColor
                                 ? "border-primary ring-2 ring-primary/20 scale-110"
                                 : "border-gray-300 hover:scale-105"
                             }`}
-                            style={{ backgroundColor: color }}
-                            title={color}
+                            style={{ backgroundColor: presetColor }}
+                            title={presetColor}
                           />
                         ))}
                       </div>
                       <div className="flex items-center gap-2 mt-2 p-2 border rounded-md bg-muted/30">
                         <div
                           className="w-6 h-6 rounded border-2 border-gray-300"
-                          style={{ backgroundColor: instructorColor }}
+                          style={{ backgroundColor: color }}
                         />
                         <span className="text-sm font-mono text-muted-foreground">
-                          {instructorColor}
+                          {color}
                         </span>
                       </div>
                     </div>
@@ -507,8 +523,8 @@ export default function InstructoresPage() {
                       <div className="flex items-center gap-3">
                         <Switch
                           id="activo"
-                          name="activo"
-                          defaultChecked={editingInstructor.activo ?? true}
+                          checked={activo}
+                          onCheckedChange={setActivo}
                         />
                         <Label htmlFor="activo">Está activo</Label>
                       </div>

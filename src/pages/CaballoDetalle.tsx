@@ -14,7 +14,7 @@ import {
   User,
   XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -74,14 +74,25 @@ export default function CaballoDetalle() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const data = {
-      nombre: formData.get("nombre") as string,
-      tipo: formData.get("tipo") as "ESCUELA" | "PRIVADO",
-      disponible: formData.get("disponible") === "on",
+
+    // 1️⃣ Validación básica
+    if (!nombre.trim()) {
+      toast.error("El nombre es obligatorio");
+      return;
+    }
+
+    // 2️⃣ Construcción de objeto
+    const data: Partial<Caballo> = {
+      nombre: nombre.trim(),
+      tipo,
+      disponible,
     };
 
-    updateMutation.mutate({ id: caballoId, data });
+    // 3️⃣ Mutación
+    updateMutation.mutate({
+      id: caballoId,
+      data,
+    });
   };
 
   // Query para obtener el caballo
@@ -90,6 +101,20 @@ export default function CaballoDetalle() {
     queryFn: () => caballosApi.obtener(caballoId),
     enabled: !!caballoId,
   });
+
+  // Estados vacíos (caballo aún no llegó del servidor)
+  const [nombre, setNombre] = useState<Caballo["nombre"]>("");
+  const [tipo, setTipo] = useState<Caballo["tipo"]>("ESCUELA");
+  const [disponible, setDisponible] = useState<Caballo["disponible"]>(true);
+
+  // useEffect que carga cuando llega el dato Y cuando se abre el dialog (para resetear tras editar)
+  useEffect(() => {
+    if (caballo && isEditOpen) {
+      setNombre(caballo.nombre);
+      setTipo(caballo.tipo);
+      setDisponible(caballo.disponible);
+    }
+  }, [isEditOpen, caballo]);
 
   // TODO Query para obtener las clases del caballo (METODO BUSCAR EN CONTROLADOR DE CLASES)
   // const { data: clasesCaballo = [], isLoading: loadingClases } = useQuery({
@@ -236,7 +261,7 @@ export default function CaballoDetalle() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Nombre</p>
+                <p className="text-sm text-muted-foreground mb-1">Nombre/s</p>
                 <p className="font-medium text-2xl">{caballo.nombre}</p>
               </div>
 
@@ -517,16 +542,23 @@ export default function CaballoDetalle() {
                 <Label htmlFor="nombre">Nombre/s</Label>
                 <Input
                   id="nombre"
-                  name="nombre"
-                  defaultValue={caballo?.nombre}
+                  type="text"
+                  autoComplete="given-name"
                   placeholder="Nombre del caballo"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
                   required
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="tipo">Tipo</Label>
-                <Select name="tipo" defaultValue={caballo?.tipo || "ESCUELA"}>
-                  <SelectTrigger>
+                <Select
+                  value={tipo}
+                  onValueChange={(value) =>
+                    setTipo(value as "ESCUELA" | "PRIVADO")
+                  }
+                >
+                  <SelectTrigger id="tipo">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -538,8 +570,8 @@ export default function CaballoDetalle() {
               <div className="flex items-center gap-3">
                 <Switch
                   id="disponible"
-                  name="disponible"
-                  defaultChecked={caballo?.disponible}
+                  checked={disponible}
+                  onCheckedChange={setDisponible}
                 />
                 <Label htmlFor="disponible">Está disponible</Label>
               </div>

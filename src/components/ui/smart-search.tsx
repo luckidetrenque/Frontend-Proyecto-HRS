@@ -1,4 +1,4 @@
-import { Filter, Loader2, Search, TrendingUp,X } from "lucide-react";
+import { Filter, Loader2, Search, TrendingUp, X } from "lucide-react";
 import React, {
   useCallback,
   useEffect,
@@ -289,6 +289,7 @@ export default function SmartSearch({
 
         <input
           ref={inputRef}
+          name="search"
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

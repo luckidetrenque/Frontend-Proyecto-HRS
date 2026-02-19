@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route,Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import IdleHandler from "@/components/auth/IdleHandler";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -15,6 +15,7 @@ import CaballosPage from "./pages/Caballos";
 import CalendarioPage from "./pages/Calendario";
 import ClaseDetalle from "./pages/ClaseDetalle";
 import ClasesPage from "./pages/Clases";
+import Finanzas from "./pages/Finanzas";
 import Index from "./pages/Index";
 import InstructorDetalle from "./pages/InstructorDetalle";
 import InstructoresPage from "./pages/Instructores";
@@ -98,6 +99,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Reportes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/finanzas"
+              element={
+                <ProtectedRoute>
+                  <Finanzas />
                 </ProtectedRoute>
               }
             />

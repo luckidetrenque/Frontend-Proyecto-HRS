@@ -111,27 +111,40 @@ export function FilterBar({
                 {filter.label}
               </Label>
               {filter.type === "select" ? (
-                <Select
-                  value={values[filter.name] || "all"}
-                  onValueChange={(value) => onChange(filter.name, value)}
-                >
-                  <SelectTrigger id={filter.name} className="h-9">
-                    <SelectValue placeholder={filter.placeholder || "Todos"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    {filter.options?.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <Select
+                    value={values[filter.name] ?? "all"}
+                    onValueChange={(value) => onChange(filter.name, value)}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue
+                        placeholder={filter.placeholder || "Todos"}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {filter.options?.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <input
+                    type="hidden"
+                    id={filter.name}
+                    name={filter.name}
+                    value={values[filter.name] ?? "all"}
+                    readOnly
+                  />
+                </div>
               ) : (
                 <Input
                   id={filter.name}
+                  name={filter.name}
                   type={filter.type}
-                  value={values[filter.name] || ""}
+                  value={values[filter.name] ?? ""}
                   onChange={(e) => onChange(filter.name, e.target.value)}
                   className="h-9"
                   placeholder={filter.placeholder}

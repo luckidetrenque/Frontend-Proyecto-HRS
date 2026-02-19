@@ -44,6 +44,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Switch } from "@/components/ui/switch";
 import { PRESET_COLORS } from "@/constants/instructor.constants";
+import { useValidarDniDuplicado } from "@/hooks/useValidarDniDuplicado";
 import { Clase, clasesApi, Instructor, instructoresApi } from "@/lib/api";
 
 export default function InstructorDetalle() {
@@ -61,9 +62,26 @@ export default function InstructorDetalle() {
     enabled: !!instructorId,
   });
 
-  const [instructorColor, setInstructorColor] = useState<string>(
-    instructor?.color || PRESET_COLORS[0],
+  const [nombre, setNombre] = useState<Instructor["nombre"]>("");
+  const [apellido, setApellido] = useState<Instructor["apellido"]>("");
+  const [dni, setDni] = useState<Instructor["dni"]>("");
+  const [fechaNacimiento, setFechaNacimiento] =
+    useState<Instructor["fechaNacimiento"]>("");
+  const [telefono, setTelefono] = useState<Instructor["telefono"]>("");
+  const [email, setEmail] = useState<Instructor["email"]>("");
+  const [activo, setActivo] = useState<Instructor["activo"]>(true);
+  const [color, setColor] = useState<string>(PRESET_COLORS[0]);
+
+  const [validacionHabilitada, setValidacionHabilitada] = useState(false);
+  const { data: validacionDni } = useValidarDniDuplicado(
+    "instructores",
+    dni,
+    instructor?.id,
   );
+  const validacionActiva =
+    validacionHabilitada && dni.length >= 9
+      ? validacionDni
+      : { duplicado: false, mensaje: "" };
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Instructor> }) =>
@@ -80,24 +98,29 @@ export default function InstructorDetalle() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
     const data = {
-      dni: formData.get("dni") as string,
-      nombre: formData.get("nombre") as string,
-      apellido: formData.get("apellido") as string,
-      fechaNacimiento: formData.get("fechaNacimiento") as string,
-      telefono: formData.get("telefono") as string,
-      email: formData.get("email") as string,
-      activo: formData.get("activo") === "on",
-      color: instructorColor,
+      nombre,
+      apellido,
+      dni,
+      fechaNacimiento,
+      telefono,
+      email,
+      activo,
+      color,
     };
-
     updateMutation.mutate({ id: instructorId, data });
   };
 
   useEffect(() => {
     if (isEditOpen && instructor) {
-      setInstructorColor(instructor.color || PRESET_COLORS[0]);
+      setNombre(instructor.nombre);
+      setApellido(instructor.apellido);
+      setDni(instructor.dni);
+      setFechaNacimiento(instructor.fechaNacimiento);
+      setTelefono(instructor.telefono);
+      setEmail(instructor.email ?? "");
+      setActivo(instructor.activo);
+      setColor(instructor.color || PRESET_COLORS[0]);
     }
   }, [isEditOpen, instructor]);
 
@@ -523,9 +546,11 @@ export default function InstructorDetalle() {
                     <Label htmlFor="nombre">Nombre/s</Label>
                     <Input
                       id="nombre"
-                      name="nombre"
-                      defaultValue={instructor?.nombre}
+                      type="text"
+                      autoComplete="given-name"
                       placeholder="Nombre/s del instructor"
+                      value={nombre}
+                      onChange={(e) => setNombre(e.target.value)}
                       required
                     />
                   </div>
@@ -533,9 +558,11 @@ export default function InstructorDetalle() {
                     <Label htmlFor="apellido">Apellido/s</Label>
                     <Input
                       id="apellido"
-                      name="apellido"
-                      defaultValue={instructor?.apellido}
-                      placeholder="Apellido/s del instructor"
+                      type="text"
+                      autoComplete="family-name"
+                      placeholder="Apellido del alumno"
+                      value={apellido}
+                      onChange={(e) => setApellido(e.target.value)}
                       required
                     />
                   </div>
@@ -546,9 +573,17 @@ export default function InstructorDetalle() {
                     <Input
                       id="dni"
                       name="dni"
-                      type="string"
-                      defaultValue={instructor?.dni}
+                      autoComplete="off"
+                      type="text"
+                      value={dni}
+                      onChange={(e) => {
+                        setDni(e.target.value);
+                        setValidacionHabilitada(true);
+                      }}
                       placeholder="Solo números sin puntos"
+                      className={
+                        validacionDni?.duplicado ? "border-red-500" : ""
+                      }
                       required
                     />
                   </div>
@@ -556,9 +591,9 @@ export default function InstructorDetalle() {
                     <Label htmlFor="fechaNacimiento">Fecha de Nacimiento</Label>
                     <Input
                       id="fechaNacimiento"
-                      name="fechaNacimiento"
                       type="date"
-                      defaultValue={instructor?.fechaNacimiento}
+                      value={fechaNacimiento}
+                      onChange={(e) => setFechaNacimiento(e.target.value)}
                       required
                     />
                   </div>
@@ -567,52 +602,56 @@ export default function InstructorDetalle() {
                   <div className="space-y-2">
                     <Label htmlFor="telefono">Teléfono</Label>
                     <Input
-                      id="telefono"
-                      name="telefono"
-                      type="tel"
-                      defaultValue={instructor?.telefono}
-                      placeholder="Sin el 0 ni el 15"
-                      pattern="\+?[0-9]*"
-                      required
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="Correo electrónico"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
                       id="email"
-                      name="email"
                       type="email"
-                      defaultValue={instructor?.email}
-                      placeholder="instructor@correo.com"
+                      autoComplete="email"
+                      placeholder="Correo electrónico"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label>Color del Instructor</Label>
-                  <div className="flex gap-2 flex-wrap">
-                    {PRESET_COLORS.map((color) => (
+                  <div
+                    id="color-group"
+                    aria-labelledby="color-label"
+                    className="flex gap-2 flex-wrap"
+                  >
+                    {PRESET_COLORS.map((presetColor) => (
                       <button
                         type="button"
-                        key={color}
-                        onClick={() => setInstructorColor(color)}
+                        key={presetColor}
+                        onClick={() => setColor(presetColor)}
                         className={`w-10 h-10 rounded-full border-2 transition-all ${
-                          instructorColor === color
+                          color === presetColor
                             ? "border-primary ring-2 ring-primary/20 scale-110"
                             : "border-gray-300 hover:scale-105"
                         }`}
-                        style={{ backgroundColor: color }}
-                        title={color}
+                        style={{ backgroundColor: presetColor }}
+                        title={presetColor}
                       />
                     ))}
                   </div>
                   <div className="flex items-center gap-2 mt-2 p-2 border rounded-md bg-muted/30">
                     <div
                       className="w-6 h-6 rounded border-2 border-gray-300"
-                      style={{ backgroundColor: instructorColor }}
+                      style={{ backgroundColor: color }}
                     />
                     <span className="text-sm font-mono text-muted-foreground">
-                      {instructorColor}
+                      {color}
                     </span>
                   </div>
                 </div>
@@ -620,8 +659,8 @@ export default function InstructorDetalle() {
                 <div className="flex items-center gap-3">
                   <Switch
                     id="activo"
-                    name="activo"
-                    defaultChecked={instructor?.activo}
+                    checked={activo}
+                    onCheckedChange={setActivo}
                   />
                   <Label htmlFor="activo">Está activo</Label>
                 </div>
