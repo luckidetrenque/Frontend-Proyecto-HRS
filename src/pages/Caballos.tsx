@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { GenericCard } from "@/components/cards/GenericCard";
 import { GenericCardSkeleton } from "@/components/cards/GenericCardSkeleton";
+import { CaballoForm } from "@/components/forms/CaballoForm";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -248,6 +249,7 @@ export default function CaballosPage() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    // ! DONDE VAN?
     // 1️⃣ Validación básica
     if (!nombre.trim()) {
       toast.error("El nombre es obligatorio");
@@ -265,6 +267,7 @@ export default function CaballosPage() {
       toast.error("Ya existe un caballo con ese nombre");
       return;
     }
+    // !
 
     // 3️⃣ Construcción del objeto
     const data: Omit<Caballo, "id"> = {
@@ -377,70 +380,31 @@ export default function CaballosPage() {
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
-                <form onSubmit={handleSubmit}>
-                  <DialogHeader>
-                    <DialogTitle className="font-display">
-                      {editingCaballo ? "Editar Caballo" : "Nuevo Caballo"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {editingCaballo
-                        ? "Modifica los datos del caballo"
-                        : "Completa los datos para registrar un nuevo caballo"}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="nombre">Nombre/s</Label>
-                      <Input
-                        id="nombre"
-                        type="text"
-                        autoComplete="given-name"
-                        placeholder="Nombre del caballo"
-                        value={nombre}
-                        onChange={(e) => setNombre(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="tipo">Tipo</Label>
-                      <Select
-                        value={tipo}
-                        onValueChange={(value) =>
-                          setTipo(value as "ESCUELA" | "PRIVADO")
-                        }
-                      >
-                        <SelectTrigger id="tipo">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ESCUELA">Escuela</SelectItem>
-                          <SelectItem value="PRIVADO">Privado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {/* Activo: solo visible al editar */}
-                    {editingCaballo && (
-                      <div className="flex items-center gap-3">
-                        <Switch
-                          id="disponible"
-                          checked={disponible}
-                          onCheckedChange={setDisponible}
-                        />
-                        <Label htmlFor="disponible">Está disponible</Label>
-                      </div>
-                    )}
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      type="submit"
-                      disabled={
-                        createMutation.isPending || updateMutation.isPending
-                      }
-                    >
-                      {editingCaballo ? "Guardar Cambios" : "Crear Caballo"}
-                    </Button>
-                  </DialogFooter>
-                </form>
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingCaballo ? "Editar Caballo" : "Nuevo Caballo"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingCaballo
+                      ? "Modifica los datos del caballo"
+                      : "Completa los datos"}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <CaballoForm
+                  caballo={editingCaballo ?? undefined}
+                  onSubmit={(data) => {
+                    if (editingCaballo) {
+                      updateMutation.mutate({ id: editingCaballo.id, data });
+                    } else {
+                      createMutation.mutate(data);
+                    }
+                  }}
+                  isPending={
+                    createMutation.isPending || updateMutation.isPending
+                  }
+                  onCancel={() => setIsOpen(false)}
+                />
               </DialogContent>
             </Dialog>
           </div>

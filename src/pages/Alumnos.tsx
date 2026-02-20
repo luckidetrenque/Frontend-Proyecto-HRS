@@ -1,6 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { te } from "date-fns/locale";
 import {
   Mail,
   MessageCircleMore,
@@ -15,7 +13,7 @@ import { toast } from "sonner";
 
 import { GenericCard } from "@/components/cards/GenericCard";
 import { GenericCardSkeleton } from "@/components/cards/GenericCardSkeleton";
-import { CommonTooltips, HelpTooltip } from "@/components/HelpTooltip";
+import { AlumnoForm } from "@/components/forms/AlumnoForm";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -35,29 +33,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FilterBar } from "@/components/ui/filter-bar";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { ProtectedData } from "@/components/ui/protected-data";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Switch } from "@/components/ui/switch";
 import { useValidarDniDuplicado } from "@/hooks/useValidarDniDuplicado";
 import {
   Alumno,
   alumnosApi,
   AlumnoSearchFilters,
-  Caballo,
   caballosApi,
 } from "@/lib/api";
-import { CuotaPension, TipoPension } from "@/types/enums";
 
 export default function AlumnosPage() {
   const queryClient = useQueryClient();
@@ -66,33 +52,7 @@ export default function AlumnosPage() {
   const [alumnoToDelete, setAlumnoToDelete] = useState<Alumno | null>(null);
   const [validacionHabilitada, setValidacionHabilitada] = useState(false);
 
-  const [propietarioSeleccionado, setPropietarioSeleccionado] = useState(false);
-
-  const [nombre, setNombre] = useState<Alumno["nombre"]>("");
-  const [apellido, setApellido] = useState<Alumno["apellido"]>("");
   const [dni, setDni] = useState<Alumno["dni"]>("");
-  const [fechaNacimiento, setFechaNacimiento] =
-    useState<Alumno["fechaNacimiento"]>("");
-  const [telefono, setTelefono] = useState<Alumno["telefono"]>("");
-  const [email, setEmail] = useState<Alumno["email"]>("");
-  const [fechaInscripcion, setFechaInscripcion] =
-    useState<Alumno["fechaInscripcion"]>("");
-  const [activo, setActivo] = useState<Alumno["activo"]>(true);
-  const [cantidadClases, setCantidadClases] =
-    useState<Alumno["cantidadClases"]>(4);
-  const [tipoPension, setTipoPension] =
-    useState<Alumno["tipoPension"]>("SIN_CABALLO");
-  const [cuotaPension, setCuotaPension] =
-    useState<Alumno["cuotaPension"]>("ENTERA");
-  const [caballoId, setCaballoId] = useState<string | null>(null);
-
-  const getCaballoId = (alumno?: Alumno): string => {
-    if (!alumno?.caballoPropio) return "";
-
-    return typeof alumno.caballoPropio === "number"
-      ? String(alumno.caballoPropio)
-      : String(alumno.caballoPropio.id);
-  };
 
   const { data: validacionDni } = useValidarDniDuplicado(
     "alumnos",
@@ -160,22 +120,8 @@ export default function AlumnosPage() {
 
   useEffect(() => {
     if (isOpen) {
-      setNombre(editingAlumno?.nombre ?? "");
-      setApellido(editingAlumno?.apellido ?? "");
       setDni(editingAlumno?.dni ?? "");
-      setTelefono(editingAlumno?.telefono ?? "");
-      setEmail(editingAlumno?.email ?? "");
-      setFechaNacimiento(editingAlumno?.fechaNacimiento ?? "");
-      setFechaInscripcion(
-        editingAlumno?.fechaInscripcion ?? format(new Date(), "yyyy-MM-dd"),
-      );
-      setCantidadClases(editingAlumno?.cantidadClases ?? 4);
-      setActivo(editingAlumno?.activo ?? true);
-      setTipoPension(editingAlumno?.tipoPension ?? "SIN_CABALLO");
-      setCuotaPension(editingAlumno?.cuotaPension ?? "ENTERA");
-      setPropietarioSeleccionado(editingAlumno?.propietario ?? false);
-      setCaballoId(getCaballoId(editingAlumno ?? undefined));
-      setValidacionHabilitada(!editingAlumno); // true en creación, false en edición
+      setValidacionHabilitada(!editingAlumno);
     }
   }, [isOpen, editingAlumno]);
 
@@ -377,7 +323,7 @@ export default function AlumnosPage() {
       ),
     },
     {
-      header: "Propietario",
+      header: "Pensiòn/Reserva",
       cell: (row: Alumno) => (
         <StatusBadge
           status={row.tipoPension === "SIN_CABALLO" ? "success" : "default"}
@@ -456,49 +402,6 @@ export default function AlumnosPage() {
     },
   ];
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    if (validacionActiva?.duplicado) {
-      toast.error("No se puede guardar: Ya existe un alumno con este DNI");
-      return;
-    }
-
-    // Normalizar teléfono
-    let telefonoNormalizado = telefono;
-
-    if (telefonoNormalizado && !telefonoNormalizado.startsWith("+549")) {
-      telefonoNormalizado = `+549${telefonoNormalizado.replace(/^\+/, "")}`;
-    }
-
-    const propietario = tipoPension === "CABALLO_PROPIO";
-
-    const data: Omit<Alumno, "id"> = {
-      dni,
-      nombre,
-      apellido,
-      fechaNacimiento,
-      telefono: telefonoNormalizado,
-      email,
-      fechaInscripcion,
-      cantidadClases,
-      propietario,
-      activo,
-      tipoPension,
-      cuotaPension: tipoPension === "SIN_CABALLO" ? null : cuotaPension,
-      caballoPropio:
-        tipoPension === "SIN_CABALLO" || !caballoId
-          ? undefined
-          : Number(caballoId),
-    };
-
-    if (editingAlumno) {
-      updateMutation.mutate({ id: editingAlumno.id, data });
-    } else {
-      createMutation.mutate(data);
-    }
-  };
-
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
 
   return (
@@ -538,252 +441,36 @@ export default function AlumnosPage() {
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
-                <form onSubmit={handleSubmit}>
-                  <DialogHeader>
-                    <DialogTitle className="font-display">
-                      {editingAlumno ? "Editar Alumno" : "Nuevo Alumno"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {editingAlumno
-                        ? "Modifica los datos del alumno"
-                        : "Completa los datos para registrar un nuevo alumno"}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="nombre">Nombre/s</Label>
-                        <Input
-                          id="nombre"
-                          type="text"
-                          autoComplete="given-name"
-                          placeholder="Nombre/s del alumno"
-                          value={nombre}
-                          onChange={(e) => setNombre(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="apellido">Apellido</Label>
-                        <Input
-                          id="apellido"
-                          type="text"
-                          autoComplete="family-name"
-                          placeholder="Apellido del alumno"
-                          value={apellido}
-                          onChange={(e) => setApellido(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="dni">
-                          DNI
-                          <HelpTooltip content={CommonTooltips.alumno.dni} />
-                        </Label>
-                        <Input
-                          id="dni"
-                          name="dni"
-                          autoComplete="off"
-                          type="text"
-                          value={dni}
-                          onChange={(e) => {
-                            setDni(e.target.value);
-                            setValidacionHabilitada(true);
-                          }}
-                          placeholder="Solo números sin puntos"
-                          className={
-                            validacionDni?.duplicado ? "border-red-500" : ""
-                          }
-                          required
-                        />
-                        {validacionDni?.duplicado && (
-                          <p className="text-sm text-red-500 mt-1">
-                            {validacionDni.mensaje}
-                          </p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="fechaNacimiento">
-                          Fecha de nacimiento
-                        </Label>
-                        <Input
-                          id="fechaNacimiento"
-                          type="date"
-                          value={fechaNacimiento}
-                          onChange={(e) => setFechaNacimiento(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="telefono">Teléfono</Label>
-                        <Input
-                          id="telefono"
-                          type="tel"
-                          autoComplete="tel"
-                          placeholder="Teléfono de contacto"
-                          value={telefono}
-                          onChange={(e) => setTelefono(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          autoComplete="email"
-                          placeholder="Correo electrónico"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="fechaInscripcion">
-                          Fecha de Inscripcion
-                          <HelpTooltip
-                            content={CommonTooltips.alumno.fechaInscripcion}
-                          />
-                        </Label>
-                        <Input
-                          id="fechaInscripcion"
-                          type="date"
-                          value={fechaInscripcion}
-                          onChange={(e) => setFechaInscripcion(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="cantidadClases">
-                          Cantidad de clases
-                        </Label>
+                <DialogHeader>
+                  <DialogTitle className="font-display">
+                    {editingAlumno ? "Editar Alumno" : "Nuevo Alumno"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingAlumno
+                      ? "Modifica los datos del alumno"
+                      : "Completa los datos para registrar un nuevo alumno"}
+                  </DialogDescription>
+                </DialogHeader>
 
-                        <Select
-                          value={String(cantidadClases)}
-                          onValueChange={(value) =>
-                            setCantidadClases(Number(value))
-                          }
-                        >
-                          <SelectTrigger id="cantidadClases">
-                            <SelectValue placeholder="Seleccionar cantidad" />
-                          </SelectTrigger>
-
-                          <SelectContent>
-                            <SelectItem value="4">4 clases</SelectItem>
-                            <SelectItem value="8">8 clases</SelectItem>
-                            <SelectItem value="12">12 clases</SelectItem>
-                            <SelectItem value="16">16 clases</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    {/* Pensión */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="tipoPension">Pensión</Label>
-                        <Select
-                          value={tipoPension}
-                          onValueChange={(v) => {
-                            const nuevo = v as Alumno["tipoPension"];
-                            setTipoPension(nuevo);
-                            if (nuevo === "SIN_CABALLO") {
-                              setCuotaPension("ENTERA"); // o el valor default que corresponda
-                              setCaballoId(""); // limpiar caballo también
-                            }
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="SIN_CABALLO">
-                              Sin caballo asignado
-                            </SelectItem>
-                            <SelectItem value="RESERVA_ESCUELA">
-                              Reserva caballo de escuela
-                            </SelectItem>
-                            <SelectItem value="CABALLO_PROPIO">
-                              Caballo propio
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Activo: solo visible al editar */}
-                      {editingAlumno && (
-                        <div className="flex items-center gap-3 pt-6">
-                          <Switch
-                            id="activo"
-                            checked={activo}
-                            onCheckedChange={setActivo}
-                          />
-                          <Label htmlFor="activo">Está activo</Label>
-                        </div>
-                      )}
-                    </div>
-                    {/* Cuota y Caballo: solo si tiene caballo */}
-                    {tipoPension !== "SIN_CABALLO" && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="cuotaPension">Cuota de pensión</Label>
-                          <Select
-                            value={cuotaPension}
-                            onValueChange={(value) =>
-                              setCuotaPension(value as CuotaPension)
-                            }
-                          >
-                            <SelectTrigger id="cuotaPension">
-                              <SelectValue placeholder="Seleccionar cuota" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="ENTERA">Entera</SelectItem>
-                              <SelectItem value="MEDIA">Media</SelectItem>
-                              <SelectItem value="TERCIO">Tercio</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="caballo">Caballo</Label>
-                          <Select
-                            value={caballoId}
-                            onValueChange={(value) => setCaballoId(value)}
-                          >
-                            <SelectTrigger id="caballo">
-                              <SelectValue placeholder="Seleccionar caballo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {caballos.map((caballo) => (
-                                <SelectItem
-                                  key={caballo.id}
-                                  value={String(caballo.id)}
-                                >
-                                  {caballo.nombre}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      type="submit"
-                      disabled={
-                        createMutation.isPending ||
-                        updateMutation.isPending ||
-                        validacionActiva?.duplicado
-                      }
-                    >
-                      {editingAlumno ? "Guardar Cambios" : "Crear Alumno"}
-                    </Button>
-                  </DialogFooter>
-                </form>
+                <AlumnoForm
+                  alumno={editingAlumno ?? undefined}
+                  caballos={caballos}
+                  onSubmit={(data) => {
+                    if (editingAlumno) {
+                      updateMutation.mutate({ id: editingAlumno.id, data });
+                    } else {
+                      createMutation.mutate(data);
+                    }
+                  }}
+                  isPending={
+                    createMutation.isPending || updateMutation.isPending
+                  }
+                  validacionDni={validacionActiva}
+                  onDniChange={(dni) => {
+                    setDni(dni);
+                    setValidacionHabilitada(true);
+                  }}
+                />
               </DialogContent>
             </Dialog>
           </div>

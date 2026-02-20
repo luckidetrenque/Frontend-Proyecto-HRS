@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
 import {
   AlertCircle,
   ArrowLeft,
@@ -12,19 +11,16 @@ import {
   Info,
   User,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import {
-  ESPECIALIDADES,
   ESTADO_COLORS,
   ESTADO_LABELS,
-  ESTADOS,
   formatearConZona,
-  obtenerHoraArgentina,
-  parsearHoraParaApi,
 } from "@/components/calendar/clases.constants";
+import { ClaseForm } from "@/components/forms/ClaseForm";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,13 +34,10 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { InfoField } from "@/components/ui/InfoField";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   Select,
@@ -57,11 +50,9 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Alumno,
   alumnosApi,
-  Caballo,
   caballosApi,
   Clase,
   clasesApi,
-  Instructor,
   instructoresApi,
 } from "@/lib/api";
 
@@ -73,29 +64,24 @@ export default function ClaseDetalle() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const [tipoPrueba, setTipoPrueba] = useState<
-    "alumno_existente" | "persona_nueva"
-  >("persona_nueva");
-  const [nombrePrueba, setNombrePrueba] = useState("");
-  const [apellidoPrueba, setApellidoPrueba] = useState("");
-  const [esPruebaChecked, setEsPruebaChecked] = useState(false);
-
-  const [dia, setDia] = useState<string>("");
-  const [hora, setHora] = useState<string>("");
-  const [duracion, setDuracion] = useState<number>(30);
-  const [alumnoId, setAlumnoId] = useState<string>("");
-  const [instructorId, setInstructorId] = useState<string>("");
-  const [caballoId, setCaballoId] = useState<string>("");
-  const [estado, setEstado] = useState<Clase["estado"]>("PROGRAMADA");
-  const [observaciones, setObservaciones] = useState<string>("");
-  const [especialidad, setEspecialidad] = useState<string>("");
-
   // Queries adicionales para los selectores
   const { data: alumnos = [] } = useQuery({
     queryKey: ["alumnos"],
     queryFn: alumnosApi.listar,
     enabled: isDialogOpen,
   });
+
+  // Filtrar solo objetos válidos de Alumno
+  const alumnosValidos = useMemo(() => {
+    return alumnos.filter((alumno: unknown): alumno is Alumno => {
+      return (
+        typeof alumno === "object" &&
+        alumno !== null &&
+        "id" in alumno &&
+        "nombre" in alumno
+      );
+    });
+  }, [alumnos]);
 
   const { data: instructores = [] } = useQuery({
     queryKey: ["instructores"],
@@ -106,6 +92,12 @@ export default function ClaseDetalle() {
   const { data: caballos = [] } = useQuery({
     queryKey: ["caballos"],
     queryFn: caballosApi.listar,
+    enabled: isDialogOpen,
+  });
+
+  const { data: clases = [] } = useQuery({
+    queryKey: ["clases-page"],
+    queryFn: clasesApi.listarDetalladas,
     enabled: isDialogOpen,
   });
 
@@ -122,31 +114,6 @@ export default function ClaseDetalle() {
     onError: (error: Error) =>
       toast.error(error.message || "Error al actualizar la clase"),
   });
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    const data = {
-      especialidad: especialidad as Clase["especialidad"],
-      dia: dia,
-      hora: parsearHoraParaApi(hora),
-      duracion: duracion,
-      estado: estado,
-      observaciones,
-      instructorId: Number(instructorId),
-      caballoId: Number(caballoId),
-      ...(clase?.esPrueba && !clase?.alumnoId
-        ? {
-            personaPruebaId: clase.personaPruebaId,
-            // Actualizar en backend
-            personaPruebaNombre: nombrePrueba,
-            personaPruebaApellido: apellidoPrueba,
-          }
-        : { alumnoId: Number(alumnoId) }),
-    };
-
-    updateMutation.mutate({ id: claseId, data });
-  };
 
   const [nuevoEstado, setNuevoEstado] = useState<Clase["estado"] | null>(null);
 
@@ -175,29 +142,6 @@ export default function ClaseDetalle() {
     queryFn: () => caballosApi.obtener(clase!.caballoId),
     enabled: !!clase?.caballoId,
   });
-
-  useEffect(() => {
-    if (isDialogOpen && clase) {
-      setEspecialidad(clase.especialidad);
-      setAlumnoId(clase.alumnoId ? String(clase.alumnoId) : "");
-      setCaballoId(String(clase.caballoId));
-      setInstructorId(String(clase.instructorId));
-      setDia(clase.dia);
-      setHora(obtenerHoraArgentina(clase.diaHoraCompleto));
-      setDuracion(Number(clase.duracion) || 30);
-      setEstado(clase.estado);
-      setObservaciones(clase.observaciones ?? "");
-    }
-  }, [isDialogOpen, clase]);
-
-  useEffect(() => {
-    if (!isDialogOpen) return;
-    if (especialidad === "MONTA") {
-      setAlumnoId("1");
-    } else if (!clase?.alumnoId) {
-      setAlumnoId("");
-    }
-  }, [especialidad, clase?.alumnoId, isDialogOpen]);
 
   // Mutation para cambiar el estado
   const cambiarEstadoMutation = useMutation({
@@ -576,262 +520,22 @@ export default function ClaseDetalle() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-lg">
-          <form onSubmit={handleSubmit}>
-            <DialogHeader>
-              <DialogTitle className="font-display">Editar Clase</DialogTitle>
-              <DialogDescription>
-                Editando clase de {getAlumnoNombreCompleto(clase.alumnoId)}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              {clase?.esPrueba && (
-                <div className="flex items-center gap-2 ml-4">
-                  <span className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-orange-300 bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-800">
-                    <Info className="h-3 w-3 text-orange-600" />
-                    Clase de Prueba
-                  </span>
-                </div>
-              )}
-              {/* FILA 1: Día + Hora */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="dia">Día</Label>
-                  <Input
-                    id="dia"
-                    type="date"
-                    value={dia}
-                    onChange={(e) => setDia(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="hora">Hora de Inicio</Label>
-                  <Input
-                    id="hora"
-                    type="time"
-                    value={hora}
-                    onChange={(e) => setHora(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
+          <DialogHeader>
+            <DialogTitle className="font-display">Editar Clase</DialogTitle>
+            <DialogDescription>
+              Modifica los datos de la clase
+            </DialogDescription>
+          </DialogHeader>
 
-              {/* FILA 2: Alumno + Caballo */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  {/* TODO: label dinámico "Alumno" vs "Persona de Prueba" según
-                  corresponda, y mostrar campos de nombre/apellido en caso de
-                  ser clase de prueba sin alumno asignado */}
-                  <Label htmlFor="alumnoId">
-                    Alumno
-                    {especialidad === "MONTA" && (
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        (Asignado automáticamente)
-                      </span>
-                    )}
-                    {clase?.esPrueba && !clase?.alumnoId && (
-                      <span className="ml-2 text-xs text-orange-600">
-                        (Clase de prueba)
-                      </span>
-                    )}
-                  </Label>
-                  {clase?.esPrueba && !clase?.alumnoId ? (
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        value={nombrePrueba}
-                        onChange={(e) => setNombrePrueba(e.target.value)}
-                        placeholder="Nombre"
-                      />
-                      <Input
-                        value={apellidoPrueba}
-                        onChange={(e) => setApellidoPrueba(e.target.value)}
-                        placeholder="Apellido"
-                      />
-                    </div>
-                  ) : (
-                    <Select
-                      value={alumnoId}
-                      onValueChange={setAlumnoId}
-                      disabled={especialidad === "MONTA"}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar alumno" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {alumnos
-                          .filter((alumno: Alumno) =>
-                            especialidad === "MONTA"
-                              ? alumno.id === 1
-                              : alumno.id !== 1,
-                          )
-                          .map((alumno: Alumno) => (
-                            <SelectItem
-                              key={alumno.id}
-                              value={String(alumno.id)}
-                            >
-                              {alumno.nombre} {alumno.apellido}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="caballoId">
-                    Caballo
-                    {(() => {
-                      if (alumno?.caballoPropio) {
-                        const caballoPredeterminado = caballos.find(
-                          (c: Caballo) =>
-                            c.id ===
-                            (typeof alumno.caballoPropio === "number"
-                              ? alumno.caballoPropio
-                              : alumno.caballoPropio.id),
-                        );
-                        return caballoPredeterminado ? (
-                          <span className="ml-2 text-xs font-medium text-success">
-                            ✓ Predeterminado: {caballoPredeterminado.nombre}
-                          </span>
-                        ) : null;
-                      }
-                      return null;
-                    })()}
-                  </Label>
-                  <Select value={caballoId} onValueChange={setCaballoId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar caballo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {caballos
-                        .filter((c: Caballo) => c.disponible)
-                        .map((caballo: Caballo) => (
-                          <SelectItem
-                            key={caballo.id}
-                            value={String(caballo.id)}
-                          >
-                            {caballo.nombre} (
-                            {caballo.tipo === "ESCUELA" ? "Escuela" : "Privado"}
-                            )
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* FILA 3: Instructor + Especialidad */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="instructorId">Instructor</Label>
-                  <Select value={instructorId} onValueChange={setInstructorId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar instructor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {instructores.map((instructor: Instructor) => (
-                        <SelectItem
-                          key={instructor.id}
-                          value={String(instructor.id)}
-                        >
-                          {instructor.nombre} {instructor.apellido}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="especialidad">Especialidad</Label>
-                  <Select value={especialidad} onValueChange={setEspecialidad}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar especialidad" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ESPECIALIDADES.map((esp) => (
-                        <SelectItem key={esp} value={esp}>
-                          {esp.charAt(0).toUpperCase() +
-                            esp.slice(1).toLowerCase()}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* FILA 4: Estado + Observaciones (siempre edición) */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="estado">Estado</Label>
-                  <Select
-                    required
-                    value={estado}
-                    onValueChange={(v) => setEstado(v as Clase["estado"])}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ESTADOS.map((estado) => (
-                        <SelectItem key={estado} value={estado}>
-                          {estado.charAt(0).toUpperCase() +
-                            estado.slice(1).toLowerCase()}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {/* FILA 6: Observaciones (span completo) */}
-                <div className="space-y-2">
-                  <Label htmlFor="observaciones">Observaciones</Label>
-                  <Input
-                    id="observaciones"
-                    placeholder="Ej. Lluvia, Feriado, etc"
-                    value={observaciones}
-                    onChange={(e) => setObservaciones(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* FILA 5: Duración + Fin estimado */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="duracion">Duración</Label>
-                  <Select
-                    name="duracion"
-                    required
-                    value={String(duracion)}
-                    onValueChange={(value) => setDuracion(Number(value))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar duración" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="30">30 minutos</SelectItem>
-                      <SelectItem value="60">60 minutos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm text-muted-foreground">
-                    Fin estimado
-                  </Label>
-                  <p className="flex h-10 items-center text-sm text-muted-foreground">
-                    {hora
-                      ? (() => {
-                          const [h, m] = hora.split(":").map(Number);
-                          const totalMin = h * 60 + m + duracion;
-                          return `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
-                        })()
-                      : "—"}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? "Guardando..." : "Guardar Cambios"}
-              </Button>
-            </DialogFooter>
-          </form>
+          <ClaseForm
+            clase={clase}
+            alumnos={alumnosValidos}
+            instructores={instructores}
+            caballos={caballos}
+            clases={clases}
+            onSubmit={(data) => updateMutation.mutate({ id: claseId, data })}
+            isPending={updateMutation.isPending}
+          />
         </DialogContent>
       </Dialog>
     </Layout>

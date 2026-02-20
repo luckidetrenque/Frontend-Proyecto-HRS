@@ -19,6 +19,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
+import { InstructorForm } from "@/components/forms/InstructorForm";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,16 +63,7 @@ export default function InstructorDetalle() {
     enabled: !!instructorId,
   });
 
-  const [nombre, setNombre] = useState<Instructor["nombre"]>("");
-  const [apellido, setApellido] = useState<Instructor["apellido"]>("");
   const [dni, setDni] = useState<Instructor["dni"]>("");
-  const [fechaNacimiento, setFechaNacimiento] =
-    useState<Instructor["fechaNacimiento"]>("");
-  const [telefono, setTelefono] = useState<Instructor["telefono"]>("");
-  const [email, setEmail] = useState<Instructor["email"]>("");
-  const [activo, setActivo] = useState<Instructor["activo"]>(true);
-  const [color, setColor] = useState<string>(PRESET_COLORS[0]);
-
   const [validacionHabilitada, setValidacionHabilitada] = useState(false);
   const { data: validacionDni } = useValidarDniDuplicado(
     "instructores",
@@ -96,31 +88,10 @@ export default function InstructorDetalle() {
       toast.error(error.message || "Error al actualizar el instructor"),
   });
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const data = {
-      nombre,
-      apellido,
-      dni,
-      fechaNacimiento,
-      telefono,
-      email,
-      activo,
-      color,
-    };
-    updateMutation.mutate({ id: instructorId, data });
-  };
-
   useEffect(() => {
     if (isEditOpen && instructor) {
-      setNombre(instructor.nombre);
-      setApellido(instructor.apellido);
       setDni(instructor.dni);
-      setFechaNacimiento(instructor.fechaNacimiento);
-      setTelefono(instructor.telefono);
-      setEmail(instructor.email ?? "");
-      setActivo(instructor.activo);
-      setColor(instructor.color || PRESET_COLORS[0]);
+      setValidacionHabilitada(false);
     }
   }, [isEditOpen, instructor]);
 
@@ -531,148 +502,27 @@ export default function InstructorDetalle() {
 
         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
           <DialogContent className="sm:max-w-md">
-            <form onSubmit={handleSubmit}>
-              <DialogHeader>
-                <DialogTitle className="font-display">
-                  Editar Instructor
-                </DialogTitle>
-                <DialogDescription>
-                  Modifica los datos del instructor
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nombre">Nombre/s</Label>
-                    <Input
-                      id="nombre"
-                      type="text"
-                      autoComplete="given-name"
-                      placeholder="Nombre/s del instructor"
-                      value={nombre}
-                      onChange={(e) => setNombre(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="apellido">Apellido/s</Label>
-                    <Input
-                      id="apellido"
-                      type="text"
-                      autoComplete="family-name"
-                      placeholder="Apellido del alumno"
-                      value={apellido}
-                      onChange={(e) => setApellido(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="dni">DNI</Label>
-                    <Input
-                      id="dni"
-                      name="dni"
-                      autoComplete="off"
-                      type="text"
-                      value={dni}
-                      onChange={(e) => {
-                        setDni(e.target.value);
-                        setValidacionHabilitada(true);
-                      }}
-                      placeholder="Solo números sin puntos"
-                      className={
-                        validacionDni?.duplicado ? "border-red-500" : ""
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fechaNacimiento">Fecha de Nacimiento</Label>
-                    <Input
-                      id="fechaNacimiento"
-                      type="date"
-                      value={fechaNacimiento}
-                      onChange={(e) => setFechaNacimiento(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="telefono">Teléfono</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      autoComplete="email"
-                      placeholder="Correo electrónico"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      autoComplete="email"
-                      placeholder="Correo electrónico"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                </div>
+            <DialogHeader>
+              <DialogTitle className="font-display">
+                Editar Instructor
+              </DialogTitle>
+              <DialogDescription>
+                Modifica los datos del instructor
+              </DialogDescription>
+            </DialogHeader>
 
-                <div className="space-y-2">
-                  <Label>Color del Instructor</Label>
-                  <div
-                    id="color-group"
-                    aria-labelledby="color-label"
-                    className="flex gap-2 flex-wrap"
-                  >
-                    {PRESET_COLORS.map((presetColor) => (
-                      <button
-                        type="button"
-                        key={presetColor}
-                        onClick={() => setColor(presetColor)}
-                        className={`w-10 h-10 rounded-full border-2 transition-all ${
-                          color === presetColor
-                            ? "border-primary ring-2 ring-primary/20 scale-110"
-                            : "border-gray-300 hover:scale-105"
-                        }`}
-                        style={{ backgroundColor: presetColor }}
-                        title={presetColor}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-2 mt-2 p-2 border rounded-md bg-muted/30">
-                    <div
-                      className="w-6 h-6 rounded border-2 border-gray-300"
-                      style={{ backgroundColor: color }}
-                    />
-                    <span className="text-sm font-mono text-muted-foreground">
-                      {color}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <Switch
-                    id="activo"
-                    checked={activo}
-                    onCheckedChange={setActivo}
-                  />
-                  <Label htmlFor="activo">Está activo</Label>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit" disabled={updateMutation.isPending}>
-                  {updateMutation.isPending
-                    ? "Guardando..."
-                    : "Guardar Cambios"}
-                </Button>
-              </DialogFooter>
-            </form>
+            <InstructorForm
+              instructor={instructor}
+              onSubmit={(data) =>
+                updateMutation.mutate({ id: instructorId, data })
+              }
+              isPending={updateMutation.isPending}
+              validacionDni={validacionActiva}
+              onDniChange={(dni) => {
+                setDni(dni);
+                setValidacionHabilitada(true);
+              }}
+            />
           </DialogContent>
         </Dialog>
       </Layout>

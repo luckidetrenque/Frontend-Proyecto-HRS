@@ -5,15 +5,13 @@
  */
 
 import {
-  CalendarDays,
+  ChessKnight,
   Clock,
-  Edit,
   GraduationCap,
-  Landmark,
+  NotebookPen,
   Pencil,
   Trash2,
   User,
-  UserCheck,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -121,15 +119,15 @@ export function ClasePopover({
               </div>
             )}
             <div className="flex items-center gap-2">
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
+              <GraduationCap className="h-4 w-4 text-muted-foreground" />
               <span>{instructorNombre}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Landmark className="h-4 w-4 text-muted-foreground" />
+              <ChessKnight className="h-4 w-4 text-muted-foreground" />
               <span>{caballoNombre}</span>
             </div>
             <div className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <NotebookPen className="h-4 w-4 text-muted-foreground" />
               <span>{clase.especialidad}</span>
             </div>
             {clase.observaciones && (

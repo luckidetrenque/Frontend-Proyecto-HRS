@@ -1,24 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { Info, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import {
-  ALUMNO_COMODIN_ID,
-  ESPECIALIDADES,
   ESPECIALIDADES_OPTIONS,
   ESTADO_COLORS,
   ESTADO_LABELS,
-  ESTADOS,
   ESTADOS_OPTIONS,
   formatearConZona,
-  obtenerHoraArgentina,
-  parsearHoraParaApi,
 } from "@/components/calendar/clases.constants";
 import { GenericCard } from "@/components/cards/GenericCard";
 import { GenericCardSkeleton } from "@/components/cards/GenericCardSkeleton";
+import { ClaseForm } from "@/components/forms/ClaseForm";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -26,7 +21,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -38,19 +32,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FilterBar } from "@/components/ui/filter-bar";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
 import { PaginationControls } from "@/components/ui/pagination-controls";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { useClasesRestantes } from "@/hooks/useClasesRestantes";
 import {
   Alumno,
   alumnosApi,
@@ -61,39 +45,15 @@ import {
   ClaseSearchFilters,
   Instructor,
   instructoresApi,
-  PersonaPrueba,
   personasPruebaApi,
 } from "@/lib/api";
-import {
-  handleEspecialidadChangeEffect,
-  puedeEditarClase,
-  resolverCaballoId,
-  validarClasePrueba,
-  validarHorarioLimite,
-} from "@/utils/validacionesClases";
+import { puedeEditarClase } from "@/utils/validacionesClases";
 
 export default function ClasesPage() {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [claseToEdit, setClaseToEdit] = useState<Clase | null>(null);
   const [claseToDelete, setClaseToDelete] = useState<Clase | null>(null);
-
-  const [tipoPrueba, setTipoPrueba] = useState<
-    "alumno_existente" | "persona_nueva"
-  >("persona_nueva");
-  const [nombrePrueba, setNombrePrueba] = useState("");
-  const [apellidoPrueba, setApellidoPrueba] = useState("");
-  const [esPruebaChecked, setEsPruebaChecked] = useState(false);
-
-  const [dia, setDia] = useState<string>("");
-  const [hora, setHora] = useState<string>("09:00");
-  const [duracion, setDuracion] = useState<number>(30);
-  const [alumnoId, setAlumnoId] = useState<string>("");
-  const [instructorId, setInstructorId] = useState<string>("");
-  const [caballoId, setCaballoId] = useState<string>("");
-  const [estado, setEstado] = useState<Clase["estado"]>("PROGRAMADA");
-  const [observaciones, setObservaciones] = useState<string>("");
-  const [especialidad, setEspecialidad] = useState<string>("");
 
   const navigate = useNavigate();
 
@@ -141,7 +101,6 @@ export default function ClasesPage() {
   // Estados de filtros
   const [filters, setFilters] = useState({
     dia: "",
-    // dia: format(new Date(), "yyyy-MM-dd"),
     hora: "",
     alumnoId: "all",
     instructorId: "all",
@@ -191,55 +150,6 @@ export default function ClasesPage() {
     });
   }, [alumnos]);
 
-  useEffect(() => {
-    if (isOpen) {
-      setEspecialidad(claseToEdit?.especialidad ?? "");
-      setAlumnoId(claseToEdit?.alumnoId ? String(claseToEdit.alumnoId) : "");
-      setDia(claseToEdit?.dia ?? format(new Date(), "yyyy-MM-dd"));
-      setHora(
-        claseToEdit
-          ? obtenerHoraArgentina(claseToEdit.diaHoraCompleto)
-          : "09:00",
-      );
-      setDuracion(Number(claseToEdit?.duracion) || 30);
-      setInstructorId(
-        claseToEdit?.instructorId ? String(claseToEdit.instructorId) : "",
-      );
-      setCaballoId(claseToEdit?.caballoId ? String(claseToEdit.caballoId) : "");
-      setEstado(claseToEdit?.estado ?? "PROGRAMADA");
-      setObservaciones(claseToEdit?.observaciones ?? "");
-      if (!claseToEdit) {
-        setEsPruebaChecked(false);
-        setTipoPrueba("persona_nueva");
-        setNombrePrueba("");
-        setApellidoPrueba("");
-      }
-    } else {
-      setEsPruebaChecked(false);
-      setTipoPrueba("persona_nueva");
-      setNombrePrueba("");
-      setApellidoPrueba("");
-      setEspecialidad("");
-      setAlumnoId("");
-      setCaballoId("");
-    }
-  }, [isOpen, claseToEdit]);
-
-  useEffect(() => {
-    if (isOpen && !claseToEdit && alumnoId) {
-      const alumno = alumnosValidos.find((a) => a.id === Number(alumnoId));
-      if (alumno?.caballoPropio) {
-        const id =
-          typeof alumno.caballoPropio === "number"
-            ? alumno.caballoPropio
-            : alumno.caballoPropio.id;
-        setCaballoId(String(id));
-      } else {
-        setCaballoId("");
-      }
-    }
-  }, [isOpen, alumnoId, claseToEdit, alumnosValidos]);
-
   const { data: instructores = [] } = useQuery({
     queryKey: ["instructores"],
     queryFn: instructoresApi.listar,
@@ -249,18 +159,6 @@ export default function ClasesPage() {
     queryKey: ["caballos"],
     queryFn: caballosApi.listar,
   });
-
-  // Filtrar caballos según alumno
-
-  // Verificar clases restantes del alumno
-  const hoy = new Date();
-  const {
-    clasesRestantes,
-    estaAgotado,
-    cercaDelLimite,
-    clasesTomadas,
-    clasesContratadas,
-  } = useClasesRestantes(alumnoId ? Number(alumnoId) : 0, hoy);
 
   // Filtrar datos
   const filteredData = useMemo(() => {
@@ -368,19 +266,6 @@ export default function ClasesPage() {
     },
   ];
 
-  // Función para abrir el diálogo de edición
-  const handleOpenEditDialog = (clase: Clase) => {
-    setClaseToEdit(clase);
-    setEspecialidad(clase.especialidad);
-    setAlumnoId(clase.alumnoId ? String(clase.alumnoId) : "");
-    setIsOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setIsOpen(false);
-    setClaseToEdit(null);
-  };
-
   const handleFilterChange = (name: string, value: string) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
     setCurrentPage(1);
@@ -388,7 +273,6 @@ export default function ClasesPage() {
 
   const handleResetFilters = () => {
     setFilters({
-      // dia: format(new Date(), "yyyy-MM-dd"),
       dia: "",
       hora: "",
       alumnoId: "all",
@@ -404,16 +288,6 @@ export default function ClasesPage() {
   const handlePageSizeChange = (size: number) => {
     setPageSize(size);
     setCurrentPage(1);
-  };
-
-  // Manejador para cambio de especialidad
-  const handleEspecialidadChange = (value: string) => {
-    handleEspecialidadChangeEffect(
-      value,
-      ALUMNO_COMODIN_ID,
-      setEspecialidad,
-      setAlumnoId,
-    );
   };
 
   const createMutation = useMutation({
@@ -455,99 +329,6 @@ export default function ClasesPage() {
       toast.error(error.message || "Error al eliminar la clase"),
   });
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    let alumnoIdFinal: number | null = null;
-    let personaPruebaId: number | null = null;
-
-    if (esPruebaChecked && tipoPrueba === "persona_nueva") {
-      if (!nombrePrueba.trim() || !apellidoPrueba.trim()) {
-        toast.error("Ingresá nombre y apellido de la persona de prueba");
-        return;
-      }
-      try {
-        const personaPrueba = await personasPruebaApi.crear({
-          nombre: nombrePrueba.trim(),
-          apellido: apellidoPrueba.trim(),
-        });
-        personaPruebaId = personaPrueba.id;
-      } catch {
-        toast.error("Error al registrar la persona de prueba");
-        return;
-      }
-    } else {
-      alumnoIdFinal = Number(alumnoId) || null;
-    }
-
-    const alumno = alumnoIdFinal
-      ? alumnosValidos.find((a: Alumno) => a.id === alumnoIdFinal)
-      : undefined;
-
-    if (!claseToEdit && esPruebaChecked && alumno) {
-      const { esValido, mensaje } = validarClasePrueba(
-        clases,
-        alumno,
-        especialidad as Clase["especialidad"],
-        claseToEdit?.id,
-      );
-      if (!esValido) {
-        toast.error(mensaje);
-        return;
-      }
-    }
-
-    // Resolver caballo — ahora usa el estado directamente
-    const caballoIdFinal = caballoId
-      ? Number(caballoId)
-      : alumno?.caballoPropio && typeof alumno.caballoPropio === "object"
-        ? alumno.caballoPropio.id
-        : 0;
-
-    if (!caballoIdFinal) {
-      toast.error("Debe seleccionar un caballo");
-      return;
-    }
-
-    const { esValido: horarioOk, mensaje: mensajeHorario } =
-      validarHorarioLimite(hora, duracion);
-    if (!horarioOk) {
-      toast.error(mensajeHorario);
-      return;
-    }
-
-    const data = {
-      especialidad: especialidad as Clase["especialidad"],
-      dia,
-      hora: parsearHoraParaApi(hora),
-      duracion,
-      estado: claseToEdit?.estado ?? "PROGRAMADA",
-      observaciones,
-      instructorId: Number(instructorId),
-      caballoId: caballoIdFinal,
-      diaHoraCompleto: "",
-      alumnoId: alumnoIdFinal,
-      personaPruebaId,
-      esPrueba: esPruebaChecked,
-    };
-
-    if (claseToEdit) {
-      updateMutation.mutate({ id: claseToEdit.id, data });
-    } else {
-      createMutation.mutate(data);
-    }
-  };
-
-  const getAlumnoNombre = (id: number) => {
-    const alumno = alumnosValidos.find((a: Alumno) => a.id === id);
-    return alumno ? `${alumno.nombre} ${alumno.apellido}` : "-";
-  };
-
-  const getAlumnoNombreCompleto = (id: number) => {
-    const alumno = alumnos.find((a: Alumno) => a.id === id);
-    return alumno ? `${alumno.nombre} ${alumno.apellido}` : "-";
-  };
-
   const getNombreParaClase = (clase: Clase): string => {
     if (clase.alumnoId) {
       const alumno = alumnosValidos.find(
@@ -568,10 +349,6 @@ export default function ClasesPage() {
     const caballo = caballos.find((c: Caballo) => c.id === id);
     return caballo?.nombre || "-";
   };
-
-  const isReadonly =
-    especialidad === "MONTA" ||
-    (esPruebaChecked && tipoPrueba === "persona_nueva");
 
   const columns = [
     {
@@ -597,31 +374,26 @@ export default function ClasesPage() {
       header: "Caballo",
       cell: (row: Clase) => getCaballoNombre(row.caballoId),
     },
-    { header: "Especialidad", accessorKey: "especialidad" as keyof Clase },
     {
-      header: "Estado",
-      cell: (row: Clase) => (
-        <StatusBadge status={ESTADO_COLORS[row.estado] || "default"}>
-          {row.estado}
-        </StatusBadge>
-      ),
+      header: "Especialidad",
+      cell: (row: Clase) => row.especialidad,
     },
     {
-      header: "Tipo",
-      cell: (row: Clase) =>
-        row.esPrueba ? (
-          <StatusBadge status="warning">🎓 Prueba</StatusBadge>
-        ) : null,
+      header: "Estado",
+      cell: (row: Clase) => {
+        const variant = ESTADO_COLORS[row.estado];
+        const label = ESTADO_LABELS[row.estado];
+        return <StatusBadge status={variant}>{label}</StatusBadge>;
+      },
     },
     {
       header: "Acciones",
       cell: (row: Clase) => {
         const puedeEditar = puedeEditarClase(row);
-
         return (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button variant="ghost" className="h-8 w-8 p-0">
                 <MoreVertical className="h-4 w-4" />
                 <span className="sr-only">Abrir menú de acciones</span>
               </Button>
@@ -630,7 +402,8 @@ export default function ClasesPage() {
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleOpenEditDialog(row);
+                  setClaseToEdit(row);
+                  setIsOpen(true);
                 }}
                 disabled={!puedeEditar}
               >
@@ -704,428 +477,40 @@ export default function ClasesPage() {
               }}
             >
               <DialogTrigger asChild>
-                <Button>
+                <Button className="h-11 shrink-0">
                   <Plus className="mr-2 h-4 w-4" />
                   Nueva Clase
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-lg">
-                <form onSubmit={handleSubmit}>
-                  <DialogHeader>
-                    <DialogTitle className="font-display">
-                      {claseToEdit ? "Editar Clase" : "Nueva Clase"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {claseToEdit
-                        ? `Editando clase de ${getAlumnoNombreCompleto(claseToEdit.alumnoId)}`
-                        : "Completa los datos para programar una nueva clase"}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    {claseToEdit?.esPrueba && (
-                      <div className="flex items-center gap-2 ml-4">
-                        <span className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-orange-300 bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-800">
-                          <Info className="h-3 w-3 text-orange-600" />
-                          Clase de Prueba
-                        </span>
-                      </div>
-                    )}
-                    {/* FILA 1: Día + Hora */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="dia">Día</Label>
-                        <Input
-                          id="dia"
-                          type="date"
-                          value={dia}
-                          onChange={(e) => setDia(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="hora">Hora de Inicio</Label>
-                        <Input
-                          id="hora"
-                          type="time"
-                          value={hora}
-                          onChange={(e) => setHora(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
+                <DialogHeader>
+                  <DialogTitle className="font-display">
+                    {claseToEdit ? "Editar Clase" : "Nueva Clase"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {claseToEdit
+                      ? "Modifica los datos de la clase"
+                      : "Completa los datos para programar una nueva clase"}
+                  </DialogDescription>
+                </DialogHeader>
 
-                    {/* FILA 2: Alumno + Caballo */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="alumnoId">
-                          Alumno
-                          {especialidad === "MONTA" && (
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              (Asignado automáticamente)
-                            </span>
-                          )}
-                          {claseToEdit?.esPrueba && !claseToEdit?.alumnoId && (
-                            <span className="ml-2 text-xs text-orange-600">
-                              (Clase de prueba)
-                            </span>
-                          )}
-                        </Label>
-                        {especialidad === "MONTA" && (
-                          <input
-                            type="hidden"
-                            name="alumnoId"
-                            value={alumnoId}
-                          />
-                        )}
-                        {claseToEdit?.esPrueba && !claseToEdit?.alumnoId ? (
-                          <div className="grid grid-cols-2 gap-2">
-                            <Input
-                              value={nombrePrueba}
-                              onChange={(e) => setNombrePrueba(e.target.value)}
-                              placeholder="Nombre"
-                            />
-                            <Input
-                              value={apellidoPrueba}
-                              onChange={(e) =>
-                                setApellidoPrueba(e.target.value)
-                              }
-                              placeholder="Apellido"
-                            />
-                          </div>
-                        ) : (
-                          <Select
-                            name="alumnoId"
-                            required={
-                              especialidad !== "MONTA" &&
-                              !(
-                                esPruebaChecked &&
-                                tipoPrueba === "persona_nueva"
-                              )
-                            }
-                            value={alumnoId || "1"}
-                            onValueChange={setAlumnoId}
-                            disabled={isReadonly}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar alumno" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {alumnosValidos
-                                .filter((alumno: Alumno) =>
-                                  especialidad === "MONTA"
-                                    ? alumno.id === 1
-                                    : alumno.id !== 1,
-                                )
-                                .map((alumno: Alumno) => (
-                                  <SelectItem
-                                    key={alumno.id}
-                                    value={String(alumno.id)}
-                                  >
-                                    {alumno.nombre} {alumno.apellido}
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="caballoId">
-                          Caballo
-                          {(() => {
-                            const alumno = alumnosValidos.find(
-                              (a: Alumno) => a.id === Number(alumnoId),
-                            );
-                            if (alumno?.caballoPropio) {
-                              const caballo = caballos.find(
-                                (c: Caballo) =>
-                                  c.id ===
-                                  (typeof alumno.caballoPropio === "number"
-                                    ? alumno.caballoPropio
-                                    : alumno.caballoPropio.id),
-                              );
-                              return caballo ? (
-                                <span className="ml-2 text-xs font-medium text-success">
-                                  ✓ Predeterminado: {caballo.nombre}
-                                </span>
-                              ) : null;
-                            }
-                            return null;
-                          })()}
-                        </Label>
-                        <Select value={caballoId} onValueChange={setCaballoId}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar caballo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {caballos
-                              .filter((c: Caballo) => c.disponible)
-                              .map((caballo: Caballo) => (
-                                <SelectItem
-                                  key={caballo.id}
-                                  value={String(caballo.id)}
-                                >
-                                  {caballo.nombre} (
-                                  {caballo.tipo === "ESCUELA"
-                                    ? "Escuela"
-                                    : "Privado"}
-                                  )
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {/* FILA 3: Instructor + Especialidad */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="instructorId">Instructor</Label>
-                        <Select
-                          value={instructorId}
-                          onValueChange={setInstructorId}
-                          required
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar instructor" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {instructores
-                              .filter((i: Instructor) => i.activo)
-                              .map((instructor: Instructor) => (
-                                <SelectItem
-                                  key={instructor.id}
-                                  value={String(instructor.id)}
-                                >
-                                  {instructor.nombre} {instructor.apellido}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="especialidad">Especialidad</Label>
-                        <Select
-                          name="especialidad"
-                          required
-                          value={especialidad}
-                          onValueChange={handleEspecialidadChange}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar especialidad" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ESPECIALIDADES.map((esp) => (
-                              <SelectItem key={esp} value={esp}>
-                                {esp.charAt(0).toUpperCase() +
-                                  esp.slice(1).toLowerCase()}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {/* FILA 4: Estado + Tipo de Clase (crear) / Observaciones (editar) */}
-                    <div className="grid grid-cols-2 gap-4">
-                      {claseToEdit && (
-                        <div className="space-y-2">
-                          <Label htmlFor="estado">Estado</Label>
-                          <Select
-                            required
-                            value={estado}
-                            onValueChange={(v) =>
-                              setEstado(v as Clase["estado"])
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {ESTADOS.map((estado) => (
-                                <SelectItem key={estado} value={estado}>
-                                  {estado.charAt(0).toUpperCase() +
-                                    estado.slice(1).toLowerCase()}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-
-                      {!claseToEdit ? (
-                        <div className="space-y-2">
-                          <Label className="text-sm text-muted-foreground">
-                            Tipo de Clase
-                          </Label>
-                          <div className="flex items-center gap-3 rounded-md border border-orange-300 bg-orange-50 p-2.5 h-10">
-                            <input
-                              type="checkbox"
-                              id="esPrueba"
-                              name="esPrueba"
-                              checked={esPruebaChecked}
-                              onChange={(e) => {
-                                setEsPruebaChecked(e.target.checked);
-                                if (!e.target.checked) {
-                                  setTipoPrueba("persona_nueva");
-                                  setNombrePrueba("");
-                                  setApellidoPrueba("");
-                                }
-                              }}
-                              className="h-4 w-4 rounded border-orange-400 text-orange-600 focus:ring-orange-500"
-                            />
-                            <Label
-                              htmlFor="esPrueba"
-                              className="text-sm font-medium text-orange-800 cursor-pointer"
-                            >
-                              Clase de Prueba
-                            </Label>
-                          </div>
-                        </div>
-                      ) : (
-                        <></>
-                      )}
-                    </div>
-
-                    {/* FILA 5: Duración + Fin estimado */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="duracion">Duración</Label>
-                        <Select
-                          name="duracion"
-                          required
-                          value={String(duracion)}
-                          onValueChange={(value) => setDuracion(Number(value))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar duración" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="30">30 minutos</SelectItem>
-                            <SelectItem value="60">60 minutos</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {claseToEdit && (
-                        <div className="space-y-2">
-                          <Label className="text-sm text-muted-foreground">
-                            Fin estimado
-                          </Label>
-                          <p className="flex h-10 items-center text-sm text-muted-foreground">
-                            {hora
-                              ? (() => {
-                                  const [h, m] = hora.split(":").map(Number);
-                                  const totalMin = h * 60 + m + duracion;
-                                  return `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
-                                })()
-                              : "—"}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* FILA 6: Observaciones al crear (span completo) */}
-                    {claseToEdit && (
-                      <div className="space-y-2">
-                        <Label htmlFor="observaciones">Observaciones</Label>
-                        <Input
-                          id="observaciones"
-                          placeholder="Ej. Lluvia, Feriado, etc"
-                          value={observaciones}
-                          onChange={(e) => setObservaciones(e.target.value)}
-                        />
-                      </div>
-                    )}
-
-                    {/* BLOQUE PersonaPrueba: visible solo cuando esPrueba está marcado en creación */}
-                    {!claseToEdit && esPruebaChecked && (
-                      <div className="rounded-md border border-orange-200 bg-orange-50 p-4 space-y-3">
-                        {/* Radio: persona nueva vs alumno existente */}
-                        <div className="flex gap-6">
-                          <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-orange-900">
-                            <input
-                              type="radio"
-                              name="tipoPrueba"
-                              value="persona_nueva"
-                              checked={tipoPrueba === "persona_nueva"}
-                              onChange={() => {
-                                setTipoPrueba("persona_nueva");
-                                setAlumnoId("");
-                              }}
-                              className="text-orange-600"
-                            />
-                            Persona nueva
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-orange-900">
-                            <input
-                              type="radio"
-                              name="tipoPrueba"
-                              value="alumno_existente"
-                              checked={tipoPrueba === "alumno_existente"}
-                              onChange={() => {
-                                setTipoPrueba("alumno_existente");
-                                setNombrePrueba("");
-                                setApellidoPrueba("");
-                              }}
-                              className="text-orange-600"
-                            />
-                            Alumno existente
-                          </label>
-                        </div>
-
-                        {/* Si persona nueva: nombre + apellido */}
-                        {tipoPrueba === "persona_nueva" && (
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                              <Label className="text-xs text-orange-800">
-                                Nombre/s
-                              </Label>
-                              <Input
-                                value={nombrePrueba}
-                                onChange={(e) =>
-                                  setNombrePrueba(e.target.value)
-                                }
-                                placeholder="Nombre/s"
-                                required
-                                className="bg-white"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs text-orange-800">
-                                Apellido/s
-                              </Label>
-                              <Input
-                                value={apellidoPrueba}
-                                onChange={(e) =>
-                                  setApellidoPrueba(e.target.value)
-                                }
-                                placeholder="Apellido/s"
-                                required
-                                className="bg-white"
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Si alumno existente: select (ya está arriba, solo mostramos mensaje) */}
-                        {tipoPrueba === "alumno_existente" && (
-                          <p className="text-xs text-orange-700">
-                            Seleccioná el alumno en el selector de arriba.
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      type="submit"
-                      disabled={
-                        createMutation.isPending || updateMutation.isPending
-                      }
-                    >
-                      {claseToEdit ? "Guardar Cambios" : "Crear Clase"}
-                    </Button>
-                  </DialogFooter>
-                </form>
+                <ClaseForm
+                  clase={claseToEdit ?? undefined}
+                  alumnos={alumnosValidos}
+                  instructores={instructores}
+                  caballos={caballos}
+                  clases={clases}
+                  onSubmit={(data) => {
+                    if (claseToEdit) {
+                      updateMutation.mutate({ id: claseToEdit.id, data });
+                    } else {
+                      createMutation.mutate(data);
+                    }
+                  }}
+                  isPending={
+                    createMutation.isPending || updateMutation.isPending
+                  }
+                />
               </DialogContent>
             </Dialog>
           </div>
@@ -1148,8 +533,8 @@ export default function ClasesPage() {
             isLoading={isLoading}
             emptyMessage={
               isSearchActive
-                ? "No se encontraron alumnos con esos criterios de búsqueda"
-                : "No hay alumnos que coincidan con los filtros"
+                ? "No se encontraron clases con esos criterios de búsqueda"
+                : "No hay clases que coincidan con los filtros"
             }
             onRowClick={(clase) => navigate(`/clases/${clase.id}`)}
           />
@@ -1165,24 +550,9 @@ export default function ClasesPage() {
               <GenericCard
                 item={clase}
                 key={clase.id}
-                title={`Clase de ${
-                  clase.especialidad.charAt(0) +
-                  clase.especialidad.slice(1).toLowerCase()
-                }`}
-                subtitle=""
-                // TODO subtitle="Descripción crear campo en db"
+                title={getNombreParaClase(clase)}
+                subtitle={`${clase.dia} - ${formatearConZona(clase.diaHoraCompleto)}`}
                 fields={[
-                  {
-                    label: "Dia",
-                    value: `${clase.dia.split("-")[2]}/${clase.dia.split("-")[1]}/${
-                      clase.dia.split("-")[0]
-                    }`,
-                  },
-                  {
-                    label: "Hora",
-                    value: formatearConZona(clase.diaHoraCompleto),
-                  },
-                  { label: "Alumno", value: getNombreParaClase(clase) },
                   {
                     label: "Instructor",
                     value: getInstructorNombre(clase.instructorId),
@@ -1191,30 +561,26 @@ export default function ClasesPage() {
                     label: "Caballo",
                     value: getCaballoNombre(clase.caballoId),
                   },
+                  { label: "Especialidad", value: clase.especialidad },
                   {
-                    label: "Estado ",
-                    value: ESTADO_LABELS[clase.estado] || clase.estado,
-                    type: "badge",
-                    trueLabel: "",
-                    falseLabel: "",
+                    label: "Estado",
+                    value: ESTADO_LABELS[clase.estado],
                   },
                 ]}
                 onClick={() => navigate(`/clases/${clase.id}`)}
                 onEdit={() => {
-                  if (puedeEditarClase(clase)) {
-                    setClaseToEdit(clase);
-                    setIsOpen(true);
-                  } else {
-                    toast.error("No se puede editar una clase finalizada");
-                  }
+                  setClaseToEdit(clase);
+                  setIsOpen(true);
                 }}
-                onDelete={() => {
-                  if (puedeEditarClase(clase)) {
-                    setClaseToDelete(clase);
-                  } else {
-                    toast.error("No se puede eliminar una clase finalizada");
-                  }
-                }}
+                onDelete={
+                  puedeEditarClase(clase)
+                    ? () => {
+                        if (confirm("¿Eliminar esta clase?")) {
+                          deleteMutation.mutate(clase.id);
+                        }
+                      }
+                    : undefined
+                }
               />
             ))}
           </div>

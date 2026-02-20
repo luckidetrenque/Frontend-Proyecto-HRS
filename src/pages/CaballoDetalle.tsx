@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
+import { CaballoForm } from "@/components/forms/CaballoForm";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -530,58 +531,18 @@ export default function CaballoDetalle() {
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="sm:max-w-md">
-          <form onSubmit={handleSubmit}>
-            <DialogHeader>
-              <DialogTitle className="font-display">Editar Caballo</DialogTitle>
-              <DialogDescription>
-                Modifica los datos del caballo
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="nombre">Nombre/s</Label>
-                <Input
-                  id="nombre"
-                  type="text"
-                  autoComplete="given-name"
-                  placeholder="Nombre del caballo"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tipo">Tipo</Label>
-                <Select
-                  value={tipo}
-                  onValueChange={(value) =>
-                    setTipo(value as "ESCUELA" | "PRIVADO")
-                  }
-                >
-                  <SelectTrigger id="tipo">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ESCUELA">Escuela</SelectItem>
-                    <SelectItem value="PRIVADO">Privado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-3">
-                <Switch
-                  id="disponible"
-                  checked={disponible}
-                  onCheckedChange={setDisponible}
-                />
-                <Label htmlFor="disponible">Está disponible</Label>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? "Guardando..." : "Guardar Cambios"}
-              </Button>
-            </DialogFooter>
-          </form>
+          <DialogHeader>
+            <DialogTitle>Editar Caballo</DialogTitle>
+            <DialogDescription>
+              Modifica los datos del caballo
+            </DialogDescription>
+          </DialogHeader>
+
+          <CaballoForm
+            caballo={caballo}
+            onSubmit={(data) => updateMutation.mutate({ id: caballoId, data })}
+            isPending={updateMutation.isPending}
+          />
         </DialogContent>
       </Dialog>
     </Layout>

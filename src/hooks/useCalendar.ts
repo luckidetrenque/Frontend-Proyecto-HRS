@@ -60,13 +60,6 @@ export function useCalendar() {
   const [isCopyOpen, setIsCopyOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-  const [tipoPrueba, setTipoPrueba] = useState<
-    "alumno_existente" | "persona_nueva"
-  >("persona_nueva");
-  const [nombrePrueba, setNombrePrueba] = useState("");
-  const [apellidoPrueba, setApellidoPrueba] = useState("");
-  const [esPruebaChecked, setEsPruebaChecked] = useState(false);
-
   // Estados de filtros
   const [filters, setFilters] = useState({
     alumnoId: "all",
@@ -309,107 +302,6 @@ export function useCalendar() {
     setClaseToEdit(null);
     setPrefilledCaballoId(null);
     setPrefilledHora(null);
-    setEsPruebaChecked(false);
-    setTipoPrueba("persona_nueva");
-    setNombrePrueba("");
-    setApellidoPrueba("");
-  };
-
-  // useCalendar.ts — nueva firma
-  const handleSubmitClase = async (
-    e: React.FormEvent<HTMLFormElement>,
-    formValues: {
-      especialidad: string;
-      alumnoId: string;
-      caballoId: string;
-      instructorId: string;
-      hora: string;
-      duracion: number;
-      dia?: string;
-      estado?: Clase["estado"];
-      observaciones?: string;
-    },
-  ) => {
-    e.preventDefault();
-
-    let alumnoIdFinal: number | null = null;
-    let personaPruebaId: number | null = null;
-
-    if (esPruebaChecked && tipoPrueba === "persona_nueva") {
-      if (!nombrePrueba.trim() || !apellidoPrueba.trim()) {
-        toast.error("Ingresá nombre y apellido de la persona de prueba");
-        return;
-      }
-      try {
-        const personaPrueba = await personasPruebaApi.crear({
-          nombre: nombrePrueba.trim(),
-          apellido: apellidoPrueba.trim(),
-        });
-        personaPruebaId = personaPrueba.id;
-      } catch {
-        toast.error("Error al registrar la persona de prueba");
-        return;
-      }
-    } else {
-      alumnoIdFinal = Number(formValues.alumnoId) || null;
-    }
-
-    const alumno = alumnoIdFinal
-      ? alumnos.find((a: Alumno) => a.id === alumnoIdFinal)
-      : undefined;
-
-    if (!claseToEdit && esPruebaChecked && alumno) {
-      const { esValido, mensaje } = validarClasePrueba(
-        clases,
-        alumno,
-        formValues.especialidad as Clase["especialidad"],
-        claseToEdit?.id,
-      );
-      if (!esValido) {
-        toast.error(mensaje);
-        return;
-      }
-    }
-
-    // Resolver caballo desde el estado
-    const caballoIdFinal = formValues.caballoId
-      ? Number(formValues.caballoId)
-      : alumno?.caballoPropio && typeof alumno.caballoPropio === "object"
-        ? alumno.caballoPropio.id
-        : 0;
-
-    if (!caballoIdFinal) {
-      toast.error("Debe seleccionar un caballo");
-      return;
-    }
-
-    const { esValido: horarioOk, mensaje: mensajeHorario } =
-      validarHorarioLimite(formValues.hora, formValues.duracion);
-    if (!horarioOk) {
-      toast.error(mensajeHorario);
-      return;
-    }
-
-    const data = {
-      especialidad: formValues.especialidad as Clase["especialidad"],
-      dia: formValues.dia ?? format(currentDate, "yyyy-MM-dd"),
-      hora: parsearHoraParaApi(formValues.hora),
-      duracion: formValues.duracion,
-      estado: claseToEdit?.estado ?? formValues.estado ?? "PROGRAMADA",
-      observaciones: formValues.observaciones ?? "",
-      instructorId: Number(formValues.instructorId),
-      caballoId: caballoIdFinal,
-      diaHoraCompleto: "",
-      alumnoId: alumnoIdFinal,
-      personaPruebaId,
-      esPrueba: esPruebaChecked,
-    };
-
-    if (claseToEdit) {
-      updateMutation.mutate({ id: claseToEdit.id, data });
-    } else {
-      createMutation.mutate(data);
-    }
   };
 
   const handleStatusChange = (claseId: number, newStatus: Clase["estado"]) => {
@@ -571,16 +463,6 @@ export function useCalendar() {
     setIsDeleteOpen,
     filters,
 
-    // Estados de prueba (para el formulario en Calendario.tsx)
-    esPruebaChecked,
-    setEsPruebaChecked,
-    tipoPrueba,
-    setTipoPrueba,
-    nombrePrueba,
-    setNombrePrueba,
-    apellidoPrueba,
-    setApellidoPrueba,
-
     // Datos
     clases,
     filteredClases,
@@ -609,7 +491,6 @@ export function useCalendar() {
     handleEditClase,
     handleDeleteClase,
     handleCloseDialog,
-    handleSubmitClase,
     handleStatusChange,
     handleBulkCancel,
     handleCopySubmit,
