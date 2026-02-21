@@ -24,6 +24,7 @@ import {
   Caballo,
   Clase,
   Instructor,
+  PersonaPrueba,
   personasPruebaApi,
 } from "@/lib/api";
 import {
@@ -52,8 +53,9 @@ interface ClaseFormProps {
   alumnos: Alumno[];
   instructores: Instructor[];
   caballos: Caballo[];
-  clases: Clase[]; // Para validar clase de prueba
-  currentDate?: Date; // Para inicializar el día en Calendario
+  clases: Clase[];
+  personasPrueba: PersonaPrueba[];
+  currentDate?: Date;
   prefilledHora?: string;
   prefilledCaballoId?: number;
   onSubmit: (data: ClaseFormData) => void;
@@ -67,6 +69,7 @@ export function ClaseForm({
   instructores,
   caballos,
   clases,
+  personasPrueba,
   currentDate,
   prefilledHora,
   prefilledCaballoId,
@@ -100,35 +103,41 @@ export function ClaseForm({
   });
 
   // Pre-poblar en modo edición
+  // ✅ LÍNEAS 99-128 - CORREGIDO
   useEffect(() => {
     if (clase) {
+      // Modo edición
       setEspecialidad(clase.especialidad);
       setAlumnoId(clase.alumnoId ? String(clase.alumnoId) : "");
       setInstructorId(clase.instructorId ? String(clase.instructorId) : "");
       setCaballoId(clase.caballoId ? String(clase.caballoId) : "");
       setDia(clase.dia);
-      setHora(obtenerHoraArgentina(clase.diaHoraCompleto));
+      setHora(clase.hora.slice(0, 5));
       setDuracion(Number(clase.duracion) || 30);
       setEstado(clase.estado ?? "PROGRAMADA");
       setObservaciones(clase.observaciones ?? "");
-      // No mostrar opciones de prueba en edición
       setEsPruebaChecked(false);
-      if (!clase) {
-        if (prefilledHora) setHora(prefilledHora);
-        if (prefilledCaballoId) setCaballoId(String(prefilledCaballoId));
-      }
     } else {
-      // Modo creación: inicializar con fecha actual si viene de Calendario
+      // Modo creación
       if (currentDate) {
         const year = currentDate.getFullYear();
         const month = String(currentDate.getMonth() + 1).padStart(2, "0");
         const day = String(currentDate.getDate()).padStart(2, "0");
         setDia(`${year}-${month}-${day}`);
       }
+
+      // ✅ Prefilled desde el calendario (doble click en celda)
+      if (prefilledHora) {
+        setHora(prefilledHora);
+      }
+      if (prefilledCaballoId) {
+        setCaballoId(String(prefilledCaballoId));
+      }
     }
   }, [clase, currentDate, prefilledCaballoId, prefilledHora]);
 
   // Auto-seleccionar caballo del alumno
+  // ✅ LÍNEAS 131-144 - CORREGIDO
   useEffect(() => {
     if (!clase && alumnoId) {
       const alumno = alumnosValidos.find((a) => a.id === Number(alumnoId));
@@ -138,9 +147,9 @@ export function ClaseForm({
             ? alumno.caballoPropio
             : alumno.caballoPropio.id;
         setCaballoId(String(id));
-      } else {
-        setCaballoId("");
       }
+      // ✅ NO limpiar el caballo si no tiene propio
+      // Dejarlo como está para que mantenga la selección manual
     }
   }, [alumnoId, clase, alumnosValidos]);
 
@@ -160,24 +169,32 @@ export function ClaseForm({
     let alumnoIdFinal: number | null = null;
     let personaPruebaId: number | null = null;
 
-    // ✅ Validación: Clase de prueba con persona nueva
+    // ✅ LÍNEAS 170-210 CORREGIDAS
     if (esPruebaChecked && tipoPrueba === "persona_nueva") {
+      // Validar campos de persona nueva
       if (!nombrePrueba.trim() || !apellidoPrueba.trim()) {
         toast.error("Ingresá nombre y apellido de la persona de prueba");
         return;
       }
+
       try {
         const personaPrueba = await personasPruebaApi.crear({
           nombre: nombrePrueba.trim(),
           apellido: apellidoPrueba.trim(),
         });
         personaPruebaId = personaPrueba.id;
+        alumnoIdFinal = null; // ✅ Explícitamente null para persona nueva
       } catch {
         toast.error("Error al registrar la persona de prueba");
         return;
       }
     } else {
-      alumnoIdFinal = Number(alumnoId) || null;
+      // Caso normal: alumno existente O clase de prueba con alumno existente
+      if (!alumnoId) {
+        toast.error("Debe seleccionar un alumno");
+        return;
+      }
+      alumnoIdFinal = Number(alumnoId);
     }
 
     // ✅ Validación: Clase de prueba para alumno existente
@@ -185,7 +202,12 @@ export function ClaseForm({
       ? alumnosValidos.find((a: Alumno) => a.id === alumnoIdFinal)
       : undefined;
 
-    if (!clase && esPruebaChecked && alumno) {
+    if (
+      !clase &&
+      esPruebaChecked &&
+      tipoPrueba === "alumno_existente" &&
+      alumno
+    ) {
       const { esValido, mensaje } = validarClasePrueba(
         clases,
         alumno,
@@ -198,14 +220,20 @@ export function ClaseForm({
       }
     }
 
-    // ✅ Resolver caballo (auto-asignar si el alumno tiene caballo propio)
-    const caballoIdFinal = caballoId
-      ? Number(caballoId)
-      : alumno?.caballoPropio && typeof alumno.caballoPropio === "object"
-        ? alumno.caballoPropio.id
-        : 0;
+    // ✅ Resolver caballo
+    let caballoIdFinal: number;
 
-    if (!caballoIdFinal) {
+    if (caballoId) {
+      // Caballo seleccionado manualmente
+      caballoIdFinal = Number(caballoId);
+    } else if (alumno?.caballoPropio) {
+      // Auto-asignar caballo del alumno
+      caballoIdFinal =
+        typeof alumno.caballoPropio === "object"
+          ? alumno.caballoPropio.id
+          : alumno.caballoPropio;
+    } else {
+      // No hay caballo seleccionado ni predeterminado
       toast.error("Debe seleccionar un caballo");
       return;
     }

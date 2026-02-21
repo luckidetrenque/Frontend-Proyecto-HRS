@@ -500,6 +500,7 @@ export default function ClasesPage() {
                   instructores={instructores}
                   caballos={caballos}
                   clases={clases}
+                  personasPrueba={personasPrueba}
                   onSubmit={(data) => {
                     if (claseToEdit) {
                       updateMutation.mutate({ id: claseToEdit.id, data });

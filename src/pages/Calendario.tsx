@@ -1,49 +1,28 @@
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Info } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { CalendarControls } from "@/components/calendar/CalendarControls";
 import { CalendarToolbar } from "@/components/calendar/CalendarToolbar";
-import {
-  ALUMNO_COMODIN_ID,
-  ESPECIALIDADES,
-  ESTADOS,
-  obtenerHoraArgentina,
-} from "@/components/calendar/clases.constants";
 import { DayView } from "@/components/calendar/DayView";
 import { MonthView } from "@/components/calendar/MonthView";
 import { WeekView } from "@/components/calendar/WeekView";
 import { ClaseForm } from "@/components/forms/ClaseForm";
 import { Layout } from "@/components/Layout";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FilterBar } from "@/components/ui/filter-bar";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useCalendar } from "@/hooks/useCalendar";
 import { useClasesRestantes } from "@/hooks/useClasesRestantes";
-import { Alumno, Caballo, Clase, Instructor } from "@/lib/api";
-import {
-  handleEspecialidadChangeEffect,
-  puedeEditarClase,
-} from "@/utils/validacionesClases";
+import { Alumno, Instructor } from "@/lib/api";
+import { puedeEditarClase } from "@/utils/validacionesClases";
 
 export default function CalendarioPage() {
   const {
@@ -63,6 +42,7 @@ export default function CalendarioPage() {
     alumnos,
     instructores,
     caballos,
+    personasPrueba,
     isLoading,
     calendarDays,
     clasesByDate,
@@ -96,59 +76,12 @@ export default function CalendarioPage() {
     conflictSet,
   } = useCalendar();
 
-  // Estados para controlar la especialidad y el alumno en el formulario
-  const [especialidad, setEspecialidad] = useState<string>("");
   const [alumnoId, setAlumnoId] = useState<string>("");
-  const [duracion, setDuracion] = useState<number>(30);
-  const [hora, setHora] = useState<string>("09:00");
-  const [estado, setEstado] = useState<Clase["estado"]>("PROGRAMADA");
-  const [instructorId, setInstructorId] = useState("");
-  const [caballoId, setCaballoId] = useState("");
-  const [observaciones, setObservaciones] = useState<string>("");
-
   // Verificar clases restantes del alumno
   const { estaAgotado } = useClasesRestantes(
     alumnoId ? Number(alumnoId) : 0,
     currentDate,
   );
-
-  // Efecto para resetear los estados cuando se abre/cierra el diálogo
-  useEffect(() => {
-    if (isDialogOpen && claseToEdit) {
-      setEspecialidad(claseToEdit.especialidad);
-      setAlumnoId(claseToEdit.alumnoId ? String(claseToEdit.alumnoId) : "");
-      setDuracion(claseToEdit.duracion || 30);
-      setHora(obtenerHoraArgentina(claseToEdit.diaHoraCompleto));
-      setEstado(claseToEdit.estado);
-      setInstructorId(String(claseToEdit.instructorId));
-      setCaballoId(String(claseToEdit.caballoId));
-      setObservaciones(claseToEdit.observaciones ?? "");
-    } else if (isDialogOpen && prefilledHora) {
-      setHora(prefilledHora);
-      if (prefilledCaballoId) {
-        setCaballoId(String(prefilledCaballoId));
-      }
-    } else if (!isDialogOpen) {
-      setEspecialidad("");
-      setAlumnoId("");
-      setDuracion(30);
-      setHora("09:00");
-      setEstado("PROGRAMADA");
-      setInstructorId("");
-      setCaballoId("");
-      setObservaciones("");
-    }
-  }, [isDialogOpen, claseToEdit, prefilledHora, prefilledCaballoId]);
-
-  // Manejador para cambio de especialidad
-  const handleEspecialidadChange = (value: string) => {
-    handleEspecialidadChangeEffect(
-      value,
-      ALUMNO_COMODIN_ID,
-      setEspecialidad,
-      setAlumnoId,
-    );
-  };
 
   // Configuración de filtros
   const filterConfig = [
@@ -334,6 +267,7 @@ export default function CalendarioPage() {
             instructores={instructores}
             caballos={caballos}
             clases={filteredClases}
+            personasPrueba={personasPrueba}
             currentDate={currentDate}
             prefilledHora={prefilledHora}
             prefilledCaballoId={prefilledCaballoId}

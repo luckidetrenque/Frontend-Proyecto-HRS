@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import {
   AlertCircle,
   ArrowLeft,
@@ -54,6 +56,7 @@ import {
   Clase,
   clasesApi,
   instructoresApi,
+  personasPruebaApi,
 } from "@/lib/api";
 
 export default function ClaseDetalle() {
@@ -99,6 +102,11 @@ export default function ClaseDetalle() {
     queryKey: ["clases-page"],
     queryFn: clasesApi.listarDetalladas,
     enabled: isDialogOpen,
+  });
+
+  const { data: personasPrueba = [] } = useQuery({
+    queryKey: ["personas-prueba"],
+    queryFn: personasPruebaApi.listar,
   });
 
   const updateMutation = useMutation({
@@ -244,10 +252,8 @@ export default function ClaseDetalle() {
                 <div className="flex items-center justify-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span>
-                    {new Date(clase.dia).toLocaleDateString("es-AR", {
-                      weekday: "long",
-                      day: "numeric",
-                      month: "long",
+                    {format(parseISO(clase.dia), "EEEE, d 'de' MMMM", {
+                      locale: es,
                     })}
                   </span>
                 </div>
@@ -533,6 +539,7 @@ export default function ClaseDetalle() {
             instructores={instructores}
             caballos={caballos}
             clases={clases}
+            personasPrueba={personasPrueba}
             onSubmit={(data) => updateMutation.mutate({ id: claseId, data })}
             isPending={updateMutation.isPending}
           />

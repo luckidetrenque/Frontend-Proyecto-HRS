@@ -1,9 +1,3 @@
-/**
- * ClasePopover.tsx
- * Popover con detalles de la clase (compartido entre vistas)
- * ✅ Con soporte para clases de prueba
- */
-
 import {
   ChessKnight,
   Clock,
@@ -79,15 +73,15 @@ export function ClasePopover({
             <h4 className="font-semibold">Detalles de la Clase</h4>
             <div className="flex items-center gap-2">
               {/* ✅ Badge de clase de prueba */}
-              {clase.esPrueba && (
+              {/* {clase.esPrueba && (
                 <StatusBadge status="warning">
                   <GraduationCap className="h-3 w-3 mr-1" />
                   Prueba
                 </StatusBadge>
-              )}
-              <StatusBadge status={ESTADO_COLORS[clase.estado]}>
+              )} */}
+              {/* <StatusBadge status={ESTADO_COLORS[clase.estado]}>
                 {clase.estado}
-              </StatusBadge>
+              </StatusBadge> */}
             </div>
           </div>
 
@@ -99,8 +93,7 @@ export function ClasePopover({
                 <div>
                   <strong className="font-semibold">Clase de Prueba</strong>
                   <p className="mt-1 text-orange-700">
-                    Esta clase no cuenta como clase regular del alumno. El
-                    alumno debe estar inactivo.
+                    Esta clase no cuenta como clase regular del alumno.
                   </p>
                 </div>
               </div>

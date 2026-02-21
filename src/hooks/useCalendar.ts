@@ -22,7 +22,6 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { ViewMode } from "@/components/calendar/clases.constants";
-import { parsearHoraParaApi } from "@/components/calendar/clases.constants";
 import {
   Alumno,
   alumnosApi,
@@ -35,11 +34,6 @@ import {
   personasPruebaApi,
 } from "@/lib/api";
 import { exportToExcel } from "@/utils/exportToExcel";
-import {
-  resolverCaballoId,
-  validarClasePrueba,
-  validarHorarioLimite,
-} from "@/utils/validacionesClases";
 
 export function useCalendar() {
   const queryClient = useQueryClient();
@@ -85,6 +79,11 @@ export function useCalendar() {
   const { data: caballos = [] } = useQuery({
     queryKey: ["caballos"],
     queryFn: caballosApi.listar,
+  });
+
+  const { data: personasPrueba = [] } = useQuery({
+    queryKey: ["personas-prueba"],
+    queryFn: personasPruebaApi.listar,
   });
 
   // Clases filtradas
@@ -469,6 +468,7 @@ export function useCalendar() {
     alumnos,
     instructores,
     caballos,
+    personasPrueba,
     isLoading,
     calendarDays,
     clasesByDate,
