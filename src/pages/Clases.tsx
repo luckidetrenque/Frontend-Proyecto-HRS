@@ -21,6 +21,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -420,9 +421,7 @@ export default function ClasesPage() {
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (confirm("¿Eliminar esta clase?")) {
-                    deleteMutation.mutate(row.id);
-                  }
+                  setClaseToDelete(row);
                 }}
                 disabled={!puedeEditar}
                 className="text-red-600 focus:text-red-600 disabled:text-muted-foreground"
@@ -597,6 +596,38 @@ export default function ClasesPage() {
             onPageSizeChange={handlePageSizeChange}
           />
         )}
+        <Dialog
+          open={!!claseToDelete}
+          onOpenChange={() => setClaseToDelete(null)}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Eliminar clase</DialogTitle>
+              <DialogDescription>
+                ¿Seguro que deseas eliminar la clase de{" "}
+                {getNombreParaClase(claseToDelete)}del día
+                {claseToDelete?.dia} a las {claseToDelete?.hora} horas? Esta
+                acción no se puede deshacer.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setClaseToDelete(null)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (claseToDelete) {
+                    deleteMutation.mutate(claseToDelete.id);
+                    setClaseToDelete(null);
+                  }
+                }}
+              >
+                Eliminar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

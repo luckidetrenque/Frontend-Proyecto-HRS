@@ -9,10 +9,19 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 5173,
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [react(), mode === "development" && componentTagger()].filter(
+    Boolean,
+  ),
+  sourcemap: false,
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+    },
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
     },
   },
 }));

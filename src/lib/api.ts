@@ -6,7 +6,7 @@ import {
   TipoPension,
 } from "@/types/enums";
 // API Configuration for HRS - Escuela de Equitación
-const API_BASE_URL = "http://localhost:8080/api/v1";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Definición de tipos para Alumnos, Instructores, Caballos y Clases
 export interface Alumno {

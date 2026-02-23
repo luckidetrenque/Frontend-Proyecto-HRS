@@ -365,7 +365,10 @@ export function useCalendar() {
 
       toast.success("Excel exportado correctamente");
     } catch (error) {
-      console.error("Error al exportar Excel:", error);
+      if (import.meta.env.DEV) {
+        console.error("Error al exportar el archivo Excel");
+      }
+
       toast.error("Error al exportar el archivo Excel");
     }
   };

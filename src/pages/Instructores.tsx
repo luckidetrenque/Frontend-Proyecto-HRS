@@ -26,13 +26,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FilterBar } from "@/components/ui/filter-bar";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Switch } from "@/components/ui/switch";
-import { PRESET_COLORS } from "@/constants/instructor.constants";
 import { useValidarDniDuplicado } from "@/hooks/useValidarDniDuplicado";
 import {
   Instructor,
@@ -283,9 +279,8 @@ export default function InstructoresPage() {
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm("¿Eliminar este instructor?")) {
-                  deleteMutation.mutate(row.id);
-                }
+                setEditingInstructor(row);
+                setIsOpen(true);
               }}
               className="text-red-600 focus:text-red-600"
             >
@@ -445,6 +440,40 @@ export default function InstructoresPage() {
             onPageSizeChange={handlePageSizeChange}
           />
         )}
+        <Dialog
+          open={!!instructorToDelete}
+          onOpenChange={() => setInstructorToDelete(null)}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Eliminar instructor</DialogTitle>
+              <DialogDescription>
+                ¿Seguro que deseas eliminar a {instructorToDelete?.nombre}
+                {instructorToDelete?.apellido}? Esta acción no se puede
+                deshacer.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setInstructorToDelete(null)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (instructorToDelete) {
+                    deleteMutation.mutate(instructorToDelete.id);
+                    setInstructorToDelete(null);
+                  }
+                }}
+              >
+                Eliminar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

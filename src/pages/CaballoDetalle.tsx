@@ -14,7 +14,7 @@ import {
   User,
   XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -33,23 +33,12 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { InfoField } from "@/components/ui/InfoField";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Switch } from "@/components/ui/switch";
 import { Alumno, Caballo, caballosApi, Clase, clasesApi } from "@/lib/api";
 
 export default function CaballoDetalle() {
@@ -73,49 +62,12 @@ export default function CaballoDetalle() {
       toast.error(error.message || "Error al actualizar el caballo"),
   });
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    // 1️⃣ Validación básica
-    if (!nombre.trim()) {
-      toast.error("El nombre es obligatorio");
-      return;
-    }
-
-    // 2️⃣ Construcción de objeto
-    const data: Partial<Caballo> = {
-      nombre: nombre.trim(),
-      tipo,
-      disponible,
-    };
-
-    // 3️⃣ Mutación
-    updateMutation.mutate({
-      id: caballoId,
-      data,
-    });
-  };
-
   // Query para obtener el caballo
   const { data: caballo, isLoading: loadingCaballo } = useQuery({
     queryKey: ["caballo", caballoId],
     queryFn: () => caballosApi.obtener(caballoId),
     enabled: !!caballoId,
   });
-
-  // Estados vacíos (caballo aún no llegó del servidor)
-  const [nombre, setNombre] = useState<Caballo["nombre"]>("");
-  const [tipo, setTipo] = useState<Caballo["tipo"]>("ESCUELA");
-  const [disponible, setDisponible] = useState<Caballo["disponible"]>(true);
-
-  // useEffect que carga cuando llega el dato Y cuando se abre el dialog (para resetear tras editar)
-  useEffect(() => {
-    if (caballo && isEditOpen) {
-      setNombre(caballo.nombre);
-      setTipo(caballo.tipo);
-      setDisponible(caballo.disponible);
-    }
-  }, [isEditOpen, caballo]);
 
   // TODO Query para obtener las clases del caballo (METODO BUSCAR EN CONTROLADOR DE CLASES)
   // const { data: clasesCaballo = [], isLoading: loadingClases } = useQuery({

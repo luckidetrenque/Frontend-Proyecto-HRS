@@ -1,6 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
-import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
-import { es } from "date-fns/locale";
 import {
   ChessKnight,
   Download,
@@ -9,7 +6,6 @@ import {
   TrendingUp,
   User,
 } from "lucide-react";
-import { useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -39,369 +35,61 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Alumno,
-  alumnosApi,
-  Caballo,
-  caballosApi,
-  Clase,
-  clasesApi,
-  Instructor,
-  instructoresApi,
-} from "@/lib/api";
+  CHART_COLORS,
+  ESPECIALIDAD_COLORS,
+  ESTADO_COLORS,
+  useReportes,
+} from "@/hooks/useReportes";
+import { Caballo } from "@/lib/api";
 import { exportarExcel } from "@/utils/exportReportesToExcel";
 
-// ─── Paleta de colores compartida para recharts ───────────────────────────────
-const CHART_COLORS = {
-  programada: "#F59E0B",
-  iniciada: "#3B82F6",
-  completada: "#22C55E",
-  cancelada: "#EF4444",
-  aca: "#8B5CF6",
-  asa: "#EC4899",
-  equitacion: "#4472C4",
-  adiestramiento: "#ED7D31",
-  equinoterapia: "#A9D18E",
-  monta: "#FF0000",
-  escuela: "#4472C4",
-  privado: "#D4A017",
-};
+// ─── CustomTooltip (solo UI, vive en el componente) ───────────────────────────
+interface TooltipPayload {
+  name: string;
+  value: number | string;
+  color?: string;
+  fill?: string;
+}
 
-const ESTADO_COLORS: Record<string, string> = {
-  PROGRAMADA: CHART_COLORS.programada,
-  INICIADA: CHART_COLORS.iniciada,
-  COMPLETADA: CHART_COLORS.completada,
-  CANCELADA: CHART_COLORS.cancelada,
-  ACA: CHART_COLORS.aca,
-  ASA: CHART_COLORS.asa,
-};
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  label?: string | number;
+}
 
-const ESPECIALIDAD_COLORS: Record<string, string> = {
-  EQUITACION: CHART_COLORS.equitacion,
-  ADIESTRAMIENTO: CHART_COLORS.adiestramiento,
-  EQUINOTERAPIA: CHART_COLORS.equinoterapia,
-  MONTA: CHART_COLORS.monta,
-};
-
-export default function ReportesPage() {
-  const [dateRange, setDateRange] = useState({
-    inicio: format(startOfMonth(new Date()), "yyyy-MM-dd"),
-    fin: format(endOfMonth(new Date()), "yyyy-MM-dd"),
-  });
-
-  // ── Queries ──────────────────────────────────────────────────────────────────
-  const { data: alumnos = [] } = useQuery({
-    queryKey: ["alumnos"],
-    queryFn: alumnosApi.listar,
-  });
-
-  const { data: clases = [] } = useQuery({
-    queryKey: ["clases"],
-    queryFn: clasesApi.listarDetalladas,
-  });
-
-  const { data: instructores = [] } = useQuery({
-    queryKey: ["instructores"],
-    queryFn: instructoresApi.listar,
-  });
-
-  const { data: caballos = [] } = useQuery({
-    queryKey: ["caballos"],
-    queryFn: caballosApi.listar,
-  });
-
-  // ── Clases filtradas por período ─────────────────────────────────────────────
-  const clasesFiltradas = useMemo(
-    () =>
-      clases.filter(
-        (clase: Clase) =>
-          clase.dia >= dateRange.inicio && clase.dia <= dateRange.fin,
-      ),
-    [clases, dateRange],
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-border bg-background p-3 shadow-md text-sm">
+      <p className="font-semibold mb-1">{label}</p>
+      {payload.map((p: TooltipPayload, i: number) => (
+        <p key={i} style={{ color: p.color || p.fill }}>
+          {p.name}: <span className="font-medium">{p.value}</span>
+        </p>
+      ))}
+    </div>
   );
+};
 
-  // ── Estadísticas generales ───────────────────────────────────────────────────
-  const estadisticasGenerales = useMemo(() => {
-    const alumnosActivos = alumnos.filter((a: Alumno) => a.activo).length;
-    const totalClases = clasesFiltradas.length;
-    const clasesCompletadas = clasesFiltradas.filter(
-      (c: Clase) => c.estado === "COMPLETADA",
-    ).length;
-    const clasesCanceladas = clasesFiltradas.filter(
-      (c: Clase) => c.estado === "CANCELADA",
-    ).length;
-    const tasaCompletado =
-      totalClases > 0
-        ? ((clasesCompletadas / totalClases) * 100).toFixed(1)
-        : "0";
+// ─── Componente principal ─────────────────────────────────────────────────────
+export default function ReportesPage() {
+  const {
+    dateRange,
+    setDateRange,
+    alumnos,
+    estadisticasGenerales,
+    alumnosPorClases,
+    estadosClases,
+    especialidadesDemanda,
+    distribucionDias,
+    asistenciaPorAlumno,
+    rankingAlumnos,
+    cargaInstructores,
+    usoCaballos,
+    caballosSinUso,
+    estadisticasPrueba,
+  } = useReportes();
 
-    return {
-      alumnosActivos,
-      alumnosInactivos: alumnos.filter((a: Alumno) => !a.activo).length,
-      totalInstructores: instructores.filter((i: Instructor) => i.activo)
-        .length,
-      totalClases,
-      clasesCompletadas,
-      clasesCanceladas,
-      tasaCompletado,
-      totalCaballos: caballos.length,
-      caballosDisponibles: caballos.filter((c: Caballo) => c.disponible).length,
-    };
-  }, [alumnos, clasesFiltradas, instructores, caballos]);
-
-  // ── Alumnos por plan (para gráfico) ─────────────────────────────────────────
-  const alumnosPorClases = useMemo(() => {
-    const grupos: Record<number, number> = { 4: 0, 8: 0, 12: 0, 16: 0 };
-    alumnos.forEach((a: Alumno) => {
-      if (grupos[a.cantidadClases] !== undefined) grupos[a.cantidadClases]++;
-    });
-    return [4, 8, 12, 16].map((n) => ({
-      plan: `${n} clases`,
-      cantidad: grupos[n],
-      porcentaje:
-        alumnos.length > 0
-          ? parseFloat(((grupos[n] / alumnos.length) * 100).toFixed(1))
-          : 0,
-    }));
-  }, [alumnos]);
-
-  // ── Estados de clases (para gráfico pie) ────────────────────────────────────
-  const estadosClases = useMemo(() => {
-    const estados: Record<string, number> = {};
-    clasesFiltradas.forEach((c: Clase) => {
-      estados[c.estado] = (estados[c.estado] || 0) + 1;
-    });
-    return Object.entries(estados).map(([estado, cantidad]) => ({
-      estado,
-      cantidad,
-      porcentaje:
-        clasesFiltradas.length > 0
-          ? parseFloat(((cantidad / clasesFiltradas.length) * 100).toFixed(1))
-          : 0,
-    }));
-  }, [clasesFiltradas]);
-
-  // ── Especialidades más demandadas ────────────────────────────────────────────
-  const especialidadesDemanda = useMemo(() => {
-    const conteo: Record<string, number> = {};
-    clasesFiltradas.forEach((c: Clase) => {
-      conteo[c.especialidad] = (conteo[c.especialidad] || 0) + 1;
-    });
-    return Object.entries(conteo)
-      .map(([especialidad, cantidad]) => ({
-        especialidad,
-        cantidad,
-        porcentaje:
-          clasesFiltradas.length > 0
-            ? parseFloat(((cantidad / clasesFiltradas.length) * 100).toFixed(1))
-            : 0,
-      }))
-      .sort((a, b) => b.cantidad - a.cantidad);
-  }, [clasesFiltradas]);
-
-  // ── Distribución por día de semana ───────────────────────────────────────────
-  const distribucionDias = useMemo(() => {
-    const dias: Record<string, number> = {
-      Lunes: 0,
-      Martes: 0,
-      Miércoles: 0,
-      Jueves: 0,
-      Viernes: 0,
-      Sábado: 0,
-      Domingo: 0,
-    };
-    clasesFiltradas.forEach((c: Clase) => {
-      const dia = format(parseISO(c.dia), "EEEE", { locale: es });
-      const diaC = dia.charAt(0).toUpperCase() + dia.slice(1);
-      if (dias[diaC] !== undefined) dias[diaC]++;
-    });
-    return Object.entries(dias).map(([dia, cantidad]) => ({ dia, cantidad }));
-  }, [clasesFiltradas]);
-
-  // ── Distribución por horario ─────────────────────────────────────────────────
-  const distribucionHorarios = useMemo(() => {
-    const h = { Mañana: 0, Tarde: 0, Noche: 0 };
-    clasesFiltradas.forEach((c: Clase) => {
-      const hora = parseInt(c.hora.split(":")[0]);
-      if (hora < 12) h.Mañana++;
-      else if (hora < 18) h.Tarde++;
-      else h.Noche++;
-    });
-    return Object.entries(h).map(([horario, cantidad]) => ({
-      horario,
-      cantidad,
-    }));
-  }, [clasesFiltradas]);
-
-  // ── Asistencia por alumno — ACA/ASA separados ────────────────────────────────
-  const asistenciaPorAlumno = useMemo(() => {
-    const mapa: Record<
-      string,
-      {
-        total: number;
-        completadas: number;
-        canceladas: number;
-        aca: number;
-        asa: number;
-      }
-    > = {};
-
-    clasesFiltradas.forEach((c: Clase) => {
-      const alumno = alumnos.find((a: Alumno) => a.id === c.alumnoId);
-      if (!alumno) return;
-      const nombre = `${alumno.nombre} ${alumno.apellido}`;
-      if (!mapa[nombre])
-        mapa[nombre] = {
-          total: 0,
-          completadas: 0,
-          canceladas: 0,
-          aca: 0,
-          asa: 0,
-        };
-      mapa[nombre].total++;
-      if (c.estado === "COMPLETADA") mapa[nombre].completadas++;
-      if (c.estado === "CANCELADA") mapa[nombre].canceladas++;
-      if (c.estado === "ACA") mapa[nombre].aca++;
-      if (c.estado === "ASA") mapa[nombre].asa++;
-    });
-
-    return Object.entries(mapa)
-      .map(([nombre, d]) => ({
-        nombre,
-        ...d,
-        porcentajeAsistencia:
-          d.total > 0
-            ? parseFloat(((d.completadas / d.total) * 100).toFixed(1))
-            : 0,
-      }))
-      .sort((a, b) => b.total - a.total);
-  }, [clasesFiltradas, alumnos]);
-
-  // ── Ranking alumnos por clases completadas ───────────────────────────────────
-  const rankingAlumnos = useMemo(() => {
-    return asistenciaPorAlumno
-      .filter((a) => a.completadas > 0)
-      .sort((a, b) => b.completadas - a.completadas)
-      .slice(0, 10);
-  }, [asistenciaPorAlumno]);
-
-  // ── Carga por instructor ─────────────────────────────────────────────────────
-  const cargaInstructores = useMemo(() => {
-    const carga: Record<
-      string,
-      { total: number; completadas: number; canceladas: number }
-    > = {};
-    clasesFiltradas.forEach((c: Clase) => {
-      const inst = instructores.find(
-        (i: Instructor) => i.id === c.instructorId,
-      );
-      if (!inst) return;
-      const nombre = `${inst.nombre} ${inst.apellido}`;
-      if (!carga[nombre])
-        carga[nombre] = { total: 0, completadas: 0, canceladas: 0 };
-      carga[nombre].total++;
-      if (c.estado === "COMPLETADA") carga[nombre].completadas++;
-      if (c.estado === "CANCELADA") carga[nombre].canceladas++;
-    });
-    return Object.entries(carga).map(([nombre, d]) => ({
-      nombre,
-      ...d,
-      eficiencia:
-        d.total > 0
-          ? parseFloat(((d.completadas / d.total) * 100).toFixed(1))
-          : 0,
-    }));
-  }, [clasesFiltradas, instructores]);
-
-  // ── Uso de caballos ──────────────────────────────────────────────────────────
-  const usoCaballos = useMemo(() => {
-    const uso: Record<string, number> = {};
-    clasesFiltradas.forEach((c: Clase) => {
-      const cab = caballos.find((x: Caballo) => x.id === c.caballoId);
-      if (cab) uso[cab.nombre] = (uso[cab.nombre] || 0) + 1;
-    });
-    return Object.entries(uso)
-      .map(([nombre, cantidad]) => {
-        const cab = caballos.find((c: Caballo) => c.nombre === nombre);
-        return {
-          nombre,
-          cantidad,
-          tipo: cab?.tipo || "ESCUELA",
-          porcentaje:
-            clasesFiltradas.length > 0
-              ? parseFloat(
-                  ((cantidad / clasesFiltradas.length) * 100).toFixed(1),
-                )
-              : 0,
-        };
-      })
-      .sort((a, b) => b.cantidad - a.cantidad);
-  }, [clasesFiltradas, caballos]);
-
-  // ── Caballos sin uso en el período ──────────────────────────────────────────
-  const caballosSinUso = useMemo(() => {
-    const nombresConUso = new Set(usoCaballos.map((u) => u.nombre));
-    return caballos.filter((c: Caballo) => !nombresConUso.has(c.nombre));
-  }, [caballos, usoCaballos]);
-
-  // ── Clases de prueba ─────────────────────────────────────────────────────────
-  const estadisticasPrueba = useMemo(() => {
-    const pruebas = clasesFiltradas.filter((c: Clase) => c.esPrueba);
-    const porEspecialidad: Record<string, number> = {};
-    pruebas.forEach((c: Clase) => {
-      porEspecialidad[c.especialidad] =
-        (porEspecialidad[c.especialidad] || 0) + 1;
-    });
-
-    // Conversión: alumnos activos que tuvieron clase de prueba en CUALQUIER momento
-    const alumnosIds = new Set(
-      clases
-        .filter((c: Clase) => c.esPrueba && c.alumnoId)
-        .map((c: Clase) => c.alumnoId),
-    );
-    const convertidos = alumnos.filter(
-      (a: Alumno) => a.activo && alumnosIds.has(a.id),
-    ).length;
-
-    return {
-      total: pruebas.length,
-      porEspecialidad: Object.entries(porEspecialidad).map(
-        ([especialidad, cantidad]) => ({ especialidad, cantidad }),
-      ),
-      personasNuevas: pruebas.filter((c: Clase) => !c.alumnoId).length,
-      alumnosExistentes: pruebas.filter((c: Clase) => !!c.alumnoId).length,
-      convertidos,
-    };
-  }, [clasesFiltradas, clases, alumnos]);
-
-  // ── Helpers UI ───────────────────────────────────────────────────────────────
-  interface TooltipPayload {
-    name: string;
-    value: number | string;
-    color?: string;
-    fill?: string;
-  }
-
-  interface CustomTooltipProps {
-    active?: boolean;
-    payload?: TooltipPayload[];
-    label?: string | number;
-  }
-
-  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
-    if (!active || !payload?.length) return null;
-    return (
-      <div className="rounded-lg border border-border bg-background p-3 shadow-md text-sm">
-        <p className="font-semibold mb-1">{label}</p>
-        {payload.map((p: TooltipPayload, i: number) => (
-          <p key={i} style={{ color: p.color || p.fill }}>
-            {p.name}: <span className="font-medium">{p.value}</span>
-          </p>
-        ))}
-      </div>
-    );
-  };
-
-  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <Layout>
       <div className="space-y-6">
@@ -532,7 +220,6 @@ export default function ReportesPage() {
           {/* ── TAB GENERAL ──────────────────────────────────────────────────── */}
           <TabsContent value="general" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
-              {/* Distribución por plan */}
               <Card>
                 <CardHeader>
                   <CardTitle>Distribución por Plan</CardTitle>
@@ -564,7 +251,6 @@ export default function ReportesPage() {
                 </CardContent>
               </Card>
 
-              {/* Estados de clases — pie */}
               <Card>
                 <CardHeader>
                   <CardTitle>Estados de Clases</CardTitle>
@@ -606,7 +292,6 @@ export default function ReportesPage() {
                 </CardContent>
               </Card>
 
-              {/* Especialidades más demandadas */}
               <Card>
                 <CardHeader>
                   <CardTitle>Especialidades más Demandadas</CardTitle>
@@ -662,7 +347,6 @@ export default function ReportesPage() {
                 </CardContent>
               </Card>
 
-              {/* Distribución por día */}
               <Card>
                 <CardHeader>
                   <CardTitle>Clases por Día de la Semana</CardTitle>
@@ -743,7 +427,6 @@ export default function ReportesPage() {
                 </CardContent>
               </Card>
 
-              {/* Ranking alumnos */}
               <Card>
                 <CardHeader>
                   <CardTitle>Top Alumnos — Clases Completadas</CardTitle>
@@ -787,7 +470,6 @@ export default function ReportesPage() {
               </Card>
             </div>
 
-            {/* Tabla asistencia — ACA/ASA separados */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -955,7 +637,6 @@ export default function ReportesPage() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              {/* Estados (pie) */}
               <Card>
                 <CardHeader>
                   <CardTitle>Por Estado</CardTitle>
@@ -994,7 +675,6 @@ export default function ReportesPage() {
                 </CardContent>
               </Card>
 
-              {/* Días (barras) */}
               <Card>
                 <CardHeader>
                   <CardTitle>Por Día de Semana</CardTitle>
@@ -1187,7 +867,6 @@ export default function ReportesPage() {
                 </CardContent>
               </Card>
 
-              {/* Caballos sin uso */}
               <Card>
                 <CardHeader>
                   <CardTitle>Sin Actividad en el Período</CardTitle>
@@ -1238,7 +917,6 @@ export default function ReportesPage() {
               </Card>
             </div>
 
-            {/* Uso de caballos */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>

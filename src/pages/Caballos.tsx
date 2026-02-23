@@ -26,25 +26,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FilterBar } from "@/components/ui/filter-bar";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
 import { PaginationControls } from "@/components/ui/pagination-controls";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Switch } from "@/components/ui/switch";
 import { Caballo, caballosApi, CaballoSearchFilters } from "@/lib/api";
 
 export default function CaballosPage() {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [editingCaballo, setEditingCaballo] = useState<Caballo | null>(null);
+  const [caballoToDelete, setCaballoToDelete] = useState<Caballo | null>(null);
 
   const [nombre, setNombre] = useState<Caballo["nombre"]>(
     editingCaballo?.nombre ?? "",
@@ -57,8 +48,6 @@ export default function CaballosPage() {
   const [disponible, setDisponible] = useState<Caballo["disponible"]>(
     editingCaballo?.disponible ?? true,
   );
-
-  const [caballoToDelete, setCaballoToDelete] = useState<Caballo | null>(null);
 
   const navigate = useNavigate();
 
@@ -246,44 +235,6 @@ export default function CaballosPage() {
       toast.error(error.message || "Error al eliminar el caballo"),
   });
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    // ! DONDE VAN?
-    // 1️⃣ Validación básica
-    if (!nombre.trim()) {
-      toast.error("El nombre es obligatorio");
-      return;
-    }
-
-    // 2️⃣ Validación de duplicado
-    const nombreDuplicado = caballos.some(
-      (c) =>
-        c.nombre.toLowerCase().trim() === nombre.toLowerCase().trim() &&
-        c.id !== editingCaballo?.id,
-    );
-
-    if (nombreDuplicado) {
-      toast.error("Ya existe un caballo con ese nombre");
-      return;
-    }
-    // !
-
-    // 3️⃣ Construcción del objeto
-    const data: Omit<Caballo, "id"> = {
-      nombre: nombre.trim(),
-      tipo,
-      disponible,
-    };
-
-    // 4️⃣ Create o Update
-    if (editingCaballo) {
-      updateMutation.mutate({ id: editingCaballo.id, data });
-    } else {
-      createMutation.mutate(data);
-    }
-  };
-
   const columns = [
     { header: "Nombre", accessorKey: "nombre" as keyof Caballo },
     {
@@ -326,9 +277,7 @@ export default function CaballosPage() {
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm("¿Eliminar este caballo?")) {
-                  deleteMutation.mutate(row.id);
-                }
+                setCaballoToDelete(row);
               }}
               className="text-red-600 focus:text-red-600"
             >
@@ -478,6 +427,39 @@ export default function CaballosPage() {
             onPageSizeChange={handlePageSizeChange}
           />
         )}
+        <Dialog
+          open={!!caballoToDelete}
+          onOpenChange={() => setCaballoToDelete(null)}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Eliminar caballo</DialogTitle>
+              <DialogDescription>
+                ¿Seguro que deseas eliminar a {caballoToDelete?.nombre}? Esta
+                acción no se puede deshacer.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setCaballoToDelete(null)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (caballoToDelete) {
+                    deleteMutation.mutate(caballoToDelete.id);
+                    setCaballoToDelete(null);
+                  }
+                }}
+              >
+                Eliminar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

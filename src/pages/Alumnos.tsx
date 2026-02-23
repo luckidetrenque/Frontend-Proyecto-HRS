@@ -566,7 +566,8 @@ export default function AlumnosPage() {
             <DialogHeader>
               <DialogTitle>Eliminar alumno</DialogTitle>
               <DialogDescription>
-                ¿Seguro que deseas eliminar a {alumnoToDelete?.nombre}?
+                ¿Seguro que deseas eliminar a {alumnoToDelete?.nombre}
+                {alumnoToDelete?.apellido}? Esta acción no se puede deshacer.
               </DialogDescription>
             </DialogHeader>
 

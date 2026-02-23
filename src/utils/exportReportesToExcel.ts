@@ -423,9 +423,9 @@ export async function exportarClases(
  * Función para exportar datos genéricos (compatible con la función original)
  * Mantiene la misma firma que exportarExcel del archivo original
  */
-export async function exportarExcel(
-  data: ReportData[],
+export async function exportarExcel<T extends object>(
+  data: T[],
   tipo: "Clases" | "Alumnos" | "Instructores" | "Caballos" | "Asistencia",
 ) {
-  await exportarReporte(data, tipo);
+  await exportarReporte(data as ReportData[], tipo);
 }
