@@ -121,10 +121,6 @@ export const MAX_CLASES_POR_CELDA = {
   day: Infinity,
 };
 
-// ID del alumno comodín para la especialidad MONTA
-// Este ID debe coincidir con el alumno "Escuela - Comodín" en tu base de datos
-export const ALUMNO_COMODIN_ID = 1; // Ajusta este ID según tu BD
-
 /**
  * Obtiene el estilo de una clase según su estado y si es de prueba
  */

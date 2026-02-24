@@ -117,13 +117,12 @@ export const resolverCaballoId = (
  */
 export const handleEspecialidadChangeEffect = (
   value: string,
-  alumnoComodinId: number,
   setEspecialidad: (v: string) => void,
   setAlumnoId: (v: string) => void,
 ) => {
   setEspecialidad(value);
   if (value === "MONTA") {
-    setAlumnoId(String(alumnoComodinId));
+    setAlumnoId(null);
   }
 };
 

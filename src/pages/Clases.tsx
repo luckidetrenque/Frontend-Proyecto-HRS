@@ -331,14 +331,15 @@ export default function ClasesPage() {
   });
 
   const getNombreParaClase = (clase: Clase): string => {
-    if (clase.alumnoId) {
+    if (clase?.alumnoId != null) {
       const alumno = alumnosValidos.find(
         (a: Alumno) => a.id === clase.alumnoId,
       );
-      return alumno ? `${alumno.nombre} ${alumno.apellido}` : "-";
+      if (alumno) return `${alumno.nombre} ${alumno.apellido}`;
     }
-    // Para clases de prueba: usar el campo que ya viene del servidor
-    return clase.personaPruebaNombreCompleto ?? "-";
+
+    // Si no hay alumnoId o no se encontró el alumno, devolvemos el nombre de prueba
+    return clase?.personaPruebaNombreCompleto ?? "-";
   };
 
   const getInstructorNombre = (id: number) => {

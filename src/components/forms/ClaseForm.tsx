@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import {
-  ALUMNO_COMODIN_ID,
   ESPECIALIDADES_OPTIONS,
   obtenerHoraArgentina,
   parsearHoraParaApi,
@@ -96,10 +95,9 @@ export function ClaseForm({
   const [nombrePrueba, setNombrePrueba] = useState("");
   const [apellidoPrueba, setApellidoPrueba] = useState("");
 
-  // Filtrar alumnos según especialidad (excluir ALUMNO_COMODIN si no es MONTA)
+  // Filtrar alumnos según especialidad
   const alumnosValidos = alumnos.filter((a: Alumno) => {
     if (especialidad === "MONTA") return true;
-    return a.id !== ALUMNO_COMODIN_ID;
   });
 
   // Pre-poblar en modo edición
@@ -137,7 +135,6 @@ export function ClaseForm({
   }, [clase, currentDate, prefilledCaballoId, prefilledHora]);
 
   // Auto-seleccionar caballo del alumno
-  // ✅ LÍNEAS 131-144 - CORREGIDO
   useEffect(() => {
     if (!clase && alumnoId) {
       const alumno = alumnosValidos.find((a) => a.id === Number(alumnoId));
@@ -148,19 +145,13 @@ export function ClaseForm({
             : alumno.caballoPropio.id;
         setCaballoId(String(id));
       }
-      // ✅ NO limpiar el caballo si no tiene propio
       // Dejarlo como está para que mantenga la selección manual
     }
   }, [alumnoId, clase, alumnosValidos]);
 
   // Manejador para cambio de especialidad
   const handleEspecialidadChange = (value: string) => {
-    handleEspecialidadChangeEffect(
-      value,
-      ALUMNO_COMODIN_ID,
-      setEspecialidad,
-      setAlumnoId,
-    );
+    handleEspecialidadChangeEffect(value, setEspecialidad, setAlumnoId);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -183,18 +174,18 @@ export function ClaseForm({
           apellido: apellidoPrueba.trim(),
         });
         personaPruebaId = personaPrueba.id;
-        alumnoIdFinal = null; // ✅ Explícitamente null para persona nueva
+        alumnoIdFinal = null;
       } catch {
         toast.error("Error al registrar la persona de prueba");
         return;
       }
     } else {
       // Caso normal: alumno existente O clase de prueba con alumno existente
-      if (!alumnoId) {
+      if (!alumnoId && especialidad !== "MONTA") {
         toast.error("Debe seleccionar un alumno");
         return;
       }
-      alumnoIdFinal = Number(alumnoId);
+      alumnoIdFinal = alumnoId ? Number(alumnoId) : null;
     }
 
     // ✅ Validación: Clase de prueba para alumno existente

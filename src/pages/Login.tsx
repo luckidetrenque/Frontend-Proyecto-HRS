@@ -35,7 +35,11 @@ const Login: React.FC = () => {
     e.preventDefault();
 
     if (!username.trim() || !password.trim()) {
-      setError("Por favor completa todos los campos");
+      toast({
+        title: "Error",
+        description: "Por favor completa todos los campos",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -46,8 +50,8 @@ const Login: React.FC = () => {
     try {
       await login({ username: username.trim(), password });
       toast({
-        title: "Bienvenido",
-        description: "Has iniciado sesión correctamente",
+        title: "¡Bienvenido!",
+        description: `Sesión iniciada como ${username}`,
       });
       navigate(from, { replace: true });
     } catch (error) {
