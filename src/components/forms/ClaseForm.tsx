@@ -3,7 +3,6 @@ import { toast } from "sonner";
 
 import {
   ESPECIALIDADES_OPTIONS,
-  obtenerHoraArgentina,
   parsearHoraParaApi,
 } from "@/components/calendar/clases.constants";
 import { Button } from "@/components/ui/button";
@@ -97,7 +96,10 @@ export function ClaseForm({
 
   // Filtrar alumnos según especialidad
   const alumnosValidos = alumnos.filter((a: Alumno) => {
-    if (especialidad === "MONTA") return true;
+    // ✅ Si es MONTA, no mostrar alumnos (retorna array vacío)
+    if (especialidad === "MONTA") return false;
+    // ✅ Para otras especialidades, mostrar todos
+    return true;
   });
 
   // Pre-poblar en modo edición
@@ -160,9 +162,11 @@ export function ClaseForm({
     let alumnoIdFinal: number | null = null;
     let personaPruebaId: number | null = null;
 
-    // ✅ LÍNEAS 170-210 CORREGIDAS
-    if (esPruebaChecked && tipoPrueba === "persona_nueva") {
-      // Validar campos de persona nueva
+    // ✅ NUEVA VALIDACIÓN: Si es MONTA, forzar alumnoId a null
+    if (especialidad === "MONTA") {
+      alumnoIdFinal = null; // Clase de MONTA no tiene alumno
+    } else if (esPruebaChecked && tipoPrueba === "persona_nueva") {
+      // Clase de prueba - persona nueva
       if (!nombrePrueba.trim() || !apellidoPrueba.trim()) {
         toast.error("Ingresá nombre y apellido de la persona de prueba");
         return;
@@ -180,12 +184,12 @@ export function ClaseForm({
         return;
       }
     } else {
-      // Caso normal: alumno existente O clase de prueba con alumno existente
-      if (!alumnoId && especialidad !== "MONTA") {
+      // ✅ Caso normal: alumno existente
+      if (!alumnoId) {
         toast.error("Debe seleccionar un alumno");
         return;
       }
-      alumnoIdFinal = alumnoId ? Number(alumnoId) : null;
+      alumnoIdFinal = Number(alumnoId);
     }
 
     // ✅ Validación: Clase de prueba para alumno existente
@@ -281,28 +285,28 @@ export function ClaseForm({
         </div>
 
         {/* Alumno */}
-        <div className="space-y-2">
-          <Label htmlFor="alumno">Alumno</Label>
-          <Select
-            value={alumnoId}
-            onValueChange={setAlumnoId}
-            disabled={isReadonly}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar alumno" />
-            </SelectTrigger>
-            <SelectContent>
-              {alumnosValidos.map((a: Alumno) => (
-                <SelectItem key={a.id} value={String(a.id)}>
-                  {a.nombre} {a.apellido}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {especialidad !== "MONTA" ? (
+          <div className="space-y-2">
+            <Label htmlFor="alumno">Alumno</Label>
+            <Select
+              value={alumnoId}
+              onValueChange={setAlumnoId}
+              disabled={isReadonly}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar alumno" />
+              </SelectTrigger>
+              {/* ... SelectContent etc */}
+            </Select>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Las clases de MONTA son exclusivamente para instructores
+          </p>
+        )}
 
-        {/* Clase de prueba (solo en creación) */}
-        {!clase && (
+        {/* Clase de prueba (solo en creación y si NO es MONTA) */}
+        {!clase && especialidad !== "MONTA" && (
           <div className="space-y-3 rounded-md border p-3">
             <div className="flex items-center gap-2">
               <Checkbox
@@ -392,7 +396,6 @@ export function ClaseForm({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="30">30 min</SelectItem>
-                <SelectItem value="45">45 min</SelectItem>
                 <SelectItem value="60">60 min</SelectItem>
               </SelectContent>
             </Select>

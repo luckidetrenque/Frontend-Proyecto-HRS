@@ -36,6 +36,7 @@ import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { useEntityActions } from "@/hooks/useEntityActions";
 import {
   Alumno,
   alumnosApi,
@@ -52,9 +53,15 @@ import { puedeEditarClase } from "@/utils/validacionesClases";
 
 export default function ClasesPage() {
   const queryClient = useQueryClient();
-  const [isOpen, setIsOpen] = useState(false);
-  const [claseToEdit, setClaseToEdit] = useState<Clase | null>(null);
-  const [claseToDelete, setClaseToDelete] = useState<Clase | null>(null);
+  const {
+    editingEntity: editingClase,
+    entityToDelete: claseToDelete,
+    isDialogOpen,
+    openEdit,
+    closeEdit,
+    openDelete,
+    closeDelete,
+  } = useEntityActions<Clase>();
 
   const navigate = useNavigate();
 
@@ -83,10 +90,8 @@ export default function ClasesPage() {
   };
 
   useEffect(() => {
-    const handleGlobalSearchEvent = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      const { filters, entityType } = customEvent.detail;
-
+    const handleGlobalSearchEvent = (e: CustomEvent) => {
+      const { filters, entityType } = e.detail;
       if (entityType === "clases") {
         handleSmartSearch(filters);
       }
@@ -116,7 +121,7 @@ export default function ClasesPage() {
 
   // 🔍 QUERY UNIFICADA
   const { data: clases = [], isLoading } = useQuery({
-    queryKey: ["clases-page", searchFilters],
+    queryKey: ["clases", searchFilters],
     queryFn: () => {
       if (Object.keys(searchFilters).length > 0) {
         return clasesApi.buscar(searchFilters);
@@ -294,8 +299,8 @@ export default function ClasesPage() {
   const createMutation = useMutation({
     mutationFn: clasesApi.crear,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["clases-page"] });
-      setIsOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["clases"] });
+      closeEdit();
       const successMsg = data.__successMessage || "Clase creada correctamente";
       toast.success(successMsg);
     },
@@ -307,9 +312,8 @@ export default function ClasesPage() {
     mutationFn: ({ id, data }: { id: number; data: Partial<Clase> }) =>
       clasesApi.actualizar(id, data),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["clases-page"] });
-      setIsOpen(false);
-      setClaseToEdit(null);
+      queryClient.invalidateQueries({ queryKey: ["clases"] });
+      closeEdit();
       const successMsg =
         data.__successMessage || "Clase actualizada correctamente";
       toast.success(successMsg);
@@ -321,7 +325,8 @@ export default function ClasesPage() {
   const deleteMutation = useMutation({
     mutationFn: clasesApi.eliminar,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["clases-page"] });
+      queryClient.invalidateQueries({ queryKey: ["clases"] });
+      closeDelete();
       const successMsg =
         data.__successMessage || "Clase eliminada correctamente";
       toast.success(successMsg);
@@ -404,8 +409,7 @@ export default function ClasesPage() {
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
-                  setClaseToEdit(row);
-                  setIsOpen(true);
+                  openEdit(row);
                 }}
                 disabled={!puedeEditar}
               >
@@ -422,7 +426,7 @@ export default function ClasesPage() {
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
-                  setClaseToDelete(row);
+                  openDelete(row);
                 }}
                 disabled={!puedeEditar}
                 className="text-red-600 focus:text-red-600 disabled:text-muted-foreground"
@@ -470,14 +474,11 @@ export default function ClasesPage() {
             </div>
 
             <Dialog
-              open={isOpen}
-              onOpenChange={(open) => {
-                setIsOpen(open);
-                if (!open) setClaseToEdit(null);
-              }}
+              open={isDialogOpen}
+              onOpenChange={(open) => !open && closeEdit()}
             >
               <DialogTrigger asChild>
-                <Button className="h-11 shrink-0">
+                <Button onClick={() => openEdit()}>
                   <Plus className="mr-2 h-4 w-4" />
                   Nueva Clase
                 </Button>
@@ -485,25 +486,25 @@ export default function ClasesPage() {
               <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                   <DialogTitle className="font-display">
-                    {claseToEdit ? "Editar Clase" : "Nueva Clase"}
+                    {editingClase ? "Editar Clase" : "Nueva Clase"}
                   </DialogTitle>
                   <DialogDescription>
-                    {claseToEdit
+                    {editingClase
                       ? "Modifica los datos de la clase"
                       : "Completa los datos para programar una nueva clase"}
                   </DialogDescription>
                 </DialogHeader>
 
                 <ClaseForm
-                  clase={claseToEdit ?? undefined}
-                  alumnos={alumnosValidos}
-                  instructores={instructores}
-                  caballos={caballos}
-                  clases={clases}
-                  personasPrueba={personasPrueba}
+                  clase={editingClase ?? undefined}
+                  alumnos={alumnos} // ← REQUERIDO
+                  instructores={instructores} // ← REQUERIDO
+                  caballos={caballos} // ← REQUERIDO
+                  clases={clases} // ← REQUERIDO
+                  personasPrueba={personasPrueba} // ← REQUERIDO
                   onSubmit={(data) => {
-                    if (claseToEdit) {
-                      updateMutation.mutate({ id: claseToEdit.id, data });
+                    if (editingClase) {
+                      updateMutation.mutate({ id: editingClase.id, data });
                     } else {
                       createMutation.mutate(data);
                     }
@@ -511,6 +512,7 @@ export default function ClasesPage() {
                   isPending={
                     createMutation.isPending || updateMutation.isPending
                   }
+                  onCancel={closeEdit} // ← AGREGAR
                 />
               </DialogContent>
             </Dialog>
@@ -569,19 +571,8 @@ export default function ClasesPage() {
                   },
                 ]}
                 onClick={() => navigate(`/clases/${clase.id}`)}
-                onEdit={() => {
-                  setClaseToEdit(clase);
-                  setIsOpen(true);
-                }}
-                onDelete={
-                  puedeEditarClase(clase)
-                    ? () => {
-                        if (confirm("¿Eliminar esta clase?")) {
-                          deleteMutation.mutate(clase.id);
-                        }
-                      }
-                    : undefined
-                }
+                onEdit={() => openEdit(clase)}
+                onDelete={() => openDelete(clase)}
               />
             ))}
           </div>
@@ -597,10 +588,7 @@ export default function ClasesPage() {
             onPageSizeChange={handlePageSizeChange}
           />
         )}
-        <Dialog
-          open={!!claseToDelete}
-          onOpenChange={() => setClaseToDelete(null)}
-        >
+        <Dialog open={!!claseToDelete} onOpenChange={closeDelete}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Eliminar clase</DialogTitle>
@@ -612,7 +600,7 @@ export default function ClasesPage() {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setClaseToDelete(null)}>
+              <Button variant="outline" onClick={closeDelete}>
                 Cancelar
               </Button>
               <Button
@@ -620,11 +608,41 @@ export default function ClasesPage() {
                 onClick={() => {
                   if (claseToDelete) {
                     deleteMutation.mutate(claseToDelete.id);
-                    setClaseToDelete(null);
                   }
                 }}
+                disabled={deleteMutation.isPending}
               >
                 Eliminar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={!!claseToDelete} onOpenChange={closeDelete}>
+          {" "}
+          // ← CAMBIAR
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Eliminar clase</DialogTitle>
+              <DialogDescription>
+                // TODO ¿Seguro que deseas eliminar la clase de{" "}
+                {claseToDelete?.alumnoId}? Esta acción no se puede deshacer.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={closeDelete}>
+                {" "}
+                // ← CAMBIAR Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (claseToDelete) {
+                    deleteMutation.mutate(claseToDelete.id);
+                  }
+                }}
+                disabled={deleteMutation.isPending} // ← AGREGAR
+              >
+                {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
               </Button>
             </DialogFooter>
           </DialogContent>

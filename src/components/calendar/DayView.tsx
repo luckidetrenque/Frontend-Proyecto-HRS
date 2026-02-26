@@ -41,9 +41,6 @@ export function DayView({
   onEditClase,
   onDeleteClase,
   puedeEditarClase,
-  getAlumnoNombre,
-  getAlumnoNombreCompleto,
-  getNombreParaClase,
   getNombreCompletoParaClase,
   getInstructorNombre,
   getCaballoNombre,
@@ -94,6 +91,15 @@ export function DayView({
   const caballosOrdenados = useMemo(() => {
     return [...caballos];
   }, [caballos]);
+
+  const obtenerNombreAMostrar = (c) => {
+    // Si 'c' no existe, devolvemos un string vacío para evitar el error
+    if (!c) return "";
+
+    return c.especialidad === "MONTA"
+      ? getInstructorNombre(c.instructorId)
+      : getNombreCompletoParaClase(c);
+  };
 
   return (
     <div className="overflow-auto max-h-[calc(100vh-200px)]">
@@ -184,7 +190,7 @@ export function DayView({
                     )}
                     title={
                       esContinuacion
-                        ? `Continúa clase de ${getNombreCompletoParaClase(claseContinuacion)} (60 min)`
+                        ? `Continúa clase de ${obtenerNombreAMostrar(claseContinuacion)} (60 min)` // <--- CAMBIO AQUÍ
                         : clase
                           ? `Clase ${clase.estado.toLowerCase()} con el instructor ${getInstructorNombre(clase.instructorId)}`
                           : `Agregar clase para ${caballo.nombre} a las ${hora}`
@@ -206,7 +212,6 @@ export function DayView({
                     )}
 
                     {/* Celda de continuación de clase 60 min */}
-                    {/* Celda de continuación de clase 60 min — clickeable, mismo popover */}
                     {esContinuacion && claseContinuacion && (
                       <ClasePopover
                         clase={claseContinuacion}
@@ -234,7 +239,7 @@ export function DayView({
                             {/* Badge igual al de inicio pero con borde izquierdo para indicar continuación */}
                             <ClaseBadge
                               clase={claseContinuacion}
-                              alumnoNombre={getNombreCompletoParaClase(
+                              alumnoNombre={obtenerNombreAMostrar(
                                 claseContinuacion,
                               )}
                               instructorColor={getInstructorColor(
@@ -283,7 +288,7 @@ export function DayView({
                             )}
                             <ClaseBadge
                               clase={clase}
-                              alumnoNombre={getNombreCompletoParaClase(clase)}
+                              alumnoNombre={obtenerNombreAMostrar(clase)}
                               instructorColor={getInstructorColor(
                                 clase.instructorId,
                               )}

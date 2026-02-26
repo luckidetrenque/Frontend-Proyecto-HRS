@@ -15,10 +15,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { Clase } from "@/lib/api";
 
-import { ESTADO_COLORS, ESTADO_STYLES, ESTADOS } from "./clases.constants";
+import { ESTADO_STYLES, ESTADOS } from "./clases.constants";
 
 interface ClasePopoverProps {
   clase: Clase;
@@ -72,7 +71,7 @@ export function ClasePopover({
           <div className="mb-3 flex items-center justify-between gap-2">
             <h4 className="font-semibold">Detalles de la Clase</h4>
             <div className="flex items-center gap-2">
-              {/* ✅ Badge de clase de prueba */}
+              {/* Badge de clase de prueba */}
               {/* {clase.esPrueba && (
                 <StatusBadge status="warning">
                   <GraduationCap className="h-3 w-3 mr-1" />
@@ -85,7 +84,7 @@ export function ClasePopover({
             </div>
           </div>
 
-          {/* ✅ Alerta de clase de prueba */}
+          {/* Alerta de clase de prueba */}
           {clase.esPrueba && (
             <div className="mb-3 rounded-md bg-orange-50 border border-orange-200 p-2.5 text-xs text-orange-800">
               <div className="flex items-start gap-2">
@@ -141,13 +140,13 @@ export function ClasePopover({
                   onEdit(clase);
                   onOpenChange?.(false);
                 }}
-                disabled={!puedeEditar} // ✅ AGREGAR disabled
-                className={!puedeEditar ? "opacity-50 cursor-not-allowed" : ""} // ✅ AGREGAR className
+                disabled={!puedeEditar}
+                className={!puedeEditar ? "opacity-50 cursor-not-allowed" : ""}
                 title={
                   !puedeEditar
                     ? "No se puede editar una clase finalizada"
                     : "Editar clase"
-                } // ✅ AGREGAR title
+                }
               >
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
@@ -163,17 +162,17 @@ export function ClasePopover({
                     onOpenChange?.(false);
                   }
                 }}
-                disabled={!puedeEditar} // ✅ AGREGAR disabled
+                disabled={!puedeEditar}
                 className={
                   !puedeEditar
                     ? "opacity-50 cursor-not-allowed text-muted"
                     : "text-destructive"
-                } // ✅ MODIFICAR className
+                }
                 title={
                   !puedeEditar
                     ? "No se puede eliminar una clase finalizada"
                     : "Eliminar clase"
-                } // ✅ AGREGAR title
+                }
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Eliminar
@@ -218,3 +217,56 @@ export function ClasePopover({
     </Popover>
   );
 }
+
+// const [isEditingObs, setIsEditingObs] = useState(false);
+// const [observacion, setObservacion] = useState("");
+
+// const handleStatusClick = (estado: Clase["estado"]) => {
+//   // 1. Cambiamos el estado de la clase
+//   onStatusChange(clase.id, estado);
+//   // 2. Activamos la vista de observaciones en lugar de cerrar el modal inmediatamente
+//   setIsEditingObs(true);
+// };
+
+// const handleSaveObservacion = () => {
+//   // Aquí llamarías a tu función para guardar el motivo en la DB
+//   // saveObservacion(clase.id, observacion);
+
+//   if (onOpenChange) onOpenChange(false);
+//   setIsEditingObs(false);
+// };
+
+// // En el JSX:
+// {
+//   !isEditingObs ? (
+//     <div className="flex gap-2">
+//       {ESTADOS.map((estado) => (
+//         <Button
+//           key={estado}
+//           variant="outline"
+//           size="sm"
+//           className={`text-xs transition-colors ${
+//             clase.estado === estado
+//               ? ESTADO_STYLES[estado]
+//               : "text-muted-foreground opacity-50"
+//           }`}
+//           onClick={() => handleStatusClick(estado)}
+//         >
+//           {estado}
+//         </Button>
+//       ))}
+//     </div>
+//   ) : (
+//     <div className="space-y-3">
+//       <Label>Motivo del cambio de estado</Label>
+//       <Textarea
+//         placeholder="Escribe el motivo..."
+//         value={observacion}
+//         onChange={(e) => setObservacion(e.target.value)}
+//       />
+//       <Button onClick={handleSaveObservacion} className="w-full">
+//         Guardar Observación
+//       </Button>
+//     </div>
+//   );
+// }

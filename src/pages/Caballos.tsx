@@ -29,27 +29,23 @@ import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { useEntityActions } from "@/hooks/useEntityActions";
 import { Caballo, caballosApi, CaballoSearchFilters } from "@/lib/api";
 
 export default function CaballosPage() {
   const queryClient = useQueryClient();
-  const [isOpen, setIsOpen] = useState(false);
-  const [editingCaballo, setEditingCaballo] = useState<Caballo | null>(null);
-  const [caballoToDelete, setCaballoToDelete] = useState<Caballo | null>(null);
-
-  const [nombre, setNombre] = useState<Caballo["nombre"]>(
-    editingCaballo?.nombre ?? "",
-  );
-
-  const [tipo, setTipo] = useState<Caballo["tipo"]>(
-    editingCaballo?.tipo ?? "ESCUELA",
-  );
-
-  const [disponible, setDisponible] = useState<Caballo["disponible"]>(
-    editingCaballo?.disponible ?? true,
-  );
-
   const navigate = useNavigate();
+
+  // ✅ Hook unificado para manejo de acciones
+  const {
+    editingEntity: editingCaballo,
+    entityToDelete: caballoToDelete,
+    isDialogOpen,
+    openEdit,
+    closeEdit,
+    openDelete,
+    closeDelete,
+  } = useEntityActions<Caballo>();
 
   // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
   const [searchFilters, setSearchFilters] = useState<CaballoSearchFilters>({});
@@ -79,16 +75,7 @@ export default function CaballosPage() {
     setCurrentPage(1);
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      // Si hay entidad, cargar sus datos; si no, limpiar
-      setNombre(editingCaballo?.nombre ?? "");
-      setTipo(editingCaballo?.tipo ?? "ESCUELA");
-      setDisponible(editingCaballo?.disponible ?? true);
-    }
-  }, [isOpen, editingCaballo]);
-
-  // ✅ NUEVO: Escuchar evento de búsqueda global desde el Layout
+  // ✅ Escuchar evento de búsqueda global desde el Layout
   useEffect(() => {
     const handleGlobalSearchEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -108,7 +95,7 @@ export default function CaballosPage() {
 
   // 🔍 QUERY PARA BÚSQUEDA INTELIGENTE
   const { data: searchResults, isLoading: isSearching } = useQuery({
-    queryKey: ["caballos-search", searchFilters],
+    queryKey: ["caballos", searchFilters],
     queryFn: () => {
       if (Object.keys(searchFilters).length > 0) {
         setIsSearchActive(true);
@@ -195,11 +182,12 @@ export default function CaballosPage() {
     setCurrentPage(1);
   };
 
+  // ✅ Mutaciones con hook unificado
   const createMutation = useMutation({
     mutationFn: caballosApi.crear,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["caballos-search"] });
-      setIsOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["caballos"] });
+      closeEdit();
       const successMsg =
         data.__successMessage || "Caballo creado correctamente";
       toast.success(successMsg);
@@ -212,9 +200,8 @@ export default function CaballosPage() {
     mutationFn: ({ id, data }: { id: number; data: Partial<Caballo> }) =>
       caballosApi.actualizar(id, data),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["caballos-search"] });
-      setIsOpen(false);
-      setEditingCaballo(null);
+      queryClient.invalidateQueries({ queryKey: ["caballos"] });
+      closeEdit();
       const successMsg =
         data.__successMessage || "Caballo actualizado correctamente";
       toast.success(successMsg);
@@ -226,7 +213,8 @@ export default function CaballosPage() {
   const deleteMutation = useMutation({
     mutationFn: caballosApi.eliminar,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["caballos-search"] });
+      queryClient.invalidateQueries({ queryKey: ["caballos"] });
+      closeDelete();
       const successMsg =
         data.__successMessage || "Caballo eliminado correctamente";
       toast.success(successMsg);
@@ -267,8 +255,7 @@ export default function CaballosPage() {
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                setEditingCaballo(row);
-                setIsOpen(true);
+                openEdit(row);
               }}
             >
               <Pencil className="mr-2 h-4 w-4" />
@@ -277,7 +264,7 @@ export default function CaballosPage() {
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                setCaballoToDelete(row);
+                openDelete(row);
               }}
               className="text-red-600 focus:text-red-600"
             >
@@ -316,14 +303,11 @@ export default function CaballosPage() {
             </div>
 
             <Dialog
-              open={isOpen}
-              onOpenChange={(open) => {
-                setIsOpen(open);
-                if (!open) setEditingCaballo(null);
-              }}
+              open={isDialogOpen}
+              onOpenChange={(open) => !open && closeEdit()}
             >
               <DialogTrigger asChild>
-                <Button>
+                <Button onClick={() => openEdit()}>
                   <Plus className="mr-2 h-4 w-4" />
                   Nuevo Caballo
                 </Button>
@@ -352,7 +336,7 @@ export default function CaballosPage() {
                   isPending={
                     createMutation.isPending || updateMutation.isPending
                   }
-                  onCancel={() => setIsOpen(false)}
+                  onCancel={closeEdit}
                 />
               </DialogContent>
             </Dialog>
@@ -394,7 +378,6 @@ export default function CaballosPage() {
                 key={caballo.id}
                 title={caballo.nombre}
                 subtitle=""
-                // TODO subtitle="Descripción crear campo en db"
                 fields={[
                   { label: "Nombre", value: caballo.nombre },
                   { label: "Tipo", value: caballo.tipo },
@@ -407,11 +390,8 @@ export default function CaballosPage() {
                   },
                 ]}
                 onClick={() => navigate(`/caballos/${caballo.id}`)}
-                onEdit={() => {
-                  setEditingCaballo(caballo);
-                  setIsOpen(true);
-                }}
-                onDelete={() => setCaballoToDelete(caballo)}
+                onEdit={() => openEdit(caballo)}
+                onDelete={() => openDelete(caballo)}
               />
             ))}
           </div>
@@ -427,10 +407,9 @@ export default function CaballosPage() {
             onPageSizeChange={handlePageSizeChange}
           />
         )}
-        <Dialog
-          open={!!caballoToDelete}
-          onOpenChange={() => setCaballoToDelete(null)}
-        >
+
+        {/* Dialog de Confirmación de Eliminación */}
+        <Dialog open={!!caballoToDelete} onOpenChange={closeDelete}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Eliminar caballo</DialogTitle>
@@ -440,10 +419,7 @@ export default function CaballosPage() {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setCaballoToDelete(null)}
-              >
+              <Button variant="outline" onClick={closeDelete}>
                 Cancelar
               </Button>
               <Button
@@ -451,11 +427,11 @@ export default function CaballosPage() {
                 onClick={() => {
                   if (caballoToDelete) {
                     deleteMutation.mutate(caballoToDelete.id);
-                    setCaballoToDelete(null);
                   }
                 }}
+                disabled={deleteMutation.isPending}
               >
-                Eliminar
+                {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
               </Button>
             </DialogFooter>
           </DialogContent>

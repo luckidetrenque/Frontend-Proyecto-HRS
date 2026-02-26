@@ -37,6 +37,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { ProtectedData } from "@/components/ui/protected-data";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { useEntityActions } from "@/hooks/useEntityActions";
 import { useValidarDniDuplicado } from "@/hooks/useValidarDniDuplicado";
 import {
   Alumno,
@@ -47,9 +48,19 @@ import {
 
 export default function AlumnosPage() {
   const queryClient = useQueryClient();
-  const [isOpen, setIsOpen] = useState(false);
-  const [editingAlumno, setEditingAlumno] = useState<Alumno | null>(null);
-  const [alumnoToDelete, setAlumnoToDelete] = useState<Alumno | null>(null);
+  const navigate = useNavigate();
+
+  // ✅ Hook unificado para manejo de acciones
+  const {
+    editingEntity: editingAlumno,
+    entityToDelete: alumnoToDelete,
+    isDialogOpen,
+    openEdit,
+    closeEdit,
+    openDelete,
+    closeDelete,
+  } = useEntityActions<Alumno>();
+
   const [validacionHabilitada, setValidacionHabilitada] = useState(false);
 
   const [dni, setDni] = useState<Alumno["dni"]>("");
@@ -65,8 +76,6 @@ export default function AlumnosPage() {
     validacionHabilitada && dni.length >= 9
       ? validacionDni
       : { duplicado: false, mensaje: "" };
-
-  const navigate = useNavigate();
 
   // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
   const [searchFilters, setSearchFilters] = useState<AlumnoSearchFilters>({});
@@ -119,11 +128,11 @@ export default function AlumnosPage() {
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isDialogOpen) {
       setDni(editingAlumno?.dni ?? "");
       setValidacionHabilitada(!editingAlumno);
     }
-  }, [isOpen, editingAlumno]);
+  }, [isDialogOpen, editingAlumno]);
 
   const { data: caballos = [] } = useQuery({
     queryKey: ["caballos"],
@@ -157,8 +166,7 @@ export default function AlumnosPage() {
         typeof alumno === "object" &&
         alumno !== null &&
         "id" in alumno &&
-        "nombre" in alumno &&
-        alumno.id !== 1 // ⛔ Excluir alumno con id 1
+        "nombre" in alumno
       );
     });
 
@@ -231,8 +239,7 @@ export default function AlumnosPage() {
     mutationFn: alumnosApi.crear,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["alumnos"] });
-      queryClient.invalidateQueries({ queryKey: ["alumnos-search"] });
-      setIsOpen(false);
+      closeEdit();
       const successMsg = data.__successMessage || "Alumno creado correctamente";
       toast.success(successMsg);
     },
@@ -245,9 +252,7 @@ export default function AlumnosPage() {
       alumnosApi.actualizar(id, data),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["alumnos"] });
-      queryClient.invalidateQueries({ queryKey: ["alumnos-search"] });
-      setIsOpen(false);
-      setEditingAlumno(null);
+      closeEdit();
       const successMsg =
         data.__successMessage || "Alumno actualizado correctamente";
       toast.success(successMsg);
@@ -260,7 +265,7 @@ export default function AlumnosPage() {
     mutationFn: alumnosApi.eliminar,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["alumnos"] });
-      queryClient.invalidateQueries({ queryKey: ["alumnos-search"] });
+      closeDelete();
       const successMsg =
         data.__successMessage || "Alumno eliminado correctamente";
       toast.success(successMsg);
@@ -379,8 +384,7 @@ export default function AlumnosPage() {
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                setEditingAlumno(row);
-                setIsOpen(true);
+                openEdit(row);
               }}
             >
               <Pencil className="mr-2 h-4 w-4" />
@@ -389,7 +393,7 @@ export default function AlumnosPage() {
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                setAlumnoToDelete(row);
+                openDelete(row);
               }}
               className="text-red-600 focus:text-red-600"
             >
@@ -428,14 +432,11 @@ export default function AlumnosPage() {
             </div>
 
             <Dialog
-              open={isOpen}
-              onOpenChange={(open) => {
-                setIsOpen(open);
-                if (!open) setEditingAlumno(null);
-              }}
+              open={isDialogOpen}
+              onOpenChange={(open) => !open && closeEdit()}
             >
               <DialogTrigger asChild>
-                <Button className="h-11 shrink-0">
+                <Button className="h-11 shrink-0" onClick={() => openEdit()}>
                   <Plus className="mr-2 h-4 w-4" />
                   Nuevo Alumno
                 </Button>
@@ -470,6 +471,7 @@ export default function AlumnosPage() {
                     setDni(dni);
                     setValidacionHabilitada(true);
                   }}
+                  onCancel={closeEdit}
                 />
               </DialogContent>
             </Dialog>
@@ -539,11 +541,8 @@ export default function AlumnosPage() {
                   },
                 ]}
                 onClick={() => navigate(`/alumnos/${alumno.id}`)}
-                onEdit={() => {
-                  setEditingAlumno(alumno);
-                  setIsOpen(true);
-                }}
-                onDelete={() => setAlumnoToDelete(alumno)}
+                onEdit={() => openEdit(alumno)}
+                onDelete={() => openDelete(alumno)}
               />
             ))}
           </div>
@@ -558,21 +557,18 @@ export default function AlumnosPage() {
             onPageSizeChange={handlePageSizeChange}
           />
         )}
-        <Dialog
-          open={!!alumnoToDelete}
-          onOpenChange={() => setAlumnoToDelete(null)}
-        >
+        <Dialog open={!!alumnoToDelete} onOpenChange={closeDelete}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Eliminar alumno</DialogTitle>
               <DialogDescription>
-                ¿Seguro que deseas eliminar a {alumnoToDelete?.nombre}
+                ¿Seguro que deseas eliminar a {alumnoToDelete?.nombre}{" "}
                 {alumnoToDelete?.apellido}? Esta acción no se puede deshacer.
               </DialogDescription>
             </DialogHeader>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setAlumnoToDelete(null)}>
+              <Button variant="outline" onClick={closeDelete}>
                 Cancelar
               </Button>
 
@@ -581,11 +577,11 @@ export default function AlumnosPage() {
                 onClick={() => {
                   if (alumnoToDelete) {
                     deleteMutation.mutate(alumnoToDelete.id);
-                    setAlumnoToDelete(null);
                   }
                 }}
+                disabled={deleteMutation.isPending}
               >
-                Eliminar
+                {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
               </Button>
             </DialogFooter>
           </DialogContent>

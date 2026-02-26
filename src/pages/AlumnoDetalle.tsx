@@ -33,12 +33,15 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { EntityDetailActions } from "@/components/ui/entity-detail-actions";
 import { InfoField } from "@/components/ui/InfoField";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { useEntityActions } from "@/hooks/useEntityActions";
 import { useValidarDniDuplicado } from "@/hooks/useValidarDniDuplicado";
 import { Alumno, alumnosApi, caballosApi, Clase, clasesApi } from "@/lib/api";
 
@@ -48,23 +51,41 @@ export default function AlumnoDetalle() {
   const queryClient = useQueryClient();
   const alumnoId = parseInt(id || "0");
 
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  const {
+    entityToDelete: alumnoToDelete,
+    isDialogOpen: isEditOpen,
+    openEdit,
+    closeEdit,
+    openDelete,
+    closeDelete,
+  } = useEntityActions<Alumno>();
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Alumno> }) =>
-      alumnosApi.actualizar(id, data),
+      caballosApi.actualizar(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["alumno", alumnoId] });
-      queryClient.invalidateQueries({ queryKey: ["alumnos"] });
-      setIsEditOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["caballo", alumnoId] });
+      closeEdit();
       toast.success("Alumno actualizado correctamente");
     },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: alumnosApi.eliminar,
+    onSuccess: (data) => {
+      const successMsg =
+        data.__successMessage || "Alumno eliminado correctamente";
+      toast.success(successMsg);
+      navigate("/alumnos");
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al eliminar el alumno"),
   });
 
   const { data: alumno, isLoading: loadingAlumno } = useQuery({
     queryKey: ["alumno", alumnoId],
     queryFn: () => alumnosApi.obtener(alumnoId),
-    enabled: !!alumnoId && alumnoId !== 1, // Evita la ejecución innecesaria
+    enabled: !!alumnoId && alumnoId !== 1,
   });
 
   const { data: clasesAlumnoData = [], isLoading: loadingData } = useQuery({
@@ -229,10 +250,11 @@ export default function AlumnoDetalle() {
                 <Mail className="mr-2 h-4 w-4" />
                 Contactar por Email
               </Button>
-              <Button onClick={() => setIsEditOpen(true)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Editar
-              </Button>
+              <EntityDetailActions
+                onEdit={() => openEdit(alumno)}
+                onDelete={() => openDelete(alumno)}
+                entityName="alumno"
+              />
             </div>
           }
         />
@@ -533,7 +555,7 @@ export default function AlumnoDetalle() {
         </Card>
 
         {/* Dialog para Editar Alumno */}
-        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <Dialog open={isEditOpen} onOpenChange={(open) => !open && closeEdit()}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="font-display">Editar Alumno</DialogTitle>
@@ -552,7 +574,31 @@ export default function AlumnoDetalle() {
                 setDni(dni);
                 setValidacionHabilitada(true);
               }}
+              onCancel={closeEdit}
             />
+          </DialogContent>
+        </Dialog>
+        <Dialog open={!!alumnoToDelete} onOpenChange={closeDelete}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Eliminar alumno</DialogTitle>
+              <DialogDescription>
+                ¿Seguro que deseas eliminar a {alumno.nombre} {alumno.apellido}?
+                Esta acción no se puede deshacer.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={closeDelete}>
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => deleteMutation.mutate(alumno.id)}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

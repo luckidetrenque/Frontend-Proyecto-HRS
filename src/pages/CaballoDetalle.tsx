@@ -33,58 +33,66 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { EntityDetailActions } from "@/components/ui/entity-detail-actions";
 import { InfoField } from "@/components/ui/InfoField";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { useEntityActions } from "@/hooks/useEntityActions";
 import { Alumno, Caballo, caballosApi, Clase, clasesApi } from "@/lib/api";
 
 export default function CaballoDetalle() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const caballoId = parseInt(id || "0");
 
-  const queryClient = useQueryClient();
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  const {
+    entityToDelete: caballoToDelete,
+    isDialogOpen: isEditOpen,
+    openEdit,
+    closeEdit,
+    openDelete,
+    closeDelete,
+  } = useEntityActions<Caballo>();
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Caballo> }) =>
       caballosApi.actualizar(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["caballo", caballoId] });
-      queryClient.invalidateQueries({ queryKey: ["caballos"] });
-      setIsEditOpen(false);
+      closeEdit();
       toast.success("Caballo actualizado correctamente");
     },
-    onError: (error: Error) =>
-      toast.error(error.message || "Error al actualizar el caballo"),
   });
 
-  // Query para obtener el caballo
+  const deleteMutation = useMutation({
+    mutationFn: caballosApi.eliminar,
+    onSuccess: (data) => {
+      const successMsg =
+        data.__successMessage || "Caballo eliminado correctamente";
+      toast.success(successMsg);
+      navigate("/caballos");
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al eliminar el caballo"),
+  });
+
   const { data: caballo, isLoading: loadingCaballo } = useQuery({
     queryKey: ["caballo", caballoId],
     queryFn: () => caballosApi.obtener(caballoId),
     enabled: !!caballoId,
   });
 
-  // TODO Query para obtener las clases del caballo (METODO BUSCAR EN CONTROLADOR DE CLASES)
-  // const { data: clasesCaballo = [], isLoading: loadingClases } = useQuery({
-  //   queryKey: ["clases-caballo", caballoId],
-  //   queryFn: () => clasesApi.buscar({ caballoId }),
-  //   enabled: !!caballoId,
-  // });
-
-  // Query para obtener las clases del caballo
   const { data: clasesCaballo = [], isLoading: loadingClases } = useQuery({
     queryKey: ["clases-caballo", caballoId],
-    // Pasa el ID directamente, no como objeto
     queryFn: () => clasesApi.buscarPorCaballo(caballoId!),
     enabled: !!caballoId,
   });
 
-  // Calcular estadísticas
   const estadisticas = {
     total: clasesCaballo.length,
     completadas: clasesCaballo.filter((c) => c.estado === "COMPLETADA").length,
@@ -100,7 +108,6 @@ export default function CaballoDetalle() {
       ? ((estadisticas.completadas / estadisticas.total) * 100).toFixed(1)
       : "0";
 
-  // Columnas para la tabla de clases
   const columnasClases = [
     {
       header: "Fecha",
@@ -186,10 +193,11 @@ export default function CaballoDetalle() {
           title="Perfil de Caballo"
           description={`Información detallada de ${caballo.nombre}`}
           action={
-            <Button onClick={() => setIsEditOpen(true)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Editar
-            </Button>
+            <EntityDetailActions
+              onEdit={() => openEdit(caballo)}
+              onDelete={() => openDelete(caballo)}
+              entityName="caballo"
+            />
           }
         />
       </div>
@@ -481,7 +489,7 @@ export default function CaballoDetalle() {
         </Card>
       </div>
 
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+      <Dialog open={isEditOpen} onOpenChange={(open) => !open && closeEdit()}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Caballo</DialogTitle>
@@ -494,7 +502,34 @@ export default function CaballoDetalle() {
             caballo={caballo}
             onSubmit={(data) => updateMutation.mutate({ id: caballoId, data })}
             isPending={updateMutation.isPending}
+            onCancel={closeEdit}
           />
+        </DialogContent>
+      </Dialog>
+      {/* Dialog para Eliminar Caballo */}
+      <Dialog open={!!caballoToDelete} onOpenChange={closeDelete}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar caballo</DialogTitle>
+            <DialogDescription>
+              ¿Seguro que deseas eliminar a {caballo.nombre}? Esta acción no se
+              puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDelete}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                deleteMutation.mutate(caballo.id);
+              }}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Layout>

@@ -29,6 +29,7 @@ import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { useEntityActions } from "@/hooks/useEntityActions";
 import { useValidarDniDuplicado } from "@/hooks/useValidarDniDuplicado";
 import {
   Instructor,
@@ -38,12 +39,15 @@ import {
 
 export default function InstructoresPage() {
   const queryClient = useQueryClient();
-  const [isOpen, setIsOpen] = useState(false);
-  const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(
-    null,
-  );
-  const [instructorToDelete, setInstructorToDelete] =
-    useState<Instructor | null>(null);
+  const {
+    editingEntity: editingInstructor,
+    entityToDelete: instructorToDelete,
+    isDialogOpen,
+    openEdit,
+    closeEdit,
+    openDelete,
+    closeDelete,
+  } = useEntityActions<Instructor>();
 
   const [dni, setDni] = useState("");
 
@@ -88,20 +92,23 @@ export default function InstructoresPage() {
       typedFilters.fechaNacimiento = String(filters.fechaNacimiento);
 
     setSearchFilters(typedFilters);
-    setCurrentPage(1); // Reset a página 1 al buscar
+    setCurrentPage(1);
   };
-  // ✅ NUEVO: Escuchar evento de búsqueda global desde el Layout
-  useEffect(() => {
-    const handleGlobalSearchEvent = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      const { filters, entityType } = customEvent.detail;
 
-      // Solo procesar si el evento es para esta entidad
+  useEffect(() => {
+    if (isDialogOpen) {
+      setDni(editingInstructor?.dni ?? "");
+      setValidacionHabilitada(!editingInstructor);
+    }
+  }, [isDialogOpen, editingInstructor]);
+
+  useEffect(() => {
+    const handleGlobalSearchEvent = (e: CustomEvent) => {
+      const { filters, entityType } = e.detail;
       if (entityType === "instructores") {
         handleSmartSearch(filters);
       }
     };
-
     // Registrar el listener
     window.addEventListener("globalSearch", handleGlobalSearchEvent);
 
@@ -113,7 +120,7 @@ export default function InstructoresPage() {
 
   // 🔍 QUERY PARA BÚSQUEDA INTELIGENTE
   const { data: searchResults, isLoading: isSearching } = useQuery({
-    queryKey: ["instructores-search", searchFilters],
+    queryKey: ["instructores", searchFilters],
     queryFn: () => {
       // Si hay filtros de búsqueda, usar endpoint de búsqueda
       if (Object.keys(searchFilters).length > 0) {
@@ -194,8 +201,8 @@ export default function InstructoresPage() {
   const createMutation = useMutation({
     mutationFn: instructoresApi.crear,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["instructores-search"] });
-      setIsOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["instructores"] });
+      closeEdit();
       const successMsg =
         data.__successMessage || "Instructor creado correctamente";
       toast.success(successMsg);
@@ -208,9 +215,8 @@ export default function InstructoresPage() {
     mutationFn: ({ id, data }: { id: number; data: Partial<Instructor> }) =>
       instructoresApi.actualizar(id, data),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["instructores-search"] });
-      setIsOpen(false);
-      setEditingInstructor(null);
+      queryClient.invalidateQueries({ queryKey: ["instructores"] });
+      closeEdit();
       const successMsg =
         data.__successMessage || "Instructor actualizado correctamente";
       toast.success(successMsg);
@@ -222,7 +228,8 @@ export default function InstructoresPage() {
   const deleteMutation = useMutation({
     mutationFn: instructoresApi.eliminar,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["instructores-search"] });
+      queryClient.invalidateQueries({ queryKey: ["instructores"] });
+      closeDelete();
       const successMsg =
         data.__successMessage || "Instructor eliminado correctamente";
       toast.success(successMsg);
@@ -230,14 +237,6 @@ export default function InstructoresPage() {
     onError: (error: Error) =>
       toast.error(error.message || "Error al eliminar el instructor"),
   });
-
-  // ✅ MODIFICAR el useEffect que resetea el form
-  useEffect(() => {
-    if (isOpen) {
-      setDni(editingInstructor?.dni ?? "");
-      setValidacionHabilitada(!editingInstructor);
-    }
-  }, [isOpen, editingInstructor]);
 
   const columns = [
     {
@@ -269,8 +268,7 @@ export default function InstructoresPage() {
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                setEditingInstructor(row);
-                setIsOpen(true);
+                openEdit(row);
               }}
             >
               <Pencil className="mr-2 h-4 w-4" />
@@ -279,8 +277,7 @@ export default function InstructoresPage() {
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                setEditingInstructor(row);
-                setIsOpen(true);
+                openDelete(row);
               }}
               className="text-red-600 focus:text-red-600"
             >
@@ -319,14 +316,11 @@ export default function InstructoresPage() {
             </div>
 
             <Dialog
-              open={isOpen}
-              onOpenChange={(open) => {
-                setIsOpen(open);
-                if (!open) setEditingInstructor(null);
-              }}
+              open={isDialogOpen}
+              onOpenChange={(open) => !open && closeEdit()}
             >
               <DialogTrigger asChild>
-                <Button>
+                <Button onClick={() => openEdit()}>
                   <Plus className="mr-2 h-4 w-4" />
                   Nuevo Instructor
                 </Button>
@@ -362,6 +356,7 @@ export default function InstructoresPage() {
                     setDni(dni);
                     setValidacionHabilitada(true);
                   }}
+                  onCancel={closeEdit}
                 />
               </DialogContent>
             </Dialog>
@@ -420,11 +415,8 @@ export default function InstructoresPage() {
                   },
                 ]}
                 onClick={() => navigate(`/instructores/${instructor.id}`)}
-                onEdit={() => {
-                  setEditingInstructor(instructor);
-                  setIsOpen(true);
-                }}
-                onDelete={() => setInstructorToDelete(instructor)}
+                onEdit={() => openEdit(instructor)} // ← CAMBIAR
+                onDelete={() => openDelete(instructor)}
               />
             ))}
           </div>
@@ -440,10 +432,7 @@ export default function InstructoresPage() {
             onPageSizeChange={handlePageSizeChange}
           />
         )}
-        <Dialog
-          open={!!instructorToDelete}
-          onOpenChange={() => setInstructorToDelete(null)}
-        >
+        <Dialog open={!!instructorToDelete} onOpenChange={closeDelete}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Eliminar instructor</DialogTitle>
@@ -454,10 +443,7 @@ export default function InstructoresPage() {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setInstructorToDelete(null)}
-              >
+              <Button variant="outline" onClick={closeDelete}>
                 Cancelar
               </Button>
               <Button
@@ -465,9 +451,9 @@ export default function InstructoresPage() {
                 onClick={() => {
                   if (instructorToDelete) {
                     deleteMutation.mutate(instructorToDelete.id);
-                    setInstructorToDelete(null);
                   }
                 }}
+                disabled={deleteMutation.isPending}
               >
                 Eliminar
               </Button>

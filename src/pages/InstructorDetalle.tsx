@@ -38,6 +38,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { EntityDetailActions } from "@/components/ui/entity-detail-actions";
 import { InfoField } from "@/components/ui/InfoField";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,6 +46,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Switch } from "@/components/ui/switch";
 import { PRESET_COLORS } from "@/constants/instructor.constants";
+import { useEntityActions } from "@/hooks/useEntityActions";
 import { useValidarDniDuplicado } from "@/hooks/useValidarDniDuplicado";
 import { Clase, clasesApi, Instructor, instructoresApi } from "@/lib/api";
 
@@ -54,7 +56,14 @@ export default function InstructorDetalle() {
   const instructorId = parseInt(id || "0");
 
   const queryClient = useQueryClient();
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  const {
+    entityToDelete: instructorToDelete,
+    isDialogOpen: isEditOpen,
+    openEdit,
+    closeEdit,
+    openDelete,
+    closeDelete,
+  } = useEntityActions<Instructor>();
 
   // Query para obtener el instructor
   const { data: instructor, isLoading: loadingInstructor } = useQuery({
@@ -81,11 +90,23 @@ export default function InstructorDetalle() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["instructor", instructorId] });
       queryClient.invalidateQueries({ queryKey: ["instructores"] });
-      setIsEditOpen(false);
+      closeEdit();
       toast.success("Instructor actualizado correctamente");
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al actualizar el instructor"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: instructoresApi.eliminar,
+    onSuccess: (data) => {
+      const successMsg =
+        data.__successMessage || "Instructor eliminado correctamente";
+      toast.success(successMsg);
+      navigate("/instructores");
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al eliminar el instructor"),
   });
 
   useEffect(() => {
@@ -239,10 +260,11 @@ export default function InstructorDetalle() {
                   <MessageCircle className="mr-2 h-4 w-4" />
                   Contactar
                 </Button>
-                <Button onClick={() => setIsEditOpen(true)}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Editar
-                </Button>
+                <EntityDetailActions
+                  onEdit={() => openEdit(instructor)}
+                  onDelete={() => openDelete(instructor)}
+                  entityName="instructor"
+                />
               </div>
             }
           />
@@ -500,7 +522,7 @@ export default function InstructorDetalle() {
           </Card>
         </div>
 
-        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <Dialog open={isEditOpen} onOpenChange={(open) => !open && closeEdit()}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="font-display">
@@ -522,7 +544,32 @@ export default function InstructorDetalle() {
                 setDni(dni);
                 setValidacionHabilitada(true);
               }}
+              onCancel={closeEdit}
             />
+          </DialogContent>
+        </Dialog>
+        <Dialog open={!!instructorToDelete} onOpenChange={closeDelete}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Eliminar instructor</DialogTitle>
+              <DialogDescription>
+                ¿Seguro que deseas eliminar a {instructor.nombre}{" "}
+                {instructor.apellido}? Esta acción no se puede deshacer y el
+                instructor será removido del sistema.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={closeDelete}>
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => deleteMutation.mutate(instructor.id)}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </Layout>

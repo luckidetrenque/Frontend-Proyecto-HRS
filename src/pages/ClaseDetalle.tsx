@@ -36,9 +36,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { EntityDetailActions } from "@/components/ui/entity-detail-actions";
 import { InfoField } from "@/components/ui/InfoField";
 import { PageHeader } from "@/components/ui/page-header";
 import {
@@ -49,6 +51,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { useEntityActions } from "@/hooks/useEntityActions";
 import {
   Alumno,
   alumnosApi,
@@ -65,13 +68,19 @@ export default function ClaseDetalle() {
   const queryClient = useQueryClient();
   const claseId = parseInt(id || "0");
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const {
+    entityToDelete: claseToDelete,
+    isDialogOpen: isEditOpen,
+    openEdit,
+    closeEdit,
+    openDelete,
+    closeDelete,
+  } = useEntityActions<Clase>();
 
   // Queries adicionales para los selectores
   const { data: alumnos = [] } = useQuery({
     queryKey: ["alumnos"],
     queryFn: alumnosApi.listar,
-    enabled: isDialogOpen,
   });
 
   // Filtrar solo objetos válidos de Alumno
@@ -89,19 +98,16 @@ export default function ClaseDetalle() {
   const { data: instructores = [] } = useQuery({
     queryKey: ["instructores"],
     queryFn: instructoresApi.listar,
-    enabled: isDialogOpen,
   });
 
   const { data: caballos = [] } = useQuery({
     queryKey: ["caballos"],
     queryFn: caballosApi.listar,
-    enabled: isDialogOpen,
   });
 
   const { data: clases = [] } = useQuery({
     queryKey: ["clases-page"],
     queryFn: clasesApi.listarDetalladas,
-    enabled: isDialogOpen,
   });
 
   const { data: personasPrueba = [] } = useQuery({
@@ -116,11 +122,23 @@ export default function ClaseDetalle() {
       queryClient.invalidateQueries({ queryKey: ["clase", claseId] });
       queryClient.invalidateQueries({ queryKey: ["clases"] });
       queryClient.invalidateQueries({ queryKey: ["clases-page"] });
-      setIsDialogOpen(false);
+      closeEdit();
       toast.success("Clase actualizada correctamente");
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al actualizar la clase"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: clasesApi.eliminar,
+    onSuccess: (data) => {
+      const successMsg =
+        data.__successMessage || "Clase eliminada correctamente";
+      toast.success(successMsg);
+      navigate("/clases");
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al eliminar la clase"),
   });
 
   const [nuevoEstado, setNuevoEstado] = useState<Clase["estado"] | null>(null);
@@ -172,9 +190,6 @@ export default function ClaseDetalle() {
     }
   };
 
-  // Función para cerrar el diálogo
-  const handleCloseDialog = () => setIsDialogOpen(false);
-
   if (loadingClase) {
     return (
       <Layout>
@@ -217,10 +232,11 @@ export default function ClaseDetalle() {
           title="Detalle de Clase"
           description={`Información completa de la clase de ${clase.especialidad}`}
           action={
-            <Button onClick={() => setIsDialogOpen(true)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Editar
-            </Button>
+            <EntityDetailActions
+              onEdit={() => openEdit(clase)}
+              onDelete={() => openDelete(clase)}
+              entityName="clase"
+            />
           }
         />
       </div>
@@ -524,7 +540,7 @@ export default function ClaseDetalle() {
         </Card>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isEditOpen} onOpenChange={(open) => !open && closeEdit()}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display">Editar Clase</DialogTitle>
@@ -535,14 +551,38 @@ export default function ClaseDetalle() {
 
           <ClaseForm
             clase={clase}
-            alumnos={alumnosValidos}
+            alumnos={alumnos}
             instructores={instructores}
             caballos={caballos}
             clases={clases}
             personasPrueba={personasPrueba}
             onSubmit={(data) => updateMutation.mutate({ id: claseId, data })}
             isPending={updateMutation.isPending}
+            onCancel={closeEdit}
           />
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!claseToDelete} onOpenChange={closeDelete}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar instructor</DialogTitle>
+            <DialogDescription>
+              // TODO ver en ClaseDetalle ¿Seguro que deseas eliminar la clase
+              de {claseToDelete?.alumnoId}? Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDelete}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteMutation.mutate(instructor.id)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Layout>

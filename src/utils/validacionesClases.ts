@@ -8,16 +8,32 @@ export const verificarConflictoHorario = (
   clases: Clase[],
   dia: string,
   hora: string,
+  duracion: number,
   caballoId: number,
   instructorId: number,
   claseActualId?: number,
 ): { tieneConflicto: boolean; mensaje: string } => {
+  // Convertir hora a minutos
+  const [hh, mm] = hora.split(":").map(Number);
+  const inicioMinutos = hh * 60 + mm;
+  const finMinutos = inicioMinutos + duracion;
+
   const conflicto = clases.find((c) => {
     if (claseActualId && c.id === claseActualId) return false;
+    if (c.dia !== dia || c.estado === "CANCELADA") return false;
 
-    if (c.dia === dia && c.hora.startsWith(hora) && c.estado !== "CANCELADA") {
+    // Calcular rango de la clase existente
+    const [cHH, cMM] = c.hora.slice(0, 5).split(":").map(Number);
+    const cInicio = cHH * 60 + cMM;
+    const cFin = cInicio + (c.duracion || 30);
+
+    // ✅ Verificar solapamiento de rangos
+    const haySolapamiento = !(finMinutos <= cInicio || inicioMinutos >= cFin);
+
+    if (haySolapamiento) {
       return c.caballoId === caballoId || c.instructorId === instructorId;
     }
+
     return false;
   });
 
@@ -25,7 +41,7 @@ export const verificarConflictoHorario = (
     const tipo = conflicto.caballoId === caballoId ? "caballo" : "instructor";
     return {
       tieneConflicto: true,
-      mensaje: `El ${tipo} ya tiene una clase programada a esa hora`,
+      mensaje: `El ${tipo} ya tiene una clase programada que se solapa con este horario (${conflicto.hora.slice(0, 5)} - ${conflicto.duracion} min)`,
     };
   }
 
@@ -54,12 +70,21 @@ export const filtrarCaballosDisponibles = (
  */
 export const validarClasePrueba = (
   clases: Clase[],
-  alumno: Alumno | null, // ← acepta null
+  alumno: Alumno | null,
   especialidad: string,
   claseActualId?: number,
 ): { esValido: boolean; mensaje: string } => {
   if (!alumno) return { esValido: true, mensaje: "" };
-  // Regla 1: No puede tener clase de prueba si ya tiene esa especialidad activa
+
+  // ✅ REGLA 0: Solo alumnos INACTIVOS pueden tener clase de prueba
+  if (alumno.activo) {
+    return {
+      esValido: false,
+      mensaje: `${alumno.nombre} ${alumno.apellido} ya es un alumno activo. Las clases de prueba solo son para alumnos inactivos que quieren probar una nueva especialidad.`,
+    };
+  }
+
+  // REGLA 1: No puede tener clase de prueba si ya tiene esa especialidad
   const yaTomoEspecialidad = clases.some(
     (c) =>
       c.alumnoId === alumno.id &&
@@ -72,11 +97,11 @@ export const validarClasePrueba = (
   if (yaTomoEspecialidad) {
     return {
       esValido: false,
-      mensaje: `No se puede asignar una clase de prueba de ${especialidad} a ${alumno.nombre} ${alumno.apellido} porque ya tiene una clase de esa especialidad programada o completada`,
+      mensaje: `No se puede asignar una clase de prueba de ${especialidad} porque ${alumno.nombre} ${alumno.apellido} ya tiene una clase de esa especialidad`,
     };
   }
 
-  // Regla 2: No puede repetir clase de prueba de la misma especialidad
+  // REGLA 2: No puede repetir clase de prueba de la misma especialidad
   const yaTomoClaseDePrueba = clases.some(
     (c) =>
       c.alumnoId === alumno.id &&
@@ -88,7 +113,7 @@ export const validarClasePrueba = (
   if (yaTomoClaseDePrueba) {
     return {
       esValido: false,
-      mensaje: `${alumno.nombre} ${alumno.apellido} ya ha tomado una clase de prueba anteriormente`,
+      mensaje: `${alumno.nombre} ${alumno.apellido} ya ha tomado una clase de prueba de ${especialidad} anteriormente`,
     };
   }
 
