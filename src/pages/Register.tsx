@@ -116,7 +116,7 @@ const Register: React.FC = () => {
         username: username.trim(),
         email: email.trim(),
         password,
-        rol: "ROLE_ADMIN",
+        rol: "ADMIN",
         activo: true,
         fechaCreacion: new Date().toISOString(),
       });

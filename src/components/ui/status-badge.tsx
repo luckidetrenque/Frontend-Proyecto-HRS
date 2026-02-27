@@ -1,6 +1,13 @@
 import { cn } from "@/lib/utils";
 
-type Status = "success" | "warning" | "error" | "info" | "default";
+type Status =
+  | "success"
+  | "warning"
+  | "error"
+  | "info"
+  | "default"
+  | "escuela"
+  | "propio";
 
 interface StatusBadgeProps {
   status: Status;
@@ -13,6 +20,8 @@ const statusStyles: Record<Status, string> = {
   error: "bg-destructive/15 text-destructive border-destructive/30",
   info: "bg-info/15 text-info border-info/30",
   default: "bg-muted text-muted-foreground border-border",
+  escuela: "ml-2 bg-yellow-100 text-yellow-800 border-yellow-300",
+  propio: "ml-2 bg-blue-100 text-blue-800 border-blue-300",
 };
 
 export function StatusBadge({ status, children }: StatusBadgeProps) {

@@ -1,4 +1,5 @@
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { ReactNode } from "react";
 
 import {
   DropdownMenu,
@@ -12,7 +13,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 interface Props<T> {
   item: T;
   title: string;
-  subtitle?: string;
+  subtitle?: ReactNode;
   fields: {
     label: string;
     value: string | number | boolean;
@@ -41,7 +42,7 @@ export function GenericCard<T>({
       {/* HEADER */}
       <div className="flex justify-between">
         <div>
-          <h3 className="text-lg font-semibold">{title}</h3>
+          <h3 className="text-lg font-body">{title}</h3>
           {subtitle && (
             <p className="text-sm text-muted-foreground">{subtitle}</p>
           )}

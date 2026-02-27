@@ -1,5 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  CalendarCheck,
+  ChessKnight,
+  House,
   Mail,
   MessageCircleMore,
   MoreVertical,
@@ -44,6 +47,7 @@ import {
   alumnosApi,
   AlumnoSearchFilters,
   caballosApi,
+  clasesApi,
 } from "@/lib/api";
 
 export default function AlumnosPage() {
@@ -91,6 +95,16 @@ export default function AlumnosPage() {
       // Si no hay filtros, listar todos
       return alumnosApi.listar();
     },
+    enabled: true,
+  });
+
+  // Consulta de clases del mes actual
+  const mesActual = new Date().getMonth() + 1;
+  const añoActual = new Date().getFullYear();
+  const mesActualNombre = new Date().toLocaleString("es-ES", { month: "long" });
+  const { data: clases = [] } = useQuery({
+    queryKey: ["clases-mes", mesActual, añoActual],
+    queryFn: () => clasesApi.listar(),
     enabled: true,
   });
 
@@ -297,14 +311,50 @@ export default function AlumnosPage() {
   const columns = [
     {
       header: "Nombre y Apellido",
-      cell: (row: Alumno) => `${row.nombre} ${row.apellido}`,
+      cell: (row: Alumno) => {
+        let caballoNombre = "";
+        if (row.caballoPropio) {
+          if (
+            typeof row.caballoPropio === "object" &&
+            "nombre" in row.caballoPropio
+          ) {
+            caballoNombre = row.caballoPropio.nombre;
+          } else if (typeof row.caballoPropio === "number") {
+            const caballo = caballos.find((c) => c.id === row.caballoPropio);
+            if (caballo) caballoNombre = caballo.nombre;
+          }
+        }
+        return (
+          <>
+            {row.nombre} {row.apellido}
+            {caballoNombre && row.tipoPension === "CABALLO_PROPIO" && (
+              <StatusBadge status="propio">
+                <ChessKnight className="inline mr-1 w-4 h-4" />
+                {caballoNombre}
+              </StatusBadge>
+            )}
+            {caballoNombre && row.tipoPension === "RESERVA_ESCUELA" && (
+              <StatusBadge status="escuela">
+                <CalendarCheck className="inline mr-1 w-4 h-4" />
+                {caballoNombre}
+              </StatusBadge>
+            )}
+            {row.caballoPropio && row.tipoPension === "CABALLO_PROPIO" && (
+              <StatusBadge status="propio">
+                <House className="inline mr-1 w-4 h-4" />
+                {row.cuotaPension}
+              </StatusBadge>
+            )}
+          </>
+        );
+      },
     },
-    {
+    /* {
       header: "DNI",
       cell: (row: Alumno) => <ProtectedData value={row.dni} />,
     },
     { header: "Teléfono", accessorKey: "telefono" as keyof Alumno },
-    { header: "Email", accessorKey: "email" as keyof Alumno },
+    { header: "Email", accessorKey: "email" as keyof Alumno }, */
     {
       header: "Inscripción",
       cell: (row: Alumno) => {
@@ -313,12 +363,12 @@ export default function AlumnosPage() {
         return `${day}/${month}/${year}`;
       },
     },
-    {
+    /*     {
       header: "Clases/Mes",
       cell: (row: Alumno) => (
         <span className="font-medium">{row.cantidadClases}</span>
       ),
-    },
+    }, */
     {
       header: "Estado",
       cell: (row: Alumno) => (
@@ -327,8 +377,8 @@ export default function AlumnosPage() {
         </StatusBadge>
       ),
     },
-    {
-      header: "Pensiòn/Reserva",
+    /* {
+      header: "Pensión/Reserva",
       cell: (row: Alumno) => (
         <StatusBadge
           status={row.tipoPension === "SIN_CABALLO" ? "success" : "default"}
@@ -336,16 +386,42 @@ export default function AlumnosPage() {
           {row.tipoPension === "SIN_CABALLO"
             ? "—"
             : [
-                row.tipoPension === "CABALLO_PROPIO" ? "Propio" : "Escuela",
-                row.cuotaPension
-                  ? row.cuotaPension.charAt(0) +
-                    row.cuotaPension.slice(1).toLowerCase()
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
+              row.tipoPension === "CABALLO_PROPIO" ? "Propio" : "Escuela",
+              row.cuotaPension
+                ? row.cuotaPension.charAt(0) +
+                row.cuotaPension.slice(1).toLowerCase()
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
         </StatusBadge>
       ),
+    }, */
+    {
+      header: `Clases (${mesActualNombre.charAt(0).toUpperCase() + mesActualNombre.slice(1)})`,
+      cell: (row: Alumno) => {
+        // Usar nombreParticipante para identificar al alumno
+        const nombreCompleto = `${row.nombre} ${row.apellido}`;
+        const clasesAlumnoMes = clases.filter(
+          (c: {
+            nombreParticipante?: string;
+            esPrueba?: boolean;
+            estado?: string;
+            dia?: string;
+          }) =>
+            c.nombreParticipante === nombreCompleto &&
+            !c.esPrueba &&
+            ["COMPLETADA", "ASA"].includes(c.estado) &&
+            new Date(c.dia).getMonth() + 1 === mesActual &&
+            new Date(c.dia).getFullYear() === añoActual,
+        );
+        const restantes = row.cantidadClases - clasesAlumnoMes.length;
+        return (
+          <span>
+            {restantes} / {row.cantidadClases}
+          </span>
+        );
+      },
     },
     {
       header: "Acciones",
@@ -479,6 +555,24 @@ export default function AlumnosPage() {
         }
       />
 
+      {/* Leyenda de badges */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="mt-3">
+          <StatusBadge status="propio">
+            <ChessKnight className="inline mr-1 w-4 h-4" />
+            Caballo Propio
+          </StatusBadge>
+          <StatusBadge status="propio">
+            <House className="inline mr-1 w-4 h-4" />
+            Cuota Pensión
+          </StatusBadge>
+          <StatusBadge status="escuela">
+            <CalendarCheck className="inline mr-1 w-4 h-4" />
+            Reserva Escuela
+          </StatusBadge>
+        </div>
+      </div>
+
       <div className="space-y-4">
         {/* Filtros tradicionales (opcional) */}
         <FilterBar
@@ -514,15 +608,81 @@ export default function AlumnosPage() {
                 item={alumno}
                 key={alumno.id}
                 title={`${alumno.nombre} ${alumno.apellido}`}
-                subtitle=""
+                subtitle={
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {(() => {
+                      let caballoNombre = "";
+                      if (alumno.caballoPropio) {
+                        if (
+                          typeof alumno.caballoPropio === "object" &&
+                          "nombre" in alumno.caballoPropio
+                        ) {
+                          caballoNombre = alumno.caballoPropio.nombre;
+                        } else if (typeof alumno.caballoPropio === "number") {
+                          const caballo = caballos.find(
+                            (c) => c.id === alumno.caballoPropio,
+                          );
+                          if (caballo) caballoNombre = caballo.nombre;
+                        }
+                      }
+                      return (
+                        <>
+                          {caballoNombre &&
+                            alumno.tipoPension === "CABALLO_PROPIO" && (
+                              <StatusBadge status="propio">
+                                <ChessKnight className="inline mr-1 w-4 h-4" />
+                                {caballoNombre}
+                              </StatusBadge>
+                            )}
+                          {caballoNombre &&
+                            alumno.tipoPension === "RESERVA_ESCUELA" && (
+                              <StatusBadge status="escuela">
+                                <CalendarCheck className="inline mr-1 w-4 h-4" />
+                                {caballoNombre}
+                              </StatusBadge>
+                            )}
+                          {alumno.caballoPropio &&
+                            alumno.tipoPension === "CABALLO_PROPIO" && (
+                              <StatusBadge status="propio">
+                                <House className="inline mr-1 w-4 h-4" />
+                                {alumno.cuotaPension}
+                              </StatusBadge>
+                            )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                }
                 // TODO subtitle="Descripción crear campo en db"
                 fields={[
-                  { label: "DNI", value: alumno.dni },
+                  /* { label: "DNI", value: alumno.dni },
                   { label: "Teléfono", value: alumno.telefono },
-                  { label: "Email", value: alumno.email || "-" },
+                  { label: "Email", value: alumno.email || "-" }, */
                   {
-                    label: "Clases / Mes",
-                    value: alumno.cantidadClases || "-",
+                    label: "Inscripción",
+                    value: alumno.fechaInscripcion || "-",
+                  },
+                  {
+                    label: `Clases (${mesActualNombre.charAt(0).toUpperCase() + mesActualNombre.slice(1)})`,
+                    value: (() => {
+                      const nombreCompleto = `${alumno.nombre} ${alumno.apellido}`;
+                      const clasesAlumnoMes = clases.filter(
+                        (c: {
+                          nombreParticipante?: string;
+                          esPrueba?: boolean;
+                          estado?: string;
+                          dia?: string;
+                        }) =>
+                          c.nombreParticipante === nombreCompleto &&
+                          !c.esPrueba &&
+                          ["COMPLETADA", "ASA"].includes(c.estado) &&
+                          new Date(c.dia).getMonth() + 1 === mesActual &&
+                          new Date(c.dia).getFullYear() === añoActual,
+                      );
+                      const restantes =
+                        alumno.cantidadClases - clasesAlumnoMes.length;
+                      return `${restantes} / ${alumno.cantidadClases}`;
+                    })(),
                   },
                   {
                     label: "Estado ",
@@ -532,13 +692,13 @@ export default function AlumnosPage() {
                     falseLabel: "Inactivo",
                   },
 
-                  {
+                  /* {
                     label: "Propietario ",
                     value: alumno.propietario,
                     type: "badge",
                     trueLabel: "Sí",
                     falseLabel: "No",
-                  },
+                  }, */
                 ]}
                 onClick={() => navigate(`/alumnos/${alumno.id}`)}
                 onEdit={() => openEdit(alumno)}

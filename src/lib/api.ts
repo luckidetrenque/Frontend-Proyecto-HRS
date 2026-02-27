@@ -473,11 +473,12 @@ export const clasesApi = {
   cambiarEstado: async (
     id: number,
     estado: Clase["estado"],
+    observaciones: string,
   ): Promise<Clase> => {
     const response = await apiFetch(`/clases/${id}/estado`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ estado }),
+      body: JSON.stringify({ estado, observaciones }),
     });
     return handleResponse<Clase>(response);
   },
