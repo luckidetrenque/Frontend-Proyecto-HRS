@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { IdCard, MoreVertical, Pencil, Plus, Table, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -461,15 +461,17 @@ export default function ClasesPage() {
               <Button
                 variant={viewMode === "table" ? "default" : "outline"}
                 onClick={() => setViewMode("table")}
+                title="Vista tabla"
               >
-                Tabla
+                <Table className="h-4 w-4" />
               </Button>
 
               <Button
                 variant={viewMode === "cards" ? "default" : "outline"}
                 onClick={() => setViewMode("cards")}
+                title="Vista tarjetas"
               >
-                Cards
+                <IdCard className="h-4 w-4" />
               </Button>
             </div>
 
