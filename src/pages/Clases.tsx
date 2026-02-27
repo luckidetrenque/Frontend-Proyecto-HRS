@@ -497,11 +497,11 @@ export default function ClasesPage() {
 
                 <ClaseForm
                   clase={editingClase ?? undefined}
-                  alumnos={alumnos} // ← REQUERIDO
-                  instructores={instructores} // ← REQUERIDO
-                  caballos={caballos} // ← REQUERIDO
-                  clases={clases} // ← REQUERIDO
-                  personasPrueba={personasPrueba} // ← REQUERIDO
+                  alumnos={alumnos}
+                  instructores={instructores}
+                  caballos={caballos}
+                  clases={clases}
+                  personasPrueba={personasPrueba}
                   onSubmit={(data) => {
                     if (editingClase) {
                       updateMutation.mutate({ id: editingClase.id, data });
@@ -512,7 +512,7 @@ export default function ClasesPage() {
                   isPending={
                     createMutation.isPending || updateMutation.isPending
                   }
-                  onCancel={closeEdit} // ← AGREGAR
+                  onCancel={closeEdit}
                 />
               </DialogContent>
             </Dialog>
@@ -594,9 +594,13 @@ export default function ClasesPage() {
               <DialogTitle>Eliminar clase</DialogTitle>
               <DialogDescription>
                 ¿Seguro que deseas eliminar la clase de{" "}
-                {getNombreParaClase(claseToDelete)}del día
-                {claseToDelete?.dia} a las {claseToDelete?.hora} horas? Esta
-                acción no se puede deshacer.
+                {claseToDelete && getNombreParaClase(claseToDelete)}
+                del día {claseToDelete?.dia.split("-")[2]}/
+                {claseToDelete?.dia.split("-")[1]}/
+                {claseToDelete?.dia.split("-")[0]} a las{" "}
+                {claseToDelete &&
+                  formatearConZona(claseToDelete.diaHoraCompleto)}{" "}
+                horas? Esta acción no se puede deshacer.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -611,36 +615,6 @@ export default function ClasesPage() {
                   }
                 }}
                 disabled={deleteMutation.isPending}
-              >
-                Eliminar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        <Dialog open={!!claseToDelete} onOpenChange={closeDelete}>
-          {" "}
-          // ← CAMBIAR
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Eliminar clase</DialogTitle>
-              <DialogDescription>
-                // TODO ¿Seguro que deseas eliminar la clase de{" "}
-                {claseToDelete?.alumnoId}? Esta acción no se puede deshacer.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={closeDelete}>
-                {" "}
-                // ← CAMBIAR Cancelar
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  if (claseToDelete) {
-                    deleteMutation.mutate(claseToDelete.id);
-                  }
-                }}
-                disabled={deleteMutation.isPending} // ← AGREGAR
               >
                 {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
               </Button>

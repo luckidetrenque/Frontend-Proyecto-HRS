@@ -565,10 +565,14 @@ export default function ClaseDetalle() {
       <Dialog open={!!claseToDelete} onOpenChange={closeDelete}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Eliminar instructor</DialogTitle>
+            <DialogTitle>Eliminar clase</DialogTitle>
             <DialogDescription>
-              // TODO ver en ClaseDetalle ¿Seguro que deseas eliminar la clase
-              de {claseToDelete?.alumnoId}? Esta acción no se puede deshacer.
+              ¿Seguro que deseas eliminar la clase de{" "}
+              {alumno ? `${alumno.nombre} ${alumno.apellido}` : "cargando..."}{" "}
+              del día {clase.dia.split("-")[2]}/{clase.dia.split("-")[1]}/
+              {clase.dia.split("-")[0]} a las{" "}
+              {formatearConZona(clase.diaHoraCompleto)} horas? Esta acción no se
+              puede deshacer.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -577,7 +581,7 @@ export default function ClaseDetalle() {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => deleteMutation.mutate(instructor.id)}
+              onClick={() => deleteMutation.mutate(clase.id)}
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
