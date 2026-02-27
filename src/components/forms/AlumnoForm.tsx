@@ -279,7 +279,7 @@ export function AlumnoForm({
         {/* Pensión y Activo */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="tipoPension">Pensión</Label>
+            <Label htmlFor="tipoPension">Caballo</Label>
             <Select
               value={tipoPension}
               onValueChange={(v) => {
@@ -301,7 +301,9 @@ export function AlumnoForm({
                 <SelectItem value="RESERVA_ESCUELA">
                   Reserva caballo de escuela
                 </SelectItem>
-                <SelectItem value="CABALLO_PROPIO">Caballo propio</SelectItem>
+                <SelectItem value="CABALLO_PROPIO">
+                  Caballo propio
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -319,7 +321,7 @@ export function AlumnoForm({
         </div>
 
         {/* Cuota y Caballo (solo si tiene caballo) */}
-        {tipoPension !== "SIN_CABALLO" && (
+        {tipoPension === "CABALLO_PROPIO" && (
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="cuotaPension">Cuota de pensión</Label>
@@ -341,7 +343,27 @@ export function AlumnoForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="caballo">Caballo</Label>
+              <Label htmlFor="caballo">Nombre Caballo</Label>
+              <Select value={caballoId} onValueChange={setCaballoId}>
+                <SelectTrigger id="caballo">
+                  <SelectValue placeholder="Seleccionar caballo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {caballosFiltrados.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
+        {tipoPension === "RESERVA_ESCUELA" && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="caballo">Nombre Caballo</Label>
               <Select value={caballoId} onValueChange={setCaballoId}>
                 <SelectTrigger id="caballo">
                   <SelectValue placeholder="Seleccionar caballo" />

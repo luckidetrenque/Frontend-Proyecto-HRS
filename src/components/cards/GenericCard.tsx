@@ -1,4 +1,4 @@
-import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Mail, MessageCircleMore, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { ReactNode } from "react";
 
 import {
@@ -24,15 +24,20 @@ interface Props<T> {
   onClick: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onSendWhatsApp: (item: T) => void;
+  onSendEmail: (item: T) => void;
 }
 
 export function GenericCard<T>({
+  item,
   title,
   subtitle,
   fields,
   onClick,
   onEdit,
   onDelete,
+  onSendWhatsApp,
+  onSendEmail,
 }: Props<T>) {
   return (
     <div
@@ -60,6 +65,30 @@ export function GenericCard<T>({
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onSendWhatsApp(item);
+              }}
+            >
+              <MessageCircleMore className="mr-2 h-4 w-4 text-green-600" />
+              Enviar WhatsApp
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onSendEmail(item);
+              }}
+            >
+              <Mail className="mr-2 h-4 w-4 text-blue-600" />
+              Enviar correo
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();

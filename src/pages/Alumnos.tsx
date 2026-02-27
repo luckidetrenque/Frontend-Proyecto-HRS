@@ -705,6 +705,17 @@ export default function AlumnosPage() {
                   }, */
                 ]}
                 onClick={() => navigate(`/alumnos/${alumno.id}`)}
+                onSendWhatsApp={(alumno) => {
+                  window.open(
+                    encodeURI(
+                      `https://wa.me/${alumno.telefono}?text=Hola ${alumno.nombre}, te contactamos desde la Escuela para avisarte que... `,
+                    ),
+                    "_blank"
+                  );
+                }}
+                onSendEmail={(alumno) => {
+                  window.location.href = `mailto:${alumno.email}?subject=${encodeURIComponent(`Contacto para ${alumno.nombre} ${alumno.apellido}`)}`;
+                }}
                 onEdit={() => openEdit(alumno)}
                 onDelete={() => openDelete(alumno)}
               />

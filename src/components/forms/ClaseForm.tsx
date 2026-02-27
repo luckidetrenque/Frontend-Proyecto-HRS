@@ -296,7 +296,13 @@ export function ClaseForm({
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar alumno" />
               </SelectTrigger>
-              {/* ... SelectContent etc */}
+              <SelectContent>
+                {alumnos.map((a: Alumno) => (
+                  <SelectItem key={a.id} value={String(a.id)}>
+                    {a.nombre} {a.apellido}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
         ) : (
@@ -381,6 +387,9 @@ export function ClaseForm({
               id="hora"
               type="time"
               value={hora}
+              min="09:00"
+              max="18:00"
+              step="1800"
               onChange={(e) => setHora(e.target.value)}
               required
             />
