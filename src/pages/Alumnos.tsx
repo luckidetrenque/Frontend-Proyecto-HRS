@@ -695,7 +695,6 @@ export default function AlumnosPage() {
                     trueLabel: "Activo",
                     falseLabel: "Inactivo",
                   },
-
                   /* {
                     label: "Propietario ",
                     value: alumno.propietario,
@@ -705,19 +704,14 @@ export default function AlumnosPage() {
                   }, */
                 ]}
                 onClick={() => navigate(`/alumnos/${alumno.id}`)}
-                onSendWhatsApp={(alumno) => {
-                  window.open(
-                    encodeURI(
-                      `https://wa.me/${alumno.telefono}?text=Hola ${alumno.nombre}, te contactamos desde la Escuela para avisarte que... `,
-                    ),
-                    "_blank"
-                  );
-                }}
-                onSendEmail={(alumno) => {
-                  window.location.href = `mailto:${alumno.email}?subject=${encodeURIComponent(`Contacto para ${alumno.nombre} ${alumno.apellido}`)}`;
-                }}
                 onEdit={() => openEdit(alumno)}
                 onDelete={() => openDelete(alumno)}
+                onSendWhatsApp={function (item: unknown): void {
+                  throw new Error("Function not implemented.");
+                }}
+                onSendEmail={function (item: unknown): void {
+                  throw new Error("Function not implemented.");
+                }}
               />
             ))}
           </div>
