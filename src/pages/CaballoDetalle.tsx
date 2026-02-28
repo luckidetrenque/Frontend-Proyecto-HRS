@@ -8,13 +8,11 @@ import {
   ChessKnight,
   ChevronRight,
   Clock,
-  Edit,
   Info,
   TrendingUp,
   User,
   XCircle,
 } from "lucide-react";
-import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 

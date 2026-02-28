@@ -21,6 +21,7 @@ import {
   ESTADO_COLORS,
   ESTADO_LABELS,
   formatearConZona,
+  MOTIVOS_CANCELACION,
 } from "@/components/calendar/clases.constants";
 import { ClaseForm } from "@/components/forms/ClaseForm";
 import { Layout } from "@/components/Layout";
@@ -42,6 +43,7 @@ import {
 } from "@/components/ui/dialog";
 import { EntityDetailActions } from "@/components/ui/entity-detail-actions";
 import { InfoField } from "@/components/ui/InfoField";
+import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   Select,
@@ -51,6 +53,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Textarea } from "@/components/ui/textarea";
 import { useEntityActions } from "@/hooks/useEntityActions";
 import {
   Alumno,
@@ -142,6 +145,11 @@ export default function ClaseDetalle() {
   });
 
   const [nuevoEstado, setNuevoEstado] = useState<Clase["estado"] | null>(null);
+  // Estados para el formulario de cancelación
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [motivoSeleccionado, setMotivoSeleccionado] = useState<string>("");
+  const [observacionesPersonalizadas, setObservacionesPersonalizadas] =
+    useState<string>("");
 
   // Query para obtener la clase
   const { data: clase, isLoading: loadingClase } = useQuery({
@@ -171,13 +179,21 @@ export default function ClaseDetalle() {
 
   // Mutation para cambiar el estado
   const cambiarEstadoMutation = useMutation({
-    mutationFn: (estado: Clase["estado"]) =>
-      clasesApi.actualizar(claseId, { estado }),
+    mutationFn: ({
+      estado,
+      observaciones,
+    }: {
+      estado: Clase["estado"];
+      observaciones?: string;
+    }) => clasesApi.actualizar(claseId, { estado, observaciones }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clase", claseId] });
       queryClient.invalidateQueries({ queryKey: ["clases-page"] });
       toast.success("Estado de la clase actualizado correctamente");
       setNuevoEstado(null);
+      setShowCancelDialog(false);
+      setMotivoSeleccionado("");
+      setObservacionesPersonalizadas("");
     },
     onError: (error: Error) => {
       toast.error(error.message || "Error al cambiar el estado");
@@ -185,9 +201,35 @@ export default function ClaseDetalle() {
   });
 
   const handleCambiarEstado = () => {
-    if (nuevoEstado) {
-      cambiarEstadoMutation.mutate(nuevoEstado);
+    if (!nuevoEstado) return;
+
+    // Si el estado es CANCELADA, mostrar el diálogo
+    if (nuevoEstado === "CANCELADA") {
+      setShowCancelDialog(true);
+      return;
     }
+
+    // Para otros estados, cambiar directamente
+    cambiarEstadoMutation.mutate({ estado: nuevoEstado });
+  };
+
+  const handleConfirmCancel = () => {
+    const observacionFinal =
+      motivoSeleccionado === "Otro"
+        ? observacionesPersonalizadas
+        : motivoSeleccionado;
+
+    cambiarEstadoMutation.mutate({
+      estado: "CANCELADA",
+      observaciones: observacionFinal,
+    });
+  };
+
+  const handleCancelDialog = () => {
+    setShowCancelDialog(false);
+    setMotivoSeleccionado("");
+    setObservacionesPersonalizadas("");
+    setNuevoEstado(null);
   };
 
   if (loadingClase) {
@@ -585,6 +627,89 @@ export default function ClaseDetalle() {
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Diálogo de Cancelación con Motivo */}
+      <Dialog open={showCancelDialog} onOpenChange={handleCancelDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              Cancelar Clase
+            </DialogTitle>
+            <DialogDescription>
+              Selecciona el motivo de la cancelación de esta clase.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="motivo-cancelacion">Motivo de cancelación</Label>
+              <Select
+                value={motivoSeleccionado}
+                onValueChange={setMotivoSeleccionado}
+              >
+                <SelectTrigger id="motivo-cancelacion">
+                  <SelectValue placeholder="Seleccionar motivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MOTIVOS_CANCELACION.map((motivo) => (
+                    <SelectItem key={motivo} value={motivo}>
+                      {motivo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {motivoSeleccionado === "Otro" && (
+              <div className="space-y-2">
+                <Label htmlFor="observaciones-personalizadas">
+                  Observaciones personalizadas
+                </Label>
+                <Textarea
+                  id="observaciones-personalizadas"
+                  placeholder="Ingrese el motivo de cancelación..."
+                  value={observacionesPersonalizadas}
+                  onChange={(e) =>
+                    setObservacionesPersonalizadas(e.target.value)
+                  }
+                  rows={3}
+                />
+              </div>
+            )}
+
+            {motivoSeleccionado && motivoSeleccionado !== "Otro" && (
+              <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+                <strong>Observaciones:</strong> {motivoSeleccionado}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancelDialog}
+            >
+              Volver
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmCancel}
+              disabled={
+                !motivoSeleccionado ||
+                (motivoSeleccionado === "Otro" &&
+                  !observacionesPersonalizadas.trim()) ||
+                cambiarEstadoMutation.isPending
+              }
+            >
+              {cambiarEstadoMutation.isPending
+                ? "Cancelando..."
+                : "Confirmar Cancelación"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -251,7 +251,7 @@ export function ClaseForm({
       observaciones,
       instructorId: Number(instructorId),
       caballoId: caballoIdFinal,
-      diaHoraCompleto: "", // El backend lo genera
+      diaHoraCompleto: "",
       alumnoId: alumnoIdFinal,
       personaPruebaId,
       esPrueba: esPruebaChecked,

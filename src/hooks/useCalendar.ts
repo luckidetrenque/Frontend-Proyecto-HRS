@@ -182,8 +182,15 @@ export function useCalendar() {
   });
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, estado }: { id: number; estado: Clase["estado"] }) =>
-      clasesApi.cambiarEstado(id, estado),
+    mutationFn: ({
+      id,
+      estado,
+      observaciones,
+    }: {
+      id: number;
+      estado: Clase["estado"];
+      observaciones: string;
+    }) => clasesApi.cambiarEstado(id, estado, observaciones),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clases"] });
     },
@@ -303,8 +310,12 @@ export function useCalendar() {
     setPrefilledHora(null);
   };
 
-  const handleStatusChange = (claseId: number, newStatus: Clase["estado"]) => {
-    statusMutation.mutate({ id: claseId, estado: newStatus });
+  const handleStatusChange = (
+    claseId: number,
+    newStatus: Clase["estado"],
+    observaciones: string,
+  ) => {
+    statusMutation.mutate({ id: claseId, estado: newStatus, observaciones });
   };
 
   const handleBulkCancel = (claseIds: number[], observaciones: string) => {
