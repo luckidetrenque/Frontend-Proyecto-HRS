@@ -230,11 +230,19 @@ export default function InstructorDetalle() {
       </Layout>
     );
   }
-
   const handleContactWhatsApp = () => {
     window.open(
       encodeURI(
         `https://wa.me/${instructor.telefono}?text=Hola ${instructor.nombre}, te contactamos desde la Escuela para avisarte que... `,
+      ),
+      "_blank",
+    );
+  };
+
+  const handleContactWEmail = () => {
+    window.open(
+      encodeURI(
+        `mailto:${instructor.email}?subject=${encodeURIComponent(`Contacto para ${instructor.nombre} ${instructor.apellido}`)}`,
       ),
       "_blank",
     );
@@ -258,8 +266,14 @@ export default function InstructorDetalle() {
               <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={handleContactWhatsApp}>
                   <MessageCircle className="mr-2 h-4 w-4" />
-                  Contactar
+                  Whatsapp
                 </Button>
+                {instructor.email !== "" && (
+                  <Button variant="outline" onClick={handleContactWEmail}>
+                    <Mail className="mr-2 h-4 w-4" />
+                    Email
+                  </Button>
+                )}
                 <EntityDetailActions
                   onEdit={() => openEdit(instructor)}
                   onDelete={() => openDelete(instructor)}

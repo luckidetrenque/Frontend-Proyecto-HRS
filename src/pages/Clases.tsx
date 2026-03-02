@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IdCard, MoreVertical, Pencil, Plus, Table, Trash2 } from "lucide-react";
+import {
+  IdCard,
+  MoreVertical,
+  Pencil,
+  Plus,
+  Table,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -575,6 +582,12 @@ export default function ClasesPage() {
                 onClick={() => navigate(`/clases/${clase.id}`)}
                 onEdit={() => openEdit(clase)}
                 onDelete={() => openDelete(clase)}
+                onSendWhatsApp={function (item: unknown): void {
+                  throw new Error("Function not implemented.");
+                }}
+                onSendEmail={function (item: unknown): void {
+                  throw new Error("Function not implemented.");
+                }}
               />
             ))}
           </div>

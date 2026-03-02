@@ -80,6 +80,10 @@ export function CalendarToolbar({
   const [observacionesPersonalizadas, setObservacionesPersonalizadas] =
     useState<string>("");
 
+  const [usarRangoHorario, setUsarRangoHorario] = useState(false);
+  const [horaInicio, setHoraInicio] = useState("09:00");
+  const [horaFin, setHoraFin] = useState("18:00");
+
   const handleCancelarDia = () => {
     if (!onCancelDay) return;
 
@@ -155,6 +159,49 @@ export function CalendarToolbar({
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="usarRangoHorario"
+                      checked={usarRangoHorario}
+                      onChange={(e) => setUsarRangoHorario(e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="usarRangoHorario">
+                      Cancelar solo en un rango horario específico
+                    </Label>
+                  </div>
+                </div>
+
+                {usarRangoHorario && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="horaInicio">Hora inicio</Label>
+                      <Input
+                        id="horaInicio"
+                        type="time"
+                        min="09:00"
+                        max="18:00"
+                        value={horaInicio}
+                        onChange={(e) => setHoraInicio(e.target.value)}
+                        required={usarRangoHorario}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="horaFin">Hora fin</Label>
+                      <Input
+                        id="horaFin"
+                        type="time"
+                        min="09:00"
+                        max="18:00"
+                        value={horaFin}
+                        onChange={(e) => setHoraFin(e.target.value)}
+                        required={usarRangoHorario}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {motivoSeleccionado === "Otro" && (
                   <div className="space-y-2">
