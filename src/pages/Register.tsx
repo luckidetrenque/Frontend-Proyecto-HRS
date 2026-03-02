@@ -112,7 +112,7 @@ const Register: React.FC = () => {
 
     try {
       await register({
-        id: 0,
+        /* id: 0, */
         username: username.trim(),
         email: email.trim(),
         password,

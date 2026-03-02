@@ -22,6 +22,7 @@ export interface AlumnoFormData {
   apellido: string;
   dni: string;
   fechaNacimiento: string;
+  codigoArea: string;
   telefono: string;
   email: string;
   fechaInscripcion: string;
@@ -60,6 +61,7 @@ export function AlumnoForm({
   const [apellido, setApellido] = useState("");
   const [dni, setDni] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
+  const [codigoArea, setCodigoArea] = useState("");
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
   const [fechaInscripcion, setFechaInscripcion] = useState(
@@ -86,6 +88,7 @@ export function AlumnoForm({
       setApellido(alumno.apellido);
       setDni(alumno.dni);
       setFechaNacimiento(alumno.fechaNacimiento);
+      setCodigoArea(alumno.codigoArea ?? "");
       setTelefono(alumno.telefono);
       setEmail(alumno.email ?? "");
       setFechaInscripcion(alumno.fechaInscripcion);
@@ -120,9 +123,9 @@ export function AlumnoForm({
     }
 
     // ✅ Normalizar teléfono
-    let telefonoNormalizado = telefono;
-    if (telefonoNormalizado && !telefonoNormalizado.startsWith("+549")) {
-      telefonoNormalizado = `+549${telefonoNormalizado.replace(/^\+/, "")}`;
+    let codigoAreaNormalizado = codigoArea;
+    if (codigoAreaNormalizado && !codigoAreaNormalizado.startsWith("+549")) {
+      codigoAreaNormalizado = `+549${codigoAreaNormalizado.replace(/^\+/, "")}`;
     }
 
     // ✅ Derivar propietario según tipoPension
@@ -133,7 +136,8 @@ export function AlumnoForm({
       apellido: apellido.trim(),
       dni: dni.trim(),
       fechaNacimiento,
-      telefono: telefonoNormalizado,
+      codigoArea: codigoAreaNormalizado,
+      telefono: telefono,
       email: email.trim(),
       fechaInscripcion,
       cantidadClases,
