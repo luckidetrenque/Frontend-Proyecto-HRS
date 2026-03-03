@@ -244,12 +244,14 @@ export default function AlumnoDetalle() {
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleContactWhatsApp}>
                 <MessageCircle className="mr-2 h-4 w-4" />
-                Contactar
+                Whatsapp
               </Button>
-              <Button variant="outline" onClick={handleContactWEmail}>
-                <Mail className="mr-2 h-4 w-4" />
-                Contactar por Email
-              </Button>
+              {alumno.email !== "" && (
+                <Button variant="outline" onClick={handleContactWEmail}>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Email
+                </Button>
+              )}
               <EntityDetailActions
                 onEdit={() => openEdit(alumno)}
                 onDelete={() => openDelete(alumno)}
