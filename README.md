@@ -1,4 +1,4 @@
-# Lógica de Negocio - Escuela de Equitación (Actualizado)
+# Escuela de Equitación
 
 ## Tabla de Contenidos
 1. [Registro de Alumno](#registro-de-alumno)
