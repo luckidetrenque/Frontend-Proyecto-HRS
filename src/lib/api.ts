@@ -15,6 +15,7 @@ export interface Alumno {
   nombre: string;
   apellido: string;
   fechaNacimiento: string;
+  codigoArea: string;
   telefono: string;
   email: string;
   fechaInscripcion: string;
@@ -39,6 +40,7 @@ export interface Instructor {
   nombre: string;
   apellido: string;
   fechaNacimiento: string;
+  codigoArea: string;
   telefono: string;
   email: string;
   activo: boolean;

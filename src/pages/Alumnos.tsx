@@ -441,7 +441,7 @@ export default function AlumnosPage() {
                 e.stopPropagation();
                 window.open(
                   encodeURI(
-                    `https://wa.me/${row.telefono}?text=Hola ${row.nombre}, te contactamos desde la Escuela para avisarte que... `,
+                    `https://wa.me/${row.codigoArea}${row.telefono}?text=Hola ${row.nombre}, te contactamos desde la Escuela para avisarte que... `,
                   ),
                   "_blank",
                 );
@@ -660,7 +660,7 @@ export default function AlumnosPage() {
                 // TODO subtitle="Descripción crear campo en db"
                 fields={[
                   /* { label: "DNI", value: alumno.dni },
-                  { label: "Teléfono", value: alumno.telefono },
+                  { label: "Teléfono", value: '${alumno.codigoArea}-${alumno.telefono}' },
                   { label: "Email", value: alumno.email || "-" }, */
                   {
                     label: "Inscripción",
