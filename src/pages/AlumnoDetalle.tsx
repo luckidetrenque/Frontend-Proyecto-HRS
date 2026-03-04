@@ -85,13 +85,13 @@ export default function AlumnoDetalle() {
   const { data: alumno, isLoading: loadingAlumno } = useQuery({
     queryKey: ["alumno", alumnoId],
     queryFn: () => alumnosApi.obtener(alumnoId),
-    enabled: !!alumnoId && alumnoId !== 1,
+    enabled: !!alumnoId,
   });
 
   const { data: clasesAlumnoData = [], isLoading: loadingData } = useQuery({
     queryKey: ["clases-alumno", alumnoId],
     queryFn: () => clasesApi.buscarPorAlumno(alumnoId),
-    enabled: !!alumnoId && alumnoId !== 1,
+    enabled: !!alumnoId,
   });
 
   const { data: caballos = [] } = useQuery({
@@ -291,11 +291,17 @@ export default function AlumnoDetalle() {
                 </InfoField>
                 <InfoField label="DNI">{alumno.dni}</InfoField>
                 <InfoField label="Fecha de Nacimiento">
-                  {new Date(alumno.fechaNacimiento).toLocaleDateString("es-AR")}
+                  {alumno.fechaNacimiento
+                    ? new Date(
+                        alumno.fechaNacimiento + "T00:00:00",
+                      ).toLocaleDateString("es-AR")
+                    : "No especificada"}
                 </InfoField>
                 <InfoField label="Edad">
-                  {new Date().getFullYear() -
-                    new Date(alumno.fechaNacimiento).getFullYear()}{" "}
+                  {alumno.fechaNacimiento
+                    ? new Date().getFullYear() -
+                      new Date(alumno.fechaNacimiento).getFullYear()
+                    : "—"}{" "}
                   años
                 </InfoField>
               </div>
@@ -309,9 +315,11 @@ export default function AlumnoDetalle() {
               {/* Sección 3: Clases e Inscripción (Grid 2x2) */}
               <div className="pt-4 border-t grid grid-cols-2 gap-4">
                 <InfoField label="Fecha de Inscripción">
-                  {new Date(alumno.fechaInscripcion).toLocaleDateString(
-                    "es-AR",
-                  )}
+                  {alumno.fechaInscripcion
+                    ? new Date(
+                        alumno.fechaInscripcion + "T00:00:00",
+                      ).toLocaleDateString("es-AR")
+                    : "No especificada"}
                 </InfoField>
                 <InfoField label="Clases por Mes">
                   <span className="text-lg">{alumno.cantidadClases}</span>
