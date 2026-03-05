@@ -10,6 +10,7 @@ import {
   Edit,
   Mail,
   MessageCircle,
+  Phone,
   TrendingUp,
   User,
   XCircle,
@@ -227,7 +228,7 @@ export default function AlumnoDetalle() {
     );
   };
 
-  const caballo = caballos.find(c => c.id === alumno.caballoId);
+  const caballo = caballos.find((c) => c.id === alumno.caballoId);
 
   return (
     <Layout>
@@ -295,14 +296,14 @@ export default function AlumnoDetalle() {
                 <InfoField label="Fecha de Nacimiento">
                   {alumno.fechaNacimiento
                     ? new Date(
-                      alumno.fechaNacimiento + "T00:00:00",
-                    ).toLocaleDateString("es-AR")
+                        alumno.fechaNacimiento + "T00:00:00",
+                      ).toLocaleDateString("es-AR")
                     : "No especificada"}
                 </InfoField>
                 <InfoField label="Edad">
                   {alumno.fechaNacimiento
                     ? new Date().getFullYear() -
-                    new Date(alumno.fechaNacimiento).getFullYear()
+                      new Date(alumno.fechaNacimiento).getFullYear()
                     : "—"}{" "}
                   años
                 </InfoField>
@@ -310,10 +311,18 @@ export default function AlumnoDetalle() {
               {/* Sección 2: Contacto y Email (Grid 2x2) */}
               <div className="pt-4 border-t grid grid-cols-2 gap-4">
                 <InfoField label="Teléfono">
-                  ({alumno.codigoArea.replace("+549", "")}) {alumno.telefono.slice(0, alumno.telefono.length - 4)}-{alumno.telefono.slice(-4)}
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />(
+                    {alumno.codigoArea.replace("+549", "")}){" "}
+                    {alumno.telefono.slice(0, alumno.telefono.length - 4)}-
+                    {alumno.telefono.slice(-4)}
+                  </div>
                 </InfoField>
                 <InfoField label="Email">
-                  {alumno.email || "No especificado"}
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    {alumno.email || "No especificado"}
+                  </div>
                 </InfoField>
               </div>
               {/* Sección 3: Clases e Inscripción (Grid 2x2) */}
@@ -321,8 +330,8 @@ export default function AlumnoDetalle() {
                 <InfoField label="Fecha de Inscripción">
                   {alumno.fechaInscripcion
                     ? new Date(
-                      alumno.fechaInscripcion + "T00:00:00",
-                    ).toLocaleDateString("es-AR")
+                        alumno.fechaInscripcion + "T00:00:00",
+                      ).toLocaleDateString("es-AR")
                     : "No especificada"}
                 </InfoField>
                 <InfoField label="Clases por Mes">
@@ -373,8 +382,7 @@ export default function AlumnoDetalle() {
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
-              ) : alumno.caballoId &&
-                typeof alumno.caballoId === "number" ? (
+              ) : alumno.caballoId && typeof alumno.caballoId === "number" ? (
                 <div className="space-y-4">
                   <div className="pt-2">
                     <InfoField label="Tipo de pensión">
@@ -415,15 +423,9 @@ export default function AlumnoDetalle() {
                     <div>
                       <InfoField label="Disponibilidad">
                         <StatusBadge
-                          status={
-                            caballo?.disponible
-                              ? "success"
-                              : "error"
-                          }
+                          status={caballo?.disponible ? "success" : "error"}
                         >
-                          {caballo?.disponible
-                            ? "Disponible"
-                            : "No Disponible"}
+                          {caballo?.disponible ? "Disponible" : "No Disponible"}
                         </StatusBadge>
                       </InfoField>
                     </div>
@@ -437,7 +439,8 @@ export default function AlumnoDetalle() {
                       onClick={() => {
                         if (
                           alumno.caballoId &&
-                          typeof alumno.caballoId === "number") {
+                          typeof alumno.caballoId === "number"
+                        ) {
                           navigate(`/caballos/${alumno.caballoId}`);
                         }
                       }}

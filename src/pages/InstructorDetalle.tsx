@@ -233,7 +233,7 @@ export default function InstructorDetalle() {
   const handleContactWhatsApp = () => {
     window.open(
       encodeURI(
-        `https://wa.me/${instructor.telefono}?text=Hola ${instructor.nombre}, te contactamos desde la Escuela para avisarte que... `,
+        `https://wa.me/${instructor.codigoArea}${instructor.telefono}?text=Hola ${instructor.nombre}, te contactamos desde la Escuela para avisarte que... `,
       ),
       "_blank",
     );
@@ -403,8 +403,9 @@ export default function InstructorDetalle() {
                             <div
                               className="bg-primary h-2 rounded-full transition-all"
                               style={{
-                                width: `${(cantidad / estadisticas.total) * 100
-                                  }%`,
+                                width: `${
+                                  (cantidad / estadisticas.total) * 100
+                                }%`,
                               }}
                             />
                           </div>
