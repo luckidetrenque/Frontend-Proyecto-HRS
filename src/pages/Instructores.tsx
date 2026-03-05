@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   IdCard,
+  Mail,
+  MessageCircleMore,
   MoreVertical,
   Pencil,
   Plus,
@@ -251,7 +253,10 @@ export default function InstructoresPage() {
       cell: (row: Instructor) => `${row.nombre} ${row.apellido}`,
     },
     { header: "DNI", accessorKey: "dni" as keyof Instructor },
-    { header: "Teléfono", accessorKey: "telefono" as keyof Instructor },
+    {
+      header: "Teléfono",
+      cell: (row: Instructor) => `(${row.codigoArea.replace("+549", "")}) ${row.telefono.slice(0, row.telefono.length - 4)}-${row.telefono.slice(-4)}`,
+    },
     { header: "Email", accessorKey: "email" as keyof Instructor },
     {
       header: "Estado",
@@ -271,7 +276,30 @@ export default function InstructoresPage() {
               <span className="sr-only">Abrir menú</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(
+                  encodeURI(
+                    `https://wa.me/${row.codigoArea}${row.telefono}?text=Hola ${row.nombre}, te contactamos desde la Escuela para avisarte que... `,
+                  ),
+                  "_blank",
+                );
+              }}
+            >
+              <MessageCircleMore className="mr-2 h-4 w-4 text-green-600" />
+              Enviar WhatsApp
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                window.location.href = `mailto:${row.email}?subject=${encodeURIComponent(`Contacto para ${row.nombre} ${row.apellido}`)}`;
+              }}
+            >
+              <Mail className="mr-2 h-4 w-4 text-blue-600" />
+              Enviar correo
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
@@ -413,7 +441,7 @@ export default function InstructoresPage() {
                 // TODO subtitle="Descripción crear campo en db"
                 fields={[
                   { label: "DNI", value: instructor.dni },
-                  { label: "Teléfono", value: instructor.telefono },
+                  { label: "Teléfono", value: `(${instructor.codigoArea.replace("+549", "")}) ${instructor.telefono.slice(0, instructor.telefono.length - 4)}-${instructor.telefono.slice(-4)}` },
                   { label: "Email", value: instructor.email || "-" },
                   {
                     label: "Estado ",
@@ -426,6 +454,12 @@ export default function InstructoresPage() {
                 onClick={() => navigate(`/instructores/${instructor.id}`)}
                 onEdit={() => openEdit(instructor)} // ← CAMBIAR
                 onDelete={() => openDelete(instructor)}
+                onSendWhatsApp={function (item: unknown): void {
+                  throw new Error("Function not implemented.");
+                }}
+                onSendEmail={function (item: unknown): void {
+                  throw new Error("Function not implemented.");
+                }}
               />
             ))}
           </div>

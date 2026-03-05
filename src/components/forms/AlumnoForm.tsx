@@ -32,6 +32,8 @@ export interface AlumnoFormData {
   propietario: boolean;
   activo: boolean;
   caballoPropio?: number | null;
+  caballoId?: number | null;
+  caballoNombre?: string | null;
 }
 
 interface AlumnoFormProps {
@@ -71,14 +73,20 @@ export function AlumnoForm({
   const [tipoPension, setTipoPension] = useState<TipoPension>("SIN_CABALLO");
   const [cuotaPension, setCuotaPension] = useState<CuotaPension>("ENTERA");
   const [caballoId, setCaballoId] = useState<string>("");
+  const [caballoNombre, setCaballoNombre] = useState<string>("");
   const [activo, setActivo] = useState(true);
 
   // Helper para extraer caballoId del alumno
+  /*   const getCaballoIdFromAlumno = (alumno?: Alumno): string => {
+      if (!alumno?.caballoId) return "";
+      return typeof alumno.caballoId === "number"
+        ? String(alumno.caballoId)
+        : String(alumno.caballoId.id);
+    }; */
+
   const getCaballoIdFromAlumno = (alumno?: Alumno): string => {
-    if (!alumno?.caballoPropio) return "";
-    return typeof alumno.caballoPropio === "number"
-      ? String(alumno.caballoPropio)
-      : String(alumno.caballoPropio.id);
+    if (!alumno?.caballoId) return "";
+    return String(alumno.caballoId);
   };
 
   // Pre-poblar en modo edición
@@ -131,6 +139,21 @@ export function AlumnoForm({
     // ✅ Derivar propietario según tipoPension
     const propietario = tipoPension === "CABALLO_PROPIO";
 
+    // Reglas para envío de caballoId y cuotaPension
+    let caballoIdValue: number | null = null;
+    let cuotaPensionValue: CuotaPension | null = null;
+
+    if (tipoPension === "CABALLO_PROPIO") {
+      caballoIdValue = caballoId ? Number(caballoId) : null;
+      cuotaPensionValue = cuotaPension;
+    } else if (tipoPension === "RESERVA_ESCUELA") {
+      caballoIdValue = caballoId ? Number(caballoId) : null;
+      cuotaPensionValue = null;
+    } else {
+      caballoIdValue = null;
+      cuotaPensionValue = null;
+    }
+
     onSubmit({
       nombre: nombre.trim(),
       apellido: apellido.trim(),
@@ -142,11 +165,10 @@ export function AlumnoForm({
       fechaInscripcion,
       cantidadClases,
       tipoPension,
-      cuotaPension: tipoPension === "SIN_CABALLO" ? null : cuotaPension,
+      cuotaPension: cuotaPensionValue,
       propietario,
       activo,
-      caballoPropio:
-        tipoPension === "SIN_CABALLO" || !caballoId ? null : Number(caballoId),
+      caballoId: caballoIdValue,
     });
   };
 
@@ -224,6 +246,14 @@ export function AlumnoForm({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="telefono">Teléfono</Label>
+            <Input
+              id="codigoArea"
+              type="tel"
+              autoComplete="tel"
+              placeholder="Código de area"
+              value={codigoArea}
+              onChange={(e) => setCodigoArea(e.target.value)}
+            />
             <Input
               id="telefono"
               type="tel"

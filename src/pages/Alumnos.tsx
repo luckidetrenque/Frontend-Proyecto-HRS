@@ -314,18 +314,7 @@ export default function AlumnosPage() {
     {
       header: "Nombre y Apellido",
       cell: (row: Alumno) => {
-        let caballoNombre = "";
-        if (row.caballoPropio) {
-          if (
-            typeof row.caballoPropio === "object" &&
-            "nombre" in row.caballoPropio
-          ) {
-            caballoNombre = row.caballoPropio.nombre;
-          } else if (typeof row.caballoPropio === "number") {
-            const caballo = caballos.find((c) => c.id === row.caballoPropio);
-            if (caballo) caballoNombre = caballo.nombre;
-          }
-        }
+        const caballoNombre = row.caballoNombre || (row.caballoId ? (caballos.find((c) => c.id === row.caballoId)?.nombre || "") : "");
         return (
           <>
             {row.nombre} {row.apellido}
@@ -341,7 +330,7 @@ export default function AlumnosPage() {
                 {caballoNombre}
               </StatusBadge>
             )}
-            {row.caballoPropio && row.tipoPension === "CABALLO_PROPIO" && (
+            {caballoNombre && row.tipoPension === "CABALLO_PROPIO" && (
               <StatusBadge status="propio">
                 <House className="inline mr-1 w-4 h-4" />
                 {row.cuotaPension}
@@ -615,20 +604,7 @@ export default function AlumnosPage() {
                 subtitle={
                   <div className="mt-1 flex flex-wrap gap-2">
                     {(() => {
-                      let caballoNombre = "";
-                      if (alumno.caballoPropio) {
-                        if (
-                          typeof alumno.caballoPropio === "object" &&
-                          "nombre" in alumno.caballoPropio
-                        ) {
-                          caballoNombre = alumno.caballoPropio.nombre;
-                        } else if (typeof alumno.caballoPropio === "number") {
-                          const caballo = caballos.find(
-                            (c) => c.id === alumno.caballoPropio,
-                          );
-                          if (caballo) caballoNombre = caballo.nombre;
-                        }
-                      }
+                      const caballoNombre = alumno.caballoNombre || (alumno.caballoId ? (caballos.find((c) => c.id === alumno.caballoId)?.nombre || "") : "");
                       return (
                         <>
                           {caballoNombre &&
@@ -645,7 +621,7 @@ export default function AlumnosPage() {
                                 {caballoNombre}
                               </StatusBadge>
                             )}
-                          {alumno.caballoPropio &&
+                          {caballoNombre &&
                             alumno.tipoPension === "CABALLO_PROPIO" && (
                               <StatusBadge status="propio">
                                 <House className="inline mr-1 w-4 h-4" />

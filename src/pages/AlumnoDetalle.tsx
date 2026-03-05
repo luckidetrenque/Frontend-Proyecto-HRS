@@ -62,7 +62,7 @@ export default function AlumnoDetalle() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Alumno> }) =>
-      caballosApi.actualizar(id, data),
+      alumnosApi.actualizar(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["caballo", alumnoId] });
       closeEdit();
@@ -212,7 +212,7 @@ export default function AlumnoDetalle() {
   const handleContactWhatsApp = () => {
     window.open(
       encodeURI(
-        `https://wa.me/${alumno.telefono}?text=Hola ${alumno.nombre}, te contactamos desde la Escuela para avisarte que... `,
+        `https://wa.me/${alumno.codigoArea}${alumno.telefono}?text=Hola ${alumno.nombre}, te contactamos desde la Escuela para avisarte que... `,
       ),
       "_blank",
     );
@@ -226,6 +226,8 @@ export default function AlumnoDetalle() {
       "_blank",
     );
   };
+
+  const caballo = caballos.find(c => c.id === alumno.caballoId);
 
   return (
     <Layout>
@@ -293,21 +295,23 @@ export default function AlumnoDetalle() {
                 <InfoField label="Fecha de Nacimiento">
                   {alumno.fechaNacimiento
                     ? new Date(
-                        alumno.fechaNacimiento + "T00:00:00",
-                      ).toLocaleDateString("es-AR")
+                      alumno.fechaNacimiento + "T00:00:00",
+                    ).toLocaleDateString("es-AR")
                     : "No especificada"}
                 </InfoField>
                 <InfoField label="Edad">
                   {alumno.fechaNacimiento
                     ? new Date().getFullYear() -
-                      new Date(alumno.fechaNacimiento).getFullYear()
+                    new Date(alumno.fechaNacimiento).getFullYear()
                     : "—"}{" "}
                   años
                 </InfoField>
               </div>
               {/* Sección 2: Contacto y Email (Grid 2x2) */}
               <div className="pt-4 border-t grid grid-cols-2 gap-4">
-                <InfoField label="Teléfono">{alumno.telefono}</InfoField>
+                <InfoField label="Teléfono">
+                  ({alumno.codigoArea.replace("+549", "")}) {alumno.telefono.slice(0, alumno.telefono.length - 4)}-{alumno.telefono.slice(-4)}
+                </InfoField>
                 <InfoField label="Email">
                   {alumno.email || "No especificado"}
                 </InfoField>
@@ -317,8 +321,8 @@ export default function AlumnoDetalle() {
                 <InfoField label="Fecha de Inscripción">
                   {alumno.fechaInscripcion
                     ? new Date(
-                        alumno.fechaInscripcion + "T00:00:00",
-                      ).toLocaleDateString("es-AR")
+                      alumno.fechaInscripcion + "T00:00:00",
+                    ).toLocaleDateString("es-AR")
                     : "No especificada"}
                 </InfoField>
                 <InfoField label="Clases por Mes">
@@ -369,8 +373,8 @@ export default function AlumnoDetalle() {
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
-              ) : alumno.caballoPropio &&
-                typeof alumno.caballoPropio === "object" ? (
+              ) : alumno.caballoId &&
+                typeof alumno.caballoId === "number" ? (
                 <div className="space-y-4">
                   <div className="pt-2">
                     <InfoField label="Tipo de pensión">
@@ -395,7 +399,7 @@ export default function AlumnoDetalle() {
                       Nombre del Caballo
                     </p>
                     <p className="font-medium text-lg">
-                      {alumno.caballoPropio.nombre || "No asignado"}
+                      {alumno.caballoNombre || "No asignado"}
                     </p>
                   </div>
                   <div className="pt-4 border-t grid grid-cols-2 gap-4">
@@ -412,12 +416,12 @@ export default function AlumnoDetalle() {
                       <InfoField label="Disponibilidad">
                         <StatusBadge
                           status={
-                            alumno.caballoPropio.disponible
+                            caballo?.disponible
                               ? "success"
                               : "error"
                           }
                         >
-                          {alumno.caballoPropio.disponible
+                          {caballo?.disponible
                             ? "Disponible"
                             : "No Disponible"}
                         </StatusBadge>
@@ -432,11 +436,9 @@ export default function AlumnoDetalle() {
                       className="h-8 w-8 p-0"
                       onClick={() => {
                         if (
-                          alumno.caballoPropio &&
-                          typeof alumno.caballoPropio === "object" &&
-                          "id" in alumno.caballoPropio
-                        ) {
-                          navigate(`/caballos/${alumno.caballoPropio.id}`);
+                          alumno.caballoId &&
+                          typeof alumno.caballoId === "number") {
+                          navigate(`/caballos/${alumno.caballoId}`);
                         }
                       }}
                     >

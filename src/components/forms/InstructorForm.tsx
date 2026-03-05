@@ -11,6 +11,7 @@ import { Instructor } from "@/lib/api";
 export interface InstructorFormData {
   nombre: string;
   apellido: string;
+  codigoArea: string;
   telefono: string;
   email: string;
   fechaNacimiento: string;
@@ -43,6 +44,7 @@ export function InstructorForm({
   // Estados locales del form
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
+  const [codigoArea, setCodigoArea] = useState("");
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
@@ -55,6 +57,7 @@ export function InstructorForm({
     if (instructor) {
       setNombre(instructor.nombre);
       setApellido(instructor.apellido);
+      setCodigoArea(instructor.codigoArea);
       setTelefono(instructor.telefono);
       setEmail(instructor.email ?? "");
       setFechaNacimiento(instructor.fechaNacimiento);
@@ -80,15 +83,16 @@ export function InstructorForm({
     }
 
     // ✅ Normalizar teléfono (igual que en tu código original)
-    let telefonoNormalizado = telefono;
-    if (telefonoNormalizado && !telefonoNormalizado.startsWith("+549")) {
-      telefonoNormalizado = `+549${telefonoNormalizado.replace(/^\+/, "")}`;
+    let codigoAreaNormalizado = codigoArea;
+    if (codigoAreaNormalizado && !codigoAreaNormalizado.startsWith("+549")) {
+      codigoAreaNormalizado = `+549${codigoAreaNormalizado.replace(/^\+/, "")}`;
     }
 
     onSubmit({
       nombre: nombre.trim(),
       apellido: apellido.trim(),
-      telefono: telefonoNormalizado,
+      codigoArea: codigoAreaNormalizado,
+      telefono: telefono,
       email: email.trim(),
       fechaNacimiento,
       activo,
@@ -166,6 +170,14 @@ export function InstructorForm({
           <div className="space-y-2">
             <Label htmlFor="telefono">Teléfono</Label>
             <Input
+              id="codigoArea"
+              type="tel"
+              autoComplete="tel"
+              placeholder="Código de area"
+              value={codigoArea}
+              onChange={(e) => setCodigoArea(e.target.value)}
+            />
+            <Input
               id="telefono"
               type="tel"
               autoComplete="tel"
@@ -195,11 +207,10 @@ export function InstructorForm({
                 type="button"
                 key={presetColor}
                 onClick={() => setColor(presetColor)}
-                className={`w-10 h-10 rounded-full border-2 transition-all ${
-                  color === presetColor
-                    ? "border-primary ring-2 ring-primary/20 scale-110"
-                    : "border-gray-300 hover:scale-105"
-                }`}
+                className={`w-10 h-10 rounded-full border-2 transition-all ${color === presetColor
+                  ? "border-primary ring-2 ring-primary/20 scale-110"
+                  : "border-gray-300 hover:scale-105"
+                  }`}
                 style={{ backgroundColor: presetColor }}
                 title={presetColor}
               />

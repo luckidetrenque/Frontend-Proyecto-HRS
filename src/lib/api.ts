@@ -22,9 +22,11 @@ export interface Alumno {
   cantidadClases: number;
   propietario: boolean;
   activo: boolean;
-  caballoPropio?: number | Caballo;
+  /* caballoPropio?: number | Caballo; */
   tipoPension: TipoPension;
   cuotaPension?: CuotaPension | null;
+  caballoId?: number | null;
+  caballoNombre?: string | null;
 }
 
 export interface PersonaPrueba {

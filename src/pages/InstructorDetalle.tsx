@@ -330,7 +330,8 @@ export default function InstructorDetalle() {
                   <InfoField label="Teléfono">
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{instructor.telefono}</span>
+                      {/* Usar etiqueta válida o fragmento JSX */}
+                      <>{`(${instructor.codigoArea.replace("+549", "")}) ${instructor.telefono.slice(0, instructor.telefono.length - 4)}-${instructor.telefono.slice(-4)}`}</>
                     </div>
                   </InfoField>
                   <InfoField label="Email">
@@ -402,9 +403,8 @@ export default function InstructorDetalle() {
                             <div
                               className="bg-primary h-2 rounded-full transition-all"
                               style={{
-                                width: `${
-                                  (cantidad / estadisticas.total) * 100
-                                }%`,
+                                width: `${(cantidad / estadisticas.total) * 100
+                                  }%`,
                               }}
                             />
                           </div>
