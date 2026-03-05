@@ -40,7 +40,6 @@ import {
 import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { PaginationControls } from "@/components/ui/pagination-controls";
-import { ProtectedData } from "@/components/ui/protected-data";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useEntityActions } from "@/hooks/useEntityActions";
 import { useValidarDniDuplicado } from "@/hooks/useValidarDniDuplicado";
@@ -314,7 +313,11 @@ export default function AlumnosPage() {
     {
       header: "Nombre y Apellido",
       cell: (row: Alumno) => {
-        const caballoNombre = row.caballoNombre || (row.caballoId ? (caballos.find((c) => c.id === row.caballoId)?.nombre || "") : "");
+        const caballoNombre =
+          row.caballoNombre ||
+          (row.caballoId
+            ? caballos.find((c) => c.id === row.caballoId)?.nombre || ""
+            : "");
         return (
           <>
             {row.nombre} {row.apellido}
@@ -604,7 +607,12 @@ export default function AlumnosPage() {
                 subtitle={
                   <div className="mt-1 flex flex-wrap gap-2">
                     {(() => {
-                      const caballoNombre = alumno.caballoNombre || (alumno.caballoId ? (caballos.find((c) => c.id === alumno.caballoId)?.nombre || "") : "");
+                      const caballoNombre =
+                        alumno.caballoNombre ||
+                        (alumno.caballoId
+                          ? caballos.find((c) => c.id === alumno.caballoId)
+                              ?.nombre || ""
+                          : "");
                       return (
                         <>
                           {caballoNombre &&

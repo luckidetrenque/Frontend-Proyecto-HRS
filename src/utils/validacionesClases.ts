@@ -75,15 +75,6 @@ export const validarClasePrueba = (
   claseActualId?: number,
 ): { esValido: boolean; mensaje: string } => {
   if (!alumno) return { esValido: true, mensaje: "" };
-
-  // ✅ REGLA 0: Solo alumnos INACTIVOS pueden tener clase de prueba
-  if (alumno.activo) {
-    return {
-      esValido: false,
-      mensaje: `${alumno.nombre} ${alumno.apellido} ya es un alumno activo. Las clases de prueba solo son para alumnos inactivos que quieren probar una nueva especialidad.`,
-    };
-  }
-
   // REGLA 1: No puede tener clase de prueba si ya tiene esa especialidad
   const yaTomoEspecialidad = clases.some(
     (c) =>
@@ -123,17 +114,17 @@ export const validarClasePrueba = (
 /**
  * Resuelve el ID del caballo a usar en la clase:
  * prioriza el del formulario, luego el caballo propio del alumno, si no retorna 0.
- */
-export const resolverCaballoId = (
-  caballoIdForm: FormDataEntryValue | null,
-  alumno?: Alumno,
-): number => {
-  if (caballoIdForm) return Number(caballoIdForm);
-  if (alumno?.caballoPropio && typeof alumno.caballoPropio === "object") {
-    return alumno.caballoPropio.id;
-  }
-  return 0;
-};
+//  */
+// export const resolverCaballoId = (
+//   caballoIdForm: FormDataEntryValue | null,
+//   alumno?: Alumno,
+// ): number => {
+//   if (caballoIdForm) return Number(caballoIdForm);
+//   if (alumno?.caballoPropio && typeof alumno.caballoPropio === "object") {
+//     return alumno.caballoPropio.id;
+//   }
+//   return 0;
+// };
 
 /**
  * Efecto secundario al cambiar la especialidad en el formulario.

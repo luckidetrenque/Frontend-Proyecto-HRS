@@ -1,5 +1,7 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
 import { CommonTooltips, HelpTooltip } from "@/components/HelpTooltip";
@@ -15,8 +17,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Alumno, Caballo } from "@/lib/api";
+import { AlumnoFormValues, alumnoSchema } from "@/lib/schemas/forms.schemas";
 import { CuotaPension, TipoPension } from "@/types/enums";
 
+// El tipo que el padre espera (compatible con la API)
 export interface AlumnoFormData {
   nombre: string;
   apellido: string;
@@ -31,9 +35,7 @@ export interface AlumnoFormData {
   cuotaPension: CuotaPension | null;
   propietario: boolean;
   activo: boolean;
-  caballoPropio?: number | null;
   caballoId?: number | null;
-  caballoNombre?: string | null;
 }
 
 interface AlumnoFormProps {
@@ -42,10 +44,7 @@ interface AlumnoFormProps {
   onSubmit: (data: AlumnoFormData) => void;
   isPending: boolean;
   onCancel?: () => void;
-  validacionDni?: {
-    duplicado: boolean;
-    mensaje: string;
-  };
+  validacionDni?: { duplicado: boolean; mensaje: string };
   onDniChange?: (dni: string) => void;
 }
 
@@ -58,55 +57,55 @@ export function AlumnoForm({
   validacionDni,
   onDniChange,
 }: AlumnoFormProps) {
-  // Estados locales del form
-  const [nombre, setNombre] = useState("");
-  const [apellido, setApellido] = useState("");
-  const [dni, setDni] = useState("");
-  const [fechaNacimiento, setFechaNacimiento] = useState("");
-  const [codigoArea, setCodigoArea] = useState("");
-  const [telefono, setTelefono] = useState("");
-  const [email, setEmail] = useState("");
-  const [fechaInscripcion, setFechaInscripcion] = useState(
-    format(new Date(), "yyyy-MM-dd"),
-  );
-  const [cantidadClases, setCantidadClases] = useState(4);
-  const [tipoPension, setTipoPension] = useState<TipoPension>("SIN_CABALLO");
-  const [cuotaPension, setCuotaPension] = useState<CuotaPension>("ENTERA");
-  const [caballoId, setCaballoId] = useState<string>("");
-  const [caballoNombre, setCaballoNombre] = useState<string>("");
-  const [activo, setActivo] = useState(true);
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    setValue,
+    formState: { errors },
+  } = useForm<AlumnoFormValues>({
+    resolver: zodResolver(alumnoSchema),
+    defaultValues: {
+      nombre: "",
+      apellido: "",
+      dni: "",
+      fechaNacimiento: "",
+      codigoArea: "",
+      telefono: "",
+      email: "",
+      fechaInscripcion: format(new Date(), "yyyy-MM-dd"),
+      cantidadClases: 4,
+      tipoPension: "SIN_CABALLO",
+      cuotaPension: null,
+      caballoId: null,
+      activo: true,
+    },
+  });
 
-  // Helper para extraer caballoId del alumno
-  /*   const getCaballoIdFromAlumno = (alumno?: Alumno): string => {
-      if (!alumno?.caballoId) return "";
-      return typeof alumno.caballoId === "number"
-        ? String(alumno.caballoId)
-        : String(alumno.caballoId.id);
-    }; */
-
-  const getCaballoIdFromAlumno = (alumno?: Alumno): string => {
-    if (!alumno?.caballoId) return "";
-    return String(alumno.caballoId);
-  };
+  // Observar tipoPension para renderizado condicional
+  const tipoPension = useWatch({ control, name: "tipoPension" });
 
   // Pre-poblar en modo edición
   useEffect(() => {
     if (alumno) {
-      setNombre(alumno.nombre);
-      setApellido(alumno.apellido);
-      setDni(alumno.dni);
-      setFechaNacimiento(alumno.fechaNacimiento);
-      setCodigoArea(alumno.codigoArea ?? "");
-      setTelefono(alumno.telefono);
-      setEmail(alumno.email ?? "");
-      setFechaInscripcion(alumno.fechaInscripcion);
-      setCantidadClases(alumno.cantidadClases);
-      setTipoPension(alumno.tipoPension ?? "SIN_CABALLO");
-      setCuotaPension(alumno.cuotaPension ?? "ENTERA");
-      setCaballoId(getCaballoIdFromAlumno(alumno));
-      setActivo(alumno.activo);
+      reset({
+        nombre: alumno.nombre,
+        apellido: alumno.apellido,
+        dni: alumno.dni,
+        fechaNacimiento: alumno.fechaNacimiento,
+        codigoArea: alumno.codigoArea ?? "",
+        telefono: alumno.telefono,
+        email: alumno.email ?? "",
+        fechaInscripcion: alumno.fechaInscripcion,
+        cantidadClases: alumno.cantidadClases,
+        tipoPension: alumno.tipoPension ?? "SIN_CABALLO",
+        cuotaPension: alumno.cuotaPension ?? null,
+        caballoId: alumno.caballoId ?? null,
+        activo: alumno.activo,
+      } as AlumnoFormValues);
     }
-  }, [alumno]);
+  }, [alumno, reset]);
 
   // Filtrar caballos según tipoPension
   const caballosFiltrados = caballos.filter((c) =>
@@ -115,65 +114,55 @@ export function AlumnoForm({
       : c.tipo === "ESCUELA",
   );
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    // ✅ Validación: DNI duplicado
+  const onValid = (data: AlumnoFormValues) => {
     if (validacionDni?.duplicado) {
       toast.error("Ya existe un alumno con este DNI");
       return;
     }
 
-    // ✅ Validación: campos obligatorios
-    if (!nombre.trim() || !apellido.trim() || !dni.trim()) {
-      toast.error("Nombre, apellido y DNI son obligatorios");
-      return;
+    // Normalizar código de área
+    let codigoArea = data.codigoArea ?? "";
+    if (codigoArea && !codigoArea.startsWith("+549")) {
+      codigoArea = `+549${codigoArea.replace(/^\+/, "")}`;
     }
 
-    // ✅ Normalizar teléfono
-    let codigoAreaNormalizado = codigoArea;
-    if (codigoAreaNormalizado && !codigoAreaNormalizado.startsWith("+549")) {
-      codigoAreaNormalizado = `+549${codigoAreaNormalizado.replace(/^\+/, "")}`;
-    }
+    const propietario = data.tipoPension === "CABALLO_PROPIO";
 
-    // ✅ Derivar propietario según tipoPension
-    const propietario = tipoPension === "CABALLO_PROPIO";
+    // Derivar cuotaPension y caballoId según tipoPension
+    let caballoId: number | null = null;
+    let cuotaPension: CuotaPension | null = null;
 
-    // Reglas para envío de caballoId y cuotaPension
-    let caballoIdValue: number | null = null;
-    let cuotaPensionValue: CuotaPension | null = null;
-
-    if (tipoPension === "CABALLO_PROPIO") {
-      caballoIdValue = caballoId ? Number(caballoId) : null;
-      cuotaPensionValue = cuotaPension;
-    } else if (tipoPension === "RESERVA_ESCUELA") {
-      caballoIdValue = caballoId ? Number(caballoId) : null;
-      cuotaPensionValue = null;
-    } else {
-      caballoIdValue = null;
-      cuotaPensionValue = null;
+    if (data.tipoPension === "CABALLO_PROPIO") {
+      caballoId = data.caballoId ? Number(data.caballoId) : null;
+      cuotaPension = (data as { cuotaPension: CuotaPension }).cuotaPension;
+    } else if (data.tipoPension === "RESERVA_ESCUELA") {
+      caballoId = data.caballoId ? Number(data.caballoId) : null;
     }
 
     onSubmit({
-      nombre: nombre.trim(),
-      apellido: apellido.trim(),
-      dni: dni.trim(),
-      fechaNacimiento,
-      codigoArea: codigoAreaNormalizado,
-      telefono: telefono,
-      email: email.trim(),
-      fechaInscripcion,
-      cantidadClases,
-      tipoPension,
-      cuotaPension: cuotaPensionValue,
+      nombre: data.nombre.trim(),
+      apellido: data.apellido.trim(),
+      dni: data.dni.trim(),
+      fechaNacimiento: data.fechaNacimiento,
+      codigoArea,
+      telefono: data.telefono ?? "",
+      email: (data.email ?? "").trim(),
+      fechaInscripcion: data.fechaInscripcion,
+      cantidadClases: data.cantidadClases,
+      tipoPension: data.tipoPension,
+      cuotaPension,
       propietario,
-      activo,
-      caballoId: caballoIdValue,
+      activo: data.activo,
+      caballoId,
     });
   };
 
+  const onInvalid = () => {
+    toast.error("Revisá los campos con errores antes de continuar");
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit(onValid, onInvalid)} className="space-y-4">
       <div className="space-y-4">
         {/* Nombre y Apellido */}
         <div className="grid grid-cols-2 gap-4">
@@ -181,25 +170,27 @@ export function AlumnoForm({
             <Label htmlFor="nombre">Nombre/s</Label>
             <Input
               id="nombre"
-              type="text"
               autoComplete="given-name"
               placeholder="Nombre/s del alumno"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              required
+              {...register("nombre")}
+              className={errors.nombre ? "border-red-500" : ""}
             />
+            {errors.nombre && (
+              <p className="text-sm text-red-500">{errors.nombre.message}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="apellido">Apellido/s</Label>
             <Input
               id="apellido"
-              type="text"
               autoComplete="family-name"
               placeholder="Apellido del alumno"
-              value={apellido}
-              onChange={(e) => setApellido(e.target.value)}
-              required
+              {...register("apellido")}
+              className={errors.apellido ? "border-red-500" : ""}
             />
+            {errors.apellido && (
+              <p className="text-sm text-red-500">{errors.apellido.message}</p>
+            )}
           </div>
         </div>
 
@@ -212,22 +203,20 @@ export function AlumnoForm({
             </Label>
             <Input
               id="dni"
-              name="dni"
               autoComplete="off"
-              type="text"
-              value={dni}
-              onChange={(e) => {
-                setDni(e.target.value);
-                onDniChange?.(e.target.value);
-              }}
               placeholder="Solo números sin puntos"
-              className={validacionDni?.duplicado ? "border-red-500" : ""}
-              required
+              {...register("dni", {
+                onChange: (e) => onDniChange?.(e.target.value),
+              })}
+              className={
+                errors.dni || validacionDni?.duplicado ? "border-red-500" : ""
+              }
             />
-            {validacionDni?.duplicado && (
-              <p className="text-sm text-red-500 mt-1">
-                {validacionDni.mensaje}
-              </p>
+            {errors.dni && (
+              <p className="text-sm text-red-500">{errors.dni.message}</p>
+            )}
+            {validacionDni?.duplicado && !errors.dni && (
+              <p className="text-sm text-red-500">{validacionDni.mensaje}</p>
             )}
           </div>
           <div className="space-y-2">
@@ -235,10 +224,14 @@ export function AlumnoForm({
             <Input
               id="fechaNacimiento"
               type="date"
-              value={fechaNacimiento}
-              onChange={(e) => setFechaNacimiento(e.target.value)}
-              required
+              {...register("fechaNacimiento")}
+              className={errors.fechaNacimiento ? "border-red-500" : ""}
             />
+            {errors.fechaNacimiento && (
+              <p className="text-sm text-red-500">
+                {errors.fechaNacimiento.message}
+              </p>
+            )}
           </div>
         </div>
 
@@ -251,16 +244,14 @@ export function AlumnoForm({
               type="tel"
               autoComplete="tel"
               placeholder="Código de area"
-              value={codigoArea}
-              onChange={(e) => setCodigoArea(e.target.value)}
+              {...register("codigoArea")}
             />
             <Input
               id="telefono"
               type="tel"
               autoComplete="tel"
               placeholder="Teléfono de contacto"
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
+              {...register("telefono")}
             />
           </div>
           <div className="space-y-2">
@@ -270,9 +261,12 @@ export function AlumnoForm({
               type="email"
               autoComplete="email"
               placeholder="Correo electrónico"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              {...register("email")}
+              className={errors.email ? "border-red-500" : ""}
             />
+            {errors.email && (
+              <p className="text-sm text-red-500">{errors.email.message}</p>
+            )}
           </div>
         </div>
 
@@ -286,130 +280,175 @@ export function AlumnoForm({
             <Input
               id="fechaInscripcion"
               type="date"
-              value={fechaInscripcion}
-              onChange={(e) => setFechaInscripcion(e.target.value)}
-              required
+              {...register("fechaInscripcion")}
+              className={errors.fechaInscripcion ? "border-red-500" : ""}
             />
+            {errors.fechaInscripcion && (
+              <p className="text-sm text-red-500">
+                {errors.fechaInscripcion.message}
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="cantidadClases">Clases por Mes</Label>
-            <Select
-              value={String(cantidadClases)}
-              onValueChange={(value) => setCantidadClases(Number(value))}
-            >
-              <SelectTrigger id="cantidadClases">
-                <SelectValue placeholder="Seleccionar cantidad" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="4">4 clases</SelectItem>
-                <SelectItem value="8">8 clases</SelectItem>
-                <SelectItem value="12">12 clases</SelectItem>
-                <SelectItem value="16">16 clases</SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              name="cantidadClases"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  value={String(field.value)}
+                  onValueChange={(v) => field.onChange(Number(v))}
+                >
+                  <SelectTrigger id="cantidadClases">
+                    <SelectValue placeholder="Seleccionar cantidad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="4">4 clases</SelectItem>
+                    <SelectItem value="8">8 clases</SelectItem>
+                    <SelectItem value="12">12 clases</SelectItem>
+                    <SelectItem value="16">16 clases</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
         </div>
 
-        {/* Pensión y Activo */}
+        {/* Tipo Pensión y Activo */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="tipoPension">Caballo</Label>
-            <Select
-              value={tipoPension}
-              onValueChange={(v) => {
-                const nuevo = v as TipoPension;
-                setTipoPension(nuevo);
-                if (nuevo === "SIN_CABALLO") {
-                  setCuotaPension("ENTERA");
-                  setCaballoId("");
-                }
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="SIN_CABALLO">
-                  Sin caballo asignado
-                </SelectItem>
-                <SelectItem value="RESERVA_ESCUELA">
-                  Reserva caballo de escuela
-                </SelectItem>
-                <SelectItem value="CABALLO_PROPIO">
-                  Caballo propio
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              name="tipoPension"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={(v) => {
+                    field.onChange(v as TipoPension);
+                    // Limpiar campos dependientes al cambiar tipo
+                    if (v === "SIN_CABALLO") {
+                      setValue("caballoId", null);
+                      setValue("cuotaPension" as keyof AlumnoFormValues, null);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SIN_CABALLO">
+                      Sin caballo asignado
+                    </SelectItem>
+                    <SelectItem value="RESERVA_ESCUELA">
+                      Reserva caballo de escuela
+                    </SelectItem>
+                    <SelectItem value="CABALLO_PROPIO">
+                      Caballo propio
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
 
+          {/* Activo — solo en edición */}
           {alumno && (
-            <div className="flex items-center gap-3 pt-6">
-              <Switch
-                id="activo"
-                checked={activo}
-                onCheckedChange={setActivo}
-              />
-              <Label htmlFor="activo">Está activo</Label>
-            </div>
+            <Controller
+              name="activo"
+              control={control}
+              render={({ field }) => (
+                <div className="flex items-center gap-3 pt-6">
+                  <Switch
+                    id="activo"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                  <Label htmlFor="activo">Está activo</Label>
+                </div>
+              )}
+            />
           )}
         </div>
 
-        {/* Cuota y Caballo (solo si tiene caballo) */}
+        {/* Cuota y Caballo — CABALLO_PROPIO */}
         {tipoPension === "CABALLO_PROPIO" && (
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="cuotaPension">Cuota de pensión</Label>
-              <Select
-                value={cuotaPension}
-                onValueChange={(value) =>
-                  setCuotaPension(value as CuotaPension)
-                }
-              >
-                <SelectTrigger id="cuotaPension">
-                  <SelectValue placeholder="Seleccionar cuota" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ENTERA">Entera</SelectItem>
-                  <SelectItem value="MEDIA">Media</SelectItem>
-                  <SelectItem value="TERCIO">Tercio</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name={"cuotaPension" as keyof AlumnoFormValues}
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={String(field.value ?? "ENTERA")}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger id="cuotaPension">
+                      <SelectValue placeholder="Seleccionar cuota" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ENTERA">Entera</SelectItem>
+                      <SelectItem value="MEDIA">Media</SelectItem>
+                      <SelectItem value="TERCIO">Tercio</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="caballo">Nombre Caballo</Label>
-              <Select value={caballoId} onValueChange={setCaballoId}>
-                <SelectTrigger id="caballo">
-                  <SelectValue placeholder="Seleccionar caballo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {caballosFiltrados.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                name="caballoId"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value ? String(field.value) : ""}
+                    onValueChange={(v) => field.onChange(v ? Number(v) : null)}
+                  >
+                    <SelectTrigger id="caballo">
+                      <SelectValue placeholder="Seleccionar caballo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {caballosFiltrados.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
           </div>
         )}
 
+        {/* Caballo — RESERVA_ESCUELA */}
         {tipoPension === "RESERVA_ESCUELA" && (
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="caballo">Nombre Caballo</Label>
-              <Select value={caballoId} onValueChange={setCaballoId}>
-                <SelectTrigger id="caballo">
-                  <SelectValue placeholder="Seleccionar caballo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {caballosFiltrados.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                name="caballoId"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value ? String(field.value) : ""}
+                    onValueChange={(v) => field.onChange(v ? Number(v) : null)}
+                  >
+                    <SelectTrigger id="caballo">
+                      <SelectValue placeholder="Seleccionar caballo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {caballosFiltrados.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
           </div>
         )}

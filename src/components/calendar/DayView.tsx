@@ -17,7 +17,11 @@ interface DayViewProps {
   selectedDate: Date;
   clases: Clase[];
   caballos: Caballo[];
-  onStatusChange: (claseId: number, newStatus: Clase["estado"]) => void;
+  onStatusChange: (
+    claseId: number,
+    newStatus: Clase["estado"],
+    observaciones: string,
+  ) => void;
   onCellClick?: (caballo: Caballo, hora: string) => void;
   onEditClase?: (clase: Clase) => void;
   onDeleteClase?: (claseId: number) => void;
@@ -86,6 +90,8 @@ export function DayView({
   // const caballosOrdenados = useMemo(() => {
   //   return [...caballos].sort((a, b) => a.nombre.localeCompare(b.nombre));
   // }, [caballos]);
+
+  // TODO revisar botón Cancelar Día porque asigna duración de 30 aunque tenga asignada 60, lo que hace que no se muestre la continuación aunque siga existiendo
 
   // Orden de los caballos según el backend
   const caballosOrdenados = useMemo(() => {

@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,16 +15,13 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Caballo } from "@/lib/api";
+import { CaballoFormValues, caballoSchema } from "@/lib/schemas/forms.schemas";
 
-export interface CaballoFormData {
-  nombre: string;
-  tipo: "ESCUELA" | "PRIVADO";
-  disponible: boolean;
-}
+export type { CaballoFormValues as CaballoFormData };
 
 interface CaballoFormProps {
   caballo?: Caballo;
-  onSubmit: (data: CaballoFormData) => void;
+  onSubmit: (data: CaballoFormValues) => void;
   isPending: boolean;
   onCancel?: () => void;
 }
@@ -33,66 +32,89 @@ export function CaballoForm({
   isPending,
   onCancel,
 }: CaballoFormProps) {
-  // Estados locales del form
-  const [nombre, setNombre] = useState("");
-  const [tipo, setTipo] = useState<"ESCUELA" | "PRIVADO">("ESCUELA");
-  const [disponible, setDisponible] = useState(true);
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors },
+  } = useForm<CaballoFormValues>({
+    resolver: zodResolver(caballoSchema),
+    defaultValues: {
+      nombre: "",
+      tipo: "ESCUELA",
+      disponible: true,
+    },
+  });
 
   // Pre-poblar en modo edición
   useEffect(() => {
     if (caballo) {
-      setNombre(caballo.nombre);
-      setTipo(caballo.tipo);
-      setDisponible(caballo.disponible);
+      reset({
+        nombre: caballo.nombre,
+        tipo: caballo.tipo,
+        disponible: caballo.disponible,
+      });
     }
-  }, [caballo]);
+  }, [caballo, reset]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const onValid = (data: CaballoFormValues) => {
+    onSubmit(data);
+  };
 
-    // 1️⃣ Validación básica
-    if (!nombre.trim()) {
-      toast.error("El nombre es obligatorio");
-      return;
-    }
-
-    // TODO VALIDACIONES
-
-    onSubmit({ nombre: nombre.trim(), tipo, disponible });
+  const onInvalid = () => {
+    toast.error("Revisá los campos con errores antes de continuar");
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit(onValid, onInvalid)} className="space-y-4">
+      {/* Nombre */}
       <div className="space-y-2">
         <Label htmlFor="nombre">Nombre</Label>
         <Input
           id="nombre"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
           placeholder="Nombre del caballo"
-          required
+          {...register("nombre")}
+          className={errors.nombre ? "border-red-500" : ""}
+        />
+        {errors.nombre && (
+          <p className="text-sm text-red-500">{errors.nombre.message}</p>
+        )}
+      </div>
+
+      {/* Tipo */}
+      <div className="space-y-2">
+        <Label htmlFor="tipo">Tipo</Label>
+        <Controller
+          name="tipo"
+          control={control}
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ESCUELA">Escuela</SelectItem>
+                <SelectItem value="PRIVADO">Privado</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="tipo">Tipo</Label>
-        <Select value={tipo} onValueChange={(v) => setTipo(v as typeof tipo)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ESCUELA">Escuela</SelectItem>
-            <SelectItem value="PRIVADO">Privado</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
+      {/* Disponible — solo en edición */}
       {caballo && (
         <div className="flex items-center gap-3">
-          <Switch
-            id="disponible"
-            checked={disponible}
-            onCheckedChange={setDisponible}
+          <Controller
+            name="disponible"
+            control={control}
+            render={({ field }) => (
+              <Switch
+                id="disponible"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            )}
           />
           <Label htmlFor="disponible">Está disponible</Label>
         </div>

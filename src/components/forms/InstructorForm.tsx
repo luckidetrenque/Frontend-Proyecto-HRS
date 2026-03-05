@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -7,30 +9,20 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PRESET_COLORS } from "@/constants/instructor.constants";
 import { Instructor } from "@/lib/api";
+import {
+  InstructorFormValues,
+  instructorSchema,
+} from "@/lib/schemas/forms.schemas";
 
-export interface InstructorFormData {
-  nombre: string;
-  apellido: string;
-  codigoArea: string;
-  telefono: string;
-  email: string;
-  fechaNacimiento: string;
-  activo: boolean;
-  color: string;
-  dni: string;
-}
+export type { InstructorFormValues as InstructorFormData };
 
 interface InstructorFormProps {
   instructor?: Instructor;
-  onSubmit: (data: InstructorFormData) => void;
+  onSubmit: (data: InstructorFormValues) => void;
   isPending: boolean;
   onCancel?: () => void;
-  // ✅ NUEVO: Recibir validación de DNI como prop
-  validacionDni?: {
-    duplicado: boolean;
-    mensaje: string;
-  };
-  onDniChange?: (dni: string) => void; // ✅ Para notificar al padre cuando cambia DNI
+  validacionDni?: { duplicado: boolean; mensaje: string };
+  onDniChange?: (dni: string) => void;
 }
 
 export function InstructorForm({
@@ -38,120 +30,119 @@ export function InstructorForm({
   onSubmit,
   isPending,
   onCancel,
-  validacionDni, // ✅ Viene del padre
-  onDniChange, // ✅ Viene del padre
+  validacionDni,
+  onDniChange,
 }: InstructorFormProps) {
-  // Estados locales del form
-  const [nombre, setNombre] = useState("");
-  const [apellido, setApellido] = useState("");
-  const [codigoArea, setCodigoArea] = useState("");
-  const [telefono, setTelefono] = useState("");
-  const [email, setEmail] = useState("");
-  const [fechaNacimiento, setFechaNacimiento] = useState("");
-  const [activo, setActivo] = useState(true);
-  const [color, setColor] = useState(PRESET_COLORS[0]);
-  const [dni, setDni] = useState("");
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors },
+  } = useForm<InstructorFormValues>({
+    resolver: zodResolver(instructorSchema),
+    defaultValues: {
+      nombre: "",
+      apellido: "",
+      dni: "",
+      fechaNacimiento: "",
+      codigoArea: "",
+      telefono: "",
+      email: "",
+      activo: true,
+      color: PRESET_COLORS[0],
+    },
+  });
 
   // Pre-poblar en modo edición
   useEffect(() => {
     if (instructor) {
-      setNombre(instructor.nombre);
-      setApellido(instructor.apellido);
-      setCodigoArea(instructor.codigoArea);
-      setTelefono(instructor.telefono);
-      setEmail(instructor.email ?? "");
-      setFechaNacimiento(instructor.fechaNacimiento);
-      setActivo(instructor.activo);
-      setColor(instructor.color || PRESET_COLORS[0]);
-      setDni(instructor.dni);
+      reset({
+        nombre: instructor.nombre,
+        apellido: instructor.apellido,
+        dni: instructor.dni,
+        fechaNacimiento: instructor.fechaNacimiento,
+        codigoArea: instructor.codigoArea ?? "",
+        telefono: instructor.telefono,
+        email: instructor.email ?? "",
+        activo: instructor.activo,
+        color: instructor.color || PRESET_COLORS[0],
+      });
     }
-  }, [instructor]);
+  }, [instructor, reset]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    // ✅ Validación: DNI duplicado
+  const onValid = (data: InstructorFormValues) => {
     if (validacionDni?.duplicado) {
       toast.error("Ya existe un instructor con este DNI");
       return;
     }
 
-    // ✅ Validación: campos obligatorios
-    if (!nombre.trim() || !apellido.trim() || !dni.trim()) {
-      toast.error("Nombre, apellido y DNI son obligatorios");
-      return;
+    // Normalizar código de área
+    let codigoArea = data.codigoArea ?? "";
+    if (codigoArea && !codigoArea.startsWith("+549")) {
+      codigoArea = `+549${codigoArea.replace(/^\+/, "")}`;
     }
 
-    // ✅ Normalizar teléfono (igual que en tu código original)
-    let codigoAreaNormalizado = codigoArea;
-    if (codigoAreaNormalizado && !codigoAreaNormalizado.startsWith("+549")) {
-      codigoAreaNormalizado = `+549${codigoAreaNormalizado.replace(/^\+/, "")}`;
-    }
+    onSubmit({ ...data, codigoArea });
+  };
 
-    onSubmit({
-      nombre: nombre.trim(),
-      apellido: apellido.trim(),
-      codigoArea: codigoAreaNormalizado,
-      telefono: telefono,
-      email: email.trim(),
-      fechaNacimiento,
-      activo,
-      color,
-      dni: dni.trim(),
-    });
+  const onInvalid = () => {
+    toast.error("Revisá los campos con errores antes de continuar");
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit(onValid, onInvalid)} className="space-y-4">
       <div className="space-y-4">
+        {/* Nombre y Apellido */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="nombre">Nombre/s</Label>
             <Input
               id="nombre"
-              type="text"
               autoComplete="given-name"
               placeholder="Nombre/s del instructor"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              required
+              {...register("nombre")}
+              className={errors.nombre ? "border-red-500" : ""}
             />
+            {errors.nombre && (
+              <p className="text-sm text-red-500">{errors.nombre.message}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="apellido">Apellido/s</Label>
             <Input
               id="apellido"
-              type="text"
               autoComplete="family-name"
               placeholder="Apellido del instructor"
-              value={apellido}
-              onChange={(e) => setApellido(e.target.value)}
-              required
+              {...register("apellido")}
+              className={errors.apellido ? "border-red-500" : ""}
             />
+            {errors.apellido && (
+              <p className="text-sm text-red-500">{errors.apellido.message}</p>
+            )}
           </div>
         </div>
 
+        {/* DNI y Fecha Nacimiento */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="dni">DNI</Label>
             <Input
               id="dni"
-              name="dni"
               autoComplete="off"
-              type="text"
-              value={dni}
-              onChange={(e) => {
-                setDni(e.target.value);
-                onDniChange?.(e.target.value); // ✅ Notificar al padre
-              }}
               placeholder="Solo números sin puntos"
-              className={validacionDni?.duplicado ? "border-red-500" : ""} // ✅ Ahora sí existe
-              required
+              {...register("dni", {
+                onChange: (e) => onDniChange?.(e.target.value),
+              })}
+              className={
+                errors.dni || validacionDni?.duplicado ? "border-red-500" : ""
+              }
             />
-            {validacionDni?.duplicado && (
-              <p className="text-sm text-red-500 mt-1">
-                {validacionDni.mensaje}
-              </p>
+            {errors.dni && (
+              <p className="text-sm text-red-500">{errors.dni.message}</p>
+            )}
+            {validacionDni?.duplicado && !errors.dni && (
+              <p className="text-sm text-red-500">{validacionDni.mensaje}</p>
             )}
           </div>
           <div className="space-y-2">
@@ -159,13 +150,18 @@ export function InstructorForm({
             <Input
               id="fechaNacimiento"
               type="date"
-              value={fechaNacimiento}
-              onChange={(e) => setFechaNacimiento(e.target.value)}
-              required
+              {...register("fechaNacimiento")}
+              className={errors.fechaNacimiento ? "border-red-500" : ""}
             />
+            {errors.fechaNacimiento && (
+              <p className="text-sm text-red-500">
+                {errors.fechaNacimiento.message}
+              </p>
+            )}
           </div>
         </div>
 
+        {/* Teléfono y Email */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="telefono">Teléfono</Label>
@@ -174,16 +170,14 @@ export function InstructorForm({
               type="tel"
               autoComplete="tel"
               placeholder="Código de area"
-              value={codigoArea}
-              onChange={(e) => setCodigoArea(e.target.value)}
+              {...register("codigoArea")}
             />
             <Input
               id="telefono"
               type="tel"
               autoComplete="tel"
               placeholder="Teléfono de contacto"
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
+              {...register("telefono")}
             />
           </div>
           <div className="space-y-2">
@@ -193,45 +187,67 @@ export function InstructorForm({
               type="email"
               autoComplete="email"
               placeholder="Correo electrónico"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              {...register("email")}
+              className={errors.email ? "border-red-500" : ""}
             />
+            {errors.email && (
+              <p className="text-sm text-red-500">{errors.email.message}</p>
+            )}
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>Color del Instructor</Label>
-          <div className="flex gap-2 flex-wrap">
-            {PRESET_COLORS.map((presetColor) => (
-              <button
-                type="button"
-                key={presetColor}
-                onClick={() => setColor(presetColor)}
-                className={`w-10 h-10 rounded-full border-2 transition-all ${color === presetColor
-                  ? "border-primary ring-2 ring-primary/20 scale-110"
-                  : "border-gray-300 hover:scale-105"
-                  }`}
-                style={{ backgroundColor: presetColor }}
-                title={presetColor}
-              />
-            ))}
-          </div>
-          <div className="flex items-center gap-2 mt-2 p-2 border rounded-md bg-muted/30">
-            <div
-              className="w-6 h-6 rounded border-2 border-gray-300"
-              style={{ backgroundColor: color }}
-            />
-            <span className="text-sm font-mono text-muted-foreground">
-              {color}
-            </span>
-          </div>
-        </div>
+        {/* Color */}
+        <Controller
+          name="color"
+          control={control}
+          render={({ field }) => (
+            <div className="space-y-2">
+              <Label>Color del Instructor</Label>
+              <div className="flex gap-2 flex-wrap">
+                {PRESET_COLORS.map((presetColor) => (
+                  <button
+                    type="button"
+                    key={presetColor}
+                    onClick={() => field.onChange(presetColor)}
+                    className={`w-10 h-10 rounded-full border-2 transition-all ${
+                      field.value === presetColor
+                        ? "border-primary ring-2 ring-primary/20 scale-110"
+                        : "border-gray-300 hover:scale-105"
+                    }`}
+                    style={{ backgroundColor: presetColor }}
+                    title={presetColor}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center gap-2 mt-2 p-2 border rounded-md bg-muted/30">
+                <div
+                  className="w-6 h-6 rounded border-2 border-gray-300"
+                  style={{ backgroundColor: field.value }}
+                />
+                <span className="text-sm font-mono text-muted-foreground">
+                  {field.value}
+                </span>
+              </div>
+            </div>
+          )}
+        />
 
+        {/* Activo — solo en edición */}
         {instructor && (
-          <div className="flex items-center gap-3">
-            <Switch id="activo" checked={activo} onCheckedChange={setActivo} />
-            <Label htmlFor="activo">Está activo</Label>
-          </div>
+          <Controller
+            name="activo"
+            control={control}
+            render={({ field }) => (
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="activo"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+                <Label htmlFor="activo">Está activo</Label>
+              </div>
+            )}
+          />
         )}
       </div>
 

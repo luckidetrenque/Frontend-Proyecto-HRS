@@ -17,7 +17,11 @@ interface WeekViewProps {
   calendarDays: Date[];
   clasesByDate: Record<string, Clase[]>;
   onDayClick: (date: Date) => void;
-  onStatusChange: (claseId: number, newStatus: Clase["estado"]) => void;
+  onStatusChange: (
+    claseId: number,
+    newStatus: Clase["estado"],
+    observaciones: string,
+  ) => void;
   onEditClase: (clase: Clase) => void;
   onDeleteClase: (claseId: number) => void;
   puedeEditarClase?: (clase: Clase) => boolean;
