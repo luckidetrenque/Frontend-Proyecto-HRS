@@ -1,7 +1,7 @@
 /**
  * CalendarToolbar.tsx
  * Barra de herramientas con todos los botones de acción del calendario
- * Incluye: Exportar Excel, Cancelar Día, Copiar Clases, Eliminar Clases
+ * Incluye: Exportar Excel (día/semana/mes), Cancelar Día, Copiar Clases, Eliminar Clases
  */
 
 import {
@@ -35,6 +35,119 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { MOTIVOS_CANCELACION } from "./clases.constants";
 
+// ── Formulario reutilizable de cancelación ────────────────────────────────────
+
+interface CancelFormBodyProps {
+  motivoSeleccionado: string;
+  setMotivoSeleccionado: (v: string) => void;
+  observacionesPersonalizadas: string;
+  setObservacionesPersonalizadas: (v: string) => void;
+  usarRangoHorario?: boolean;
+  setUsarRangoHorario?: (v: boolean) => void;
+  horaInicio?: string;
+  setHoraInicio?: (v: string) => void;
+  horaFin?: string;
+  setHoraFin?: (v: string) => void;
+}
+
+function CancelFormBody({
+  motivoSeleccionado,
+  setMotivoSeleccionado,
+  observacionesPersonalizadas,
+  setObservacionesPersonalizadas,
+  usarRangoHorario = false,
+  setUsarRangoHorario,
+  horaInicio = "09:00",
+  setHoraInicio,
+  horaFin = "18:00",
+  setHoraFin,
+}: CancelFormBodyProps) {
+  return (
+    <div className="space-y-4 py-4">
+      <div className="space-y-2">
+        <Label htmlFor="motivo">Motivo de cancelación</Label>
+        <Select
+          value={motivoSeleccionado}
+          onValueChange={setMotivoSeleccionado}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Seleccionar motivo" />
+          </SelectTrigger>
+          <SelectContent>
+            {MOTIVOS_CANCELACION.map((motivo) => (
+              <SelectItem key={motivo} value={motivo}>
+                {motivo}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {setUsarRangoHorario && (
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="usarRangoHorario"
+              checked={usarRangoHorario}
+              onChange={(e) => setUsarRangoHorario(e.target.checked)}
+              className="h-4 w-4"
+            />
+            <Label htmlFor="usarRangoHorario">
+              Cancelar solo en un rango horario específico
+            </Label>
+          </div>
+          {usarRangoHorario && setHoraInicio && setHoraFin && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Hora inicio</Label>
+                <Input
+                  type="time"
+                  min="09:00"
+                  max="18:00"
+                  value={horaInicio}
+                  onChange={(e) => setHoraInicio(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Hora fin</Label>
+                <Input
+                  type="time"
+                  min="09:00"
+                  max="18:00"
+                  value={horaFin}
+                  onChange={(e) => setHoraFin(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {motivoSeleccionado === "Otro" && (
+        <div className="space-y-2">
+          <Label htmlFor="observaciones">Observaciones personalizadas</Label>
+          <Textarea
+            id="observaciones"
+            placeholder="Ingrese el motivo de cancelación..."
+            value={observacionesPersonalizadas}
+            onChange={(e) => setObservacionesPersonalizadas(e.target.value)}
+            rows={3}
+          />
+        </div>
+      )}
+
+      {motivoSeleccionado && motivoSeleccionado !== "Otro" && (
+        <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+          <strong>Observaciones:</strong> {motivoSeleccionado}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface CalendarToolbarProps {
   // Copiar Clases
   isCopyOpen: boolean;
@@ -48,9 +161,17 @@ interface CalendarToolbarProps {
   onDeleteSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   deletePending: boolean;
 
-  // Exportar Excel
+  // Exportar Excel día
   onExportExcel?: () => void;
   showExport?: boolean;
+
+  // Exportar Excel semana
+  onExportWeekExcel?: () => void;
+  showExportWeek?: boolean;
+
+  // Exportar Excel mes
+  onExportMonthExcel?: () => void;
+  showExportMonth?: boolean;
 
   // Cancelar Día
   onCancelDay?: (observaciones: string) => void;
@@ -70,6 +191,10 @@ export function CalendarToolbar({
   deletePending,
   onExportExcel,
   showExport = false,
+  onExportWeekExcel,
+  showExportWeek = false,
+  onExportMonthExcel,
+  showExportMonth = false,
   onCancelDay,
   showCancelDay = false,
   cancelDayCount = 0,
@@ -79,32 +204,52 @@ export function CalendarToolbar({
   const [motivoSeleccionado, setMotivoSeleccionado] = useState<string>("");
   const [observacionesPersonalizadas, setObservacionesPersonalizadas] =
     useState<string>("");
-
   const [usarRangoHorario, setUsarRangoHorario] = useState(false);
   const [horaInicio, setHoraInicio] = useState("09:00");
   const [horaFin, setHoraFin] = useState("18:00");
 
+  const resetCancelForm = () => {
+    setMotivoSeleccionado("");
+    setObservacionesPersonalizadas("");
+    setUsarRangoHorario(false);
+    setHoraInicio("09:00");
+    setHoraFin("18:00");
+  };
+
   const handleCancelarDia = () => {
     if (!onCancelDay) return;
-
     const observacionFinal =
       motivoSeleccionado === "Otro"
         ? observacionesPersonalizadas
         : motivoSeleccionado;
-
     onCancelDay(observacionFinal);
     setIsCancelDialogOpen(false);
-    setMotivoSeleccionado("");
-    setObservacionesPersonalizadas("");
+    resetCancelForm();
   };
 
   return (
     <div className="flex flex-wrap items-center sm:justify-end gap-2">
-      {/* Exportar Excel */}
+      {/* Exportar Excel día */}
       {showExport && onExportExcel && (
         <Button variant="outline" size="sm" onClick={onExportExcel}>
           <Download className="h-4 w-4 mr-2" />
           Exportar Excel
+        </Button>
+      )}
+
+      {/* Exportar Excel semana */}
+      {showExportWeek && onExportWeekExcel && (
+        <Button variant="outline" size="sm" onClick={onExportWeekExcel}>
+          <Download className="h-4 w-4 mr-2" />
+          Exportar Semana
+        </Button>
+      )}
+
+      {/* Exportar Excel mes */}
+      {showExportMonth && onExportMonthExcel && (
+        <Button variant="outline" size="sm" onClick={onExportMonthExcel}>
+          <Download className="h-4 w-4 mr-2" />
+          Exportar Mes
         </Button>
       )}
 
@@ -122,10 +267,12 @@ export function CalendarToolbar({
             Cancelar Día ({cancelDayCount})
           </Button>
 
-          {/* Diálogo Cancelar Día */}
           <Dialog
             open={isCancelDialogOpen}
-            onOpenChange={setIsCancelDialogOpen}
+            onOpenChange={(open) => {
+              setIsCancelDialogOpen(open);
+              if (!open) resetCancelForm();
+            }}
           >
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
@@ -140,92 +287,18 @@ export function CalendarToolbar({
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="motivo">Motivo de cancelación</Label>
-                  <Select
-                    value={motivoSeleccionado}
-                    onValueChange={setMotivoSeleccionado}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar motivo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MOTIVOS_CANCELACION.map((motivo) => (
-                        <SelectItem key={motivo} value={motivo}>
-                          {motivo}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="usarRangoHorario"
-                      checked={usarRangoHorario}
-                      onChange={(e) => setUsarRangoHorario(e.target.checked)}
-                      className="h-4 w-4"
-                    />
-                    <Label htmlFor="usarRangoHorario">
-                      Cancelar solo en un rango horario específico
-                    </Label>
-                  </div>
-                </div>
-
-                {usarRangoHorario && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="horaInicio">Hora inicio</Label>
-                      <Input
-                        id="horaInicio"
-                        type="time"
-                        min="09:00"
-                        max="18:00"
-                        value={horaInicio}
-                        onChange={(e) => setHoraInicio(e.target.value)}
-                        required={usarRangoHorario}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="horaFin">Hora fin</Label>
-                      <Input
-                        id="horaFin"
-                        type="time"
-                        min="09:00"
-                        max="18:00"
-                        value={horaFin}
-                        onChange={(e) => setHoraFin(e.target.value)}
-                        required={usarRangoHorario}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {motivoSeleccionado === "Otro" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="observaciones">
-                      Observaciones personalizadas
-                    </Label>
-                    <Textarea
-                      id="observaciones"
-                      placeholder="Ingrese el motivo de cancelación..."
-                      value={observacionesPersonalizadas}
-                      onChange={(e) =>
-                        setObservacionesPersonalizadas(e.target.value)
-                      }
-                      rows={3}
-                    />
-                  </div>
-                )}
-
-                {motivoSeleccionado && motivoSeleccionado !== "Otro" && (
-                  <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
-                    <strong>Observaciones:</strong> {motivoSeleccionado}
-                  </div>
-                )}
-              </div>
+              <CancelFormBody
+                motivoSeleccionado={motivoSeleccionado}
+                setMotivoSeleccionado={setMotivoSeleccionado}
+                observacionesPersonalizadas={observacionesPersonalizadas}
+                setObservacionesPersonalizadas={setObservacionesPersonalizadas}
+                usarRangoHorario={usarRangoHorario}
+                setUsarRangoHorario={setUsarRangoHorario}
+                horaInicio={horaInicio}
+                setHoraInicio={setHoraInicio}
+                horaFin={horaFin}
+                setHoraFin={setHoraFin}
+              />
 
               <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
                 <Button
@@ -233,8 +306,7 @@ export function CalendarToolbar({
                   variant="outline"
                   onClick={() => {
                     setIsCancelDialogOpen(false);
-                    setMotivoSeleccionado("");
-                    setObservacionesPersonalizadas("");
+                    resetCancelForm();
                   }}
                 >
                   Volver

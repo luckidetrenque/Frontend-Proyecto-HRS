@@ -52,6 +52,7 @@ export default function CalendarioPage() {
     deleteWeekMutation,
     navigate,
     goToToday,
+    handleGoToDay,
     handleDayClick,
     handleCellClick,
     handleEditClase,
@@ -63,6 +64,8 @@ export default function CalendarioPage() {
     handleFilterChange,
     handleResetFilters,
     handleExportExcel,
+    handleExportWeekExcel,
+    handleExportMonthExcel,
     handleCancelDayClases,
     getCancelableDayClases,
     getAlumnoNombre,
@@ -144,6 +147,10 @@ export default function CalendarioPage() {
           deletePending={deleteWeekMutation.isPending}
           showExport={viewMode === "day"}
           onExportExcel={handleExportExcel}
+          showExportWeek={viewMode === "week"}
+          onExportWeekExcel={handleExportWeekExcel}
+          showExportMonth={viewMode === "month"}
+          onExportMonthExcel={handleExportMonthExcel}
           showCancelDay={viewMode === "day"}
           onCancelDay={handleCancelDayClases}
           cancelDayCount={getCancelableDayClases().length}
@@ -197,6 +204,7 @@ export default function CalendarioPage() {
                 calendarDays={calendarDays}
                 clasesByDate={clasesByDate}
                 onDayClick={handleDayClick}
+                onGoToDay={handleGoToDay}
                 onStatusChange={handleStatusChange}
                 onEditClase={handleEditClase}
                 onDeleteClase={handleDeleteClase}
@@ -215,6 +223,7 @@ export default function CalendarioPage() {
                 calendarDays={calendarDays}
                 clasesByDate={clasesByDate}
                 onDayClick={handleDayClick}
+                onGoToDay={handleGoToDay}
                 onStatusChange={handleStatusChange}
                 onEditClase={handleEditClase}
                 onDeleteClase={handleDeleteClase}

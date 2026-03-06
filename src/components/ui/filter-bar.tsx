@@ -105,7 +105,7 @@ export function FilterBar({
           {filters.map((filter) => (
             <div key={filter.name} className="space-y-2">
               <Label
-                htmlFor={filter.name}
+                htmlFor={`select-${filter.name}`}
                 className="text-xs text-muted-foreground"
               >
                 {filter.label}
@@ -116,7 +116,7 @@ export function FilterBar({
                     value={values[filter.name] ?? "all"}
                     onValueChange={(value) => onChange(filter.name, value)}
                   >
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-9" id={`select-${filter.name}`}>
                       <SelectValue
                         placeholder={filter.placeholder || "Todos"}
                       />

@@ -17,7 +17,12 @@ interface WeekViewProps {
   calendarDays: Date[];
   clasesByDate: Record<string, Clase[]>;
   onDayClick: (date: Date) => void;
-  onStatusChange: (claseId: number, newStatus: Clase["estado"]) => void;
+  onGoToDay: (date: Date) => void;
+  onStatusChange: (
+    claseId: number,
+    newStatus: Clase["estado"],
+    observaciones: string,
+  ) => void;
   onEditClase: (clase: Clase) => void;
   onDeleteClase: (claseId: number) => void;
   puedeEditarClase?: (clase: Clase) => boolean;
@@ -35,6 +40,7 @@ export function WeekView({
   calendarDays,
   clasesByDate,
   onDayClick,
+  onGoToDay,
   onStatusChange,
   onEditClase,
   onDeleteClase,
@@ -71,6 +77,7 @@ export function WeekView({
           const dateKey = format(day, "yyyy-MM-dd");
           const dayClases = clasesByDate[dateKey] || [];
           const isCurrentDay = isToday(day);
+          const hiddenCount = dayClases.length - maxClases;
 
           return (
             <div
@@ -81,8 +88,10 @@ export function WeekView({
               )}
             >
               <div className="mb-2 flex items-center justify-between">
+                {/* Número de día — abre el diálogo de nueva clase */}
                 <button
                   onClick={() => onDayClick(day)}
+                  title="Agregar clase en este día"
                   className={cn(
                     "flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium transition-colors hover:bg-primary hover:text-primary-foreground",
                     isCurrentDay && "bg-primary text-primary-foreground",
@@ -132,10 +141,16 @@ export function WeekView({
                     />
                   );
                 })}
-                {dayClases.length > maxClases && (
-                  <span className="block text-center text-xs text-muted-foreground">
-                    +{dayClases.length - maxClases} más
-                  </span>
+
+                {/* Botón "+N más" → navega a la vista día */}
+                {hiddenCount > 0 && (
+                  <button
+                    onClick={() => onGoToDay(day)}
+                    title={`Ver las ${hiddenCount} clase${hiddenCount > 1 ? "s" : ""} restante${hiddenCount > 1 ? "s" : ""} del día`}
+                    className="block w-full text-center text-xs text-primary hover:text-primary/80 hover:underline transition-colors py-0.5 rounded"
+                  >
+                    +{hiddenCount} más →
+                  </button>
                 )}
               </div>
             </div>

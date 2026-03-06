@@ -291,15 +291,17 @@ export default function InstructoresPage() {
               <MessageCircleMore className="mr-2 h-4 w-4 text-green-600" />
               Enviar WhatsApp
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                window.location.href = `mailto:${row.email}?subject=${encodeURIComponent(`Contacto para ${row.nombre} ${row.apellido}`)}`;
-              }}
-            >
-              <Mail className="mr-2 h-4 w-4 text-blue-600" />
-              Enviar correo
-            </DropdownMenuItem>
+            {row.email && (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.location.href = `mailto:${row.email}?subject=${encodeURIComponent(`Contacto para ${row.nombre} ${row.apellido}`)}`;
+                }}
+              >
+                <Mail className="mr-2 h-4 w-4 text-blue-600" />
+                Enviar correo
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
@@ -379,10 +381,21 @@ export default function InstructoresPage() {
                 <InstructorForm
                   instructor={editingInstructor ?? undefined}
                   onSubmit={(data) => {
+                    const payload: Omit<Instructor, "id"> = {
+                      nombre: data.nombre,
+                      apellido: data.apellido,
+                      dni: data.dni,
+                      fechaNacimiento: data.fechaNacimiento,
+                      codigoArea: data.codigoArea,
+                      telefono: data.telefono,
+                      email: data.email,
+                      activo: data.activo,
+                      color: data.color,
+                    };
                     if (editingInstructor) {
-                      updateMutation.mutate({ id: editingInstructor.id, data });
+                      updateMutation.mutate({ id: editingInstructor.id, data: payload });
                     } else {
-                      createMutation.mutate(data);
+                      createMutation.mutate(payload);
                     }
                   }}
                   isPending={
@@ -454,11 +467,20 @@ export default function InstructoresPage() {
                 onClick={() => navigate(`/instructores/${instructor.id}`)}
                 onEdit={() => openEdit(instructor)} // ← CAMBIAR
                 onDelete={() => openDelete(instructor)}
-                onSendWhatsApp={function (item: unknown): void {
-                  throw new Error("Function not implemented.");
+                onSendWhatsApp={(item) => {
+                  const instructor = item as Instructor;
+                  window.open(
+                    encodeURI(
+                      `https://wa.me/${instructor.codigoArea}${instructor.telefono}?text=Hola ${instructor.nombre}, te contactamos desde la Escuela para avisarte que... `
+                    ),
+                    "_blank"
+                  );
                 }}
-                onSendEmail={function (item: unknown): void {
-                  throw new Error("Function not implemented.");
+                onSendEmail={(item) => {
+                  const instructor = item as Instructor;
+                  if (instructor.email) {
+                    window.location.href = `mailto:${instructor.email}?subject=${encodeURIComponent(`Contacto para ${instructor.nombre} ${instructor.apellido}`)}`;
+                  }
                 }}
               />
             ))}
