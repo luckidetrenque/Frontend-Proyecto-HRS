@@ -39,6 +39,15 @@ export function GenericCard<T>({
   onSendWhatsApp,
   onSendEmail,
 }: Props<T>) {
+  function hasEmail(obj: unknown): obj is { email: string } {
+    return (
+      typeof obj === "object" &&
+      obj !== null &&
+      "email" in obj &&
+      typeof (obj as { email: unknown }).email === "string" &&
+      ((obj as { email: string }).email.length > 0)
+    );
+  }
   return (
     <div
       onClick={onClick}
@@ -75,19 +84,17 @@ export function GenericCard<T>({
               Enviar WhatsApp
             </DropdownMenuItem>
 
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                onSendEmail(item);
-              }}
-            >
-              <Mail className="mr-2 h-4 w-4 text-blue-600" />
-              Enviar correo
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
+            {hasEmail(item) && (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSendEmail(item);
+                }}
+              >
+                <Mail className="mr-2 h-4 w-4 text-blue-600" />
+                Enviar correo
+              </DropdownMenuItem>
+            )}
 
             <DropdownMenuItem
               onClick={(e) => {
@@ -98,8 +105,6 @@ export function GenericCard<T>({
               <Pencil className="mr-2 h-4 w-4" />
               Editar
             </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
 
             <DropdownMenuItem
               className="text-destructive"
@@ -117,19 +122,27 @@ export function GenericCard<T>({
 
       {/* BODY */}
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        {fields.map((f) => (
-          <div key={f.label}>
-            <span className="text-muted-foreground">{f.label}</span>
-
-            {f.type === "badge" && typeof f.value === "boolean" ? (
-              <StatusBadge status={f.value ? "success" : "default"}>
-                {f.value ? (f.trueLabel ?? "Sí") : (f.falseLabel ?? "No")}
-              </StatusBadge>
-            ) : (
-              <p>{String(f.value)}</p>
-            )}
-          </div>
-        ))}
+        {fields.map((f) => {
+          // Ocultar la fila de email si está vacío, es guion o null
+          if (
+            f.label.toLowerCase() === "email" &&
+            (!f.value || f.value === "-" || f.value === null || f.value === "")
+          ) {
+            return null;
+          }
+          return (
+            <div key={f.label}>
+              <span className="text-muted-foreground">{f.label}</span>
+              {f.type === "badge" && typeof f.value === "boolean" ? (
+                <StatusBadge status={f.value ? "success" : "default"}>
+                  {f.value ? (f.trueLabel ?? "Sí") : (f.falseLabel ?? "No")}
+                </StatusBadge>
+              ) : (
+                <p>{String(f.value)}</p>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -442,15 +442,17 @@ export default function AlumnosPage() {
               <MessageCircleMore className="mr-2 h-4 w-4 text-green-600" />
               Enviar WhatsApp
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                window.location.href = `mailto:${row.email}?subject=${encodeURIComponent(`Contacto para ${row.nombre} ${row.apellido}`)}`;
-              }}
-            >
-              <Mail className="mr-2 h-4 w-4 text-blue-600" />
-              Enviar correo
-            </DropdownMenuItem>
+            {row.email && (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.location.href = `mailto:${row.email}?subject=${encodeURIComponent(`Contacto para ${row.nombre} ${row.apellido}`)}`;
+                }}
+              >
+                <Mail className="mr-2 h-4 w-4 text-blue-600" />
+                Enviar correo
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
@@ -611,7 +613,7 @@ export default function AlumnosPage() {
                         alumno.caballoNombre ||
                         (alumno.caballoId
                           ? caballos.find((c) => c.id === alumno.caballoId)
-                              ?.nombre || ""
+                            ?.nombre || ""
                           : "");
                       return (
                         <>
@@ -690,11 +692,20 @@ export default function AlumnosPage() {
                 onClick={() => navigate(`/alumnos/${alumno.id}`)}
                 onEdit={() => openEdit(alumno)}
                 onDelete={() => openDelete(alumno)}
-                onSendWhatsApp={function (item: unknown): void {
-                  throw new Error("Function not implemented.");
+                onSendWhatsApp={(item) => {
+                  const alumno = item as Alumno;
+                  window.open(
+                    encodeURI(
+                      `https://wa.me/${alumno.codigoArea}${alumno.telefono}?text=Hola ${alumno.nombre}, te contactamos desde la Escuela para avisarte que... `
+                    ),
+                    "_blank"
+                  );
                 }}
-                onSendEmail={function (item: unknown): void {
-                  throw new Error("Function not implemented.");
+                onSendEmail={(item) => {
+                  const alumno = item as Alumno;
+                  if (alumno.email) {
+                    window.location.href = `mailto:${alumno.email}?subject=${encodeURIComponent(`Contacto para ${alumno.nombre} ${alumno.apellido}`)}`;
+                  }
                 }}
               />
             ))}
