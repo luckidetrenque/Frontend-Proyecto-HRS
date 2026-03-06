@@ -33,7 +33,11 @@ import {
   instructoresApi,
   personasPruebaApi,
 } from "@/lib/api";
-import { exportToExcel } from "@/utils/exportToExcel";
+import {
+  exportMonthToExcel,
+  exportToExcel,
+  exportWeekToExcel,
+} from "@/utils/exportToExcel";
 
 export function useCalendar() {
   const queryClient = useQueryClient();
@@ -60,7 +64,8 @@ export function useCalendar() {
     instructorId: "all",
   });
 
-  // Queries
+  // ─── Queries ────────────────────────────────────────────────────────────────
+
   const { data: clases = [], isLoading } = useQuery({
     queryKey: ["clases"],
     queryFn: clasesApi.listarDetalladas,
@@ -86,7 +91,8 @@ export function useCalendar() {
     queryFn: personasPruebaApi.listar,
   });
 
-  // Clases filtradas
+  // ─── Datos derivados ────────────────────────────────────────────────────────
+
   const filteredClases = useMemo(() => {
     return clases.filter((clase: Clase) => {
       if (
@@ -105,10 +111,11 @@ export function useCalendar() {
     });
   }, [clases, filters]);
 
-  // Generar días para el calendario
   const calendarDays = useMemo(() => {
     if (viewMode === "month") {
-      const start = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 });
+      const start = startOfWeek(startOfMonth(currentDate), {
+        weekStartsOn: 1,
+      });
       const end = endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 });
       return eachDayOfInterval({ start, end });
     } else {
@@ -118,7 +125,6 @@ export function useCalendar() {
     }
   }, [currentDate, viewMode]);
 
-  // Agrupar clases por fecha
   const clasesByDate = useMemo(() => {
     const grouped: Record<string, Clase[]> = {};
     filteredClases.forEach((clase: Clase) => {
@@ -134,16 +140,15 @@ export function useCalendar() {
 
   const conflictSet = useMemo(() => {
     const set = new Set<string>();
-
     clases.forEach((clase) => {
       const key = `${clase.dia}|${clase.hora.slice(0, 5)}|${clase.caballoId}`;
       set.add(key);
     });
-
     return set;
   }, [clases]);
 
-  // Mutations
+  // ─── Mutations ──────────────────────────────────────────────────────────────
+
   const createMutation = useMutation({
     mutationFn: clasesApi.crear,
     onSuccess: (data) => {
@@ -227,6 +232,11 @@ export function useCalendar() {
       toast.error(error.message || "Error al eliminar clases"),
   });
 
+  /**
+   * Usa cambiarEstado (PATCH /clases/{id}/estado) en lugar de actualizar
+   * (PUT /clases/{id}), evitando que el backend resetee campos como `duracion`
+   * al recibir un objeto parcial sin ese campo.
+   */
   const bulkCancelMutation = useMutation({
     mutationFn: async ({
       claseIds,
@@ -237,7 +247,7 @@ export function useCalendar() {
     }) => {
       await Promise.all(
         claseIds.map((id) =>
-          clasesApi.actualizar(id, { estado: "CANCELADA", observaciones }),
+          clasesApi.cambiarEstado(id, "CANCELADA", observaciones),
         ),
       );
     },
@@ -251,7 +261,8 @@ export function useCalendar() {
       toast.error(error.message || "Error al cancelar las clases"),
   });
 
-  // Navegación
+  // ─── Navegación ─────────────────────────────────────────────────────────────
+
   const navigate = (direction: "prev" | "next") => {
     if (viewMode === "month") {
       setCurrentDate(
@@ -276,7 +287,14 @@ export function useCalendar() {
 
   const goToToday = () => setCurrentDate(new Date());
 
-  // Handlers de diálogos
+  // Navega a la vista día sobre una fecha concreta sin abrir el diálogo
+  const handleGoToDay = (date: Date) => {
+    setCurrentDate(date);
+    setViewMode("day");
+  };
+
+  // ─── Handlers de diálogos ───────────────────────────────────────────────────
+
   const handleDayClick = (date: Date) => {
     setCurrentDate(date);
     setClaseToEdit(null);
@@ -325,13 +343,11 @@ export function useCalendar() {
   const handleCopySubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const data = {
+    copyWeekMutation.mutate({
       diaInicioOrigen: formData.get("inicioOri") as string,
       diaInicioDestino: formData.get("inicioDes") as string,
       cantidadSemanas: Number(formData.get("cantidadSemanas")),
-    };
-
-    copyWeekMutation.mutate(data);
+    });
   };
 
   const handleDeleteSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -342,12 +358,10 @@ export function useCalendar() {
       diaInicioDestino: formData.get("inicioDes") as string,
       cantidadSemanas: 1,
     };
-
     if (!data.diaInicioOrigen || !data.diaInicioDestino) {
       toast.error("Ambas fechas son obligatorias");
       return;
     }
-
     deleteWeekMutation.mutate(data);
   };
 
@@ -359,60 +373,96 @@ export function useCalendar() {
     setFilters({ alumnoId: "all", instructorId: "all" });
   };
 
-  // Exportar a Excel (para vista día)
+  // ─── Exportar Excel ─────────────────────────────────────────────────────────
+
   const handleExportExcel = async () => {
     try {
       await exportToExcel({
         selectedDate: currentDate,
         clases: filteredClases,
-        caballos: caballos,
-        instructores: instructores,
-        getAlumnoNombre,
-        getAlumnoNombreCompleto,
+        caballos,
+        instructores,
+        getNombreParaClase,
+        getNombreCompletoParaClase,
         getInstructorNombre,
         getInstructorColor,
         getCaballoNombre,
       });
-
       toast.success("Excel exportado correctamente");
-    } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error("Error al exportar el archivo Excel");
-      }
-
+    } catch {
+      if (import.meta.env.DEV) console.error("Error al exportar Excel");
       toast.error("Error al exportar el archivo Excel");
     }
   };
 
-  // Cancelar clases del día (para vista día)
+  const handleExportWeekExcel = async () => {
+    try {
+      await exportWeekToExcel({
+        selectedDate: currentDate,
+        clases: filteredClases,
+        caballos,
+        instructores,
+        getNombreParaClase,
+        getNombreCompletoParaClase,
+        getInstructorNombre,
+        getInstructorColor,
+        getCaballoNombre,
+      });
+      toast.success("Excel de la semana exportado correctamente");
+    } catch {
+      if (import.meta.env.DEV) console.error("Error al exportar Excel semana");
+      toast.error("Error al exportar el archivo Excel");
+    }
+  };
+
+  const handleExportMonthExcel = async () => {
+    try {
+      await exportMonthToExcel({
+        selectedDate: currentDate,
+        clases: filteredClases,
+        caballos,
+        instructores,
+        getNombreParaClase,
+        getNombreCompletoParaClase,
+        getInstructorNombre,
+        getInstructorColor,
+        getCaballoNombre,
+      });
+      toast.success("Excel del mes exportado correctamente");
+    } catch {
+      if (import.meta.env.DEV) console.error("Error al exportar Excel mes");
+      toast.error("Error al exportar el archivo Excel");
+    }
+  };
+
+  // ─── Cancelación masiva del día ─────────────────────────────────────────────
+
   const handleCancelDayClases = (observaciones: string) => {
     const dateKey = format(currentDate, "yyyy-MM-dd");
-    const clasesDelDia = filteredClases.filter(
-      (clase) => clase.dia === dateKey,
+    const cancelables = filteredClases.filter(
+      (clase) =>
+        clase.dia === dateKey &&
+        clase.estado !== "CANCELADA" &&
+        clase.estado !== "COMPLETADA",
     );
-
-    // Solo clases cancelables
-    const clasesCancelables = clasesDelDia.filter(
-      (clase) => clase.estado !== "CANCELADA" && clase.estado !== "COMPLETADA",
-    );
-
-    const claseIds = clasesCancelables.map((clase) => clase.id);
-    bulkCancelMutation.mutate({ claseIds, observaciones });
+    bulkCancelMutation.mutate({
+      claseIds: cancelables.map((c) => c.id),
+      observaciones,
+    });
   };
 
-  // Obtener clases cancelables del día actual
   const getCancelableDayClases = () => {
     const dateKey = format(currentDate, "yyyy-MM-dd");
-    const clasesDelDia = filteredClases.filter(
-      (clase) => clase.dia === dateKey,
-    );
-
-    return clasesDelDia.filter(
-      (clase) => clase.estado !== "CANCELADA" && clase.estado !== "COMPLETADA",
+    return filteredClases.filter(
+      (clase) =>
+        clase.dia === dateKey &&
+        clase.estado !== "CANCELADA" &&
+        clase.estado !== "COMPLETADA",
     );
   };
 
-  // Helpers
+  // ─── Helpers ────────────────────────────────────────────────────────────────
+
   const getAlumnoNombre = (id: number) => {
     const alumno = alumnos.find((a: Alumno) => a.id === id);
     return alumno ? alumno.nombre : "-";
@@ -427,8 +477,6 @@ export function useCalendar() {
     const alumno = alumnos.find((a: Alumno) => a.id === id);
     return alumno ? `${alumno.nombre} ${alumno.apellido}` : "-";
   };
-
-  // Agregar después de getAlumnoNombreCompleto en useCalendar.ts:
 
   const getNombreParaClase = (clase: Clase): string => {
     if (clase.alumnoId) {
@@ -460,6 +508,8 @@ export function useCalendar() {
     const instructor = instructores.find((i: Instructor) => i.id === id);
     return instructor?.color || "#6B7280";
   };
+
+  // ─── Return ─────────────────────────────────────────────────────────────────
 
   return {
     // Estado
@@ -500,6 +550,7 @@ export function useCalendar() {
     // Handlers
     navigate,
     goToToday,
+    handleGoToDay,
     handleDayClick,
     handleCellClick,
     handleEditClase,
@@ -512,6 +563,8 @@ export function useCalendar() {
     handleFilterChange,
     handleResetFilters,
     handleExportExcel,
+    handleExportWeekExcel,
+    handleExportMonthExcel,
     handleCancelDayClases,
     getCancelableDayClases,
 

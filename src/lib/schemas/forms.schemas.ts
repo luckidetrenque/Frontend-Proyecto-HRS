@@ -81,7 +81,7 @@ export type AlumnoFormValues = z.infer<typeof alumnoSchema>;
 // ─────────────────────────────────────────────
 export const claseSchema = z.object({
   especialidad: z.string().min(1, "La especialidad es obligatoria"),
-  alumnoId: z.string().optional(),
+  alumnoId: z.string().optional(), // Se convierte a number | null en el handler
   instructorId: z.string().min(1, "Seleccioná un instructor"),
   caballoId: z.string().optional(),
   dia: z.string().min(1, "El día es obligatorio"),

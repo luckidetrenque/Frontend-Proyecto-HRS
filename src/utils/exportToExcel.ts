@@ -8,6 +8,13 @@
  */
 
 import { format } from "date-fns";
+import {
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  startOfMonth,
+  startOfWeek,
+} from "date-fns";
 import { es } from "date-fns/locale";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -25,8 +32,12 @@ interface ExportToExcelParams {
     apellido: string;
     color: string;
   }>;
-  getAlumnoNombre: (id: number) => string;
-  getAlumnoNombreCompleto: (id: number) => string;
+  getNombreParaClase: (clase: Clase) => string;
+  getNombreCompletoParaClase: (clase: Clase) => string;
+  /** @deprecated use getNombreParaClase */
+  getAlumnoNombre?: (id: number) => string;
+  /** @deprecated use getNombreCompletoParaClase */
+  getAlumnoNombreCompleto?: (id: number) => string;
   getInstructorNombre: (id: number) => string;
   getInstructorColor: (id: number) => string;
   getCaballoNombre: (id: number) => string;
@@ -67,12 +78,26 @@ export async function exportToExcel({
   clases,
   caballos,
   instructores,
+  getNombreParaClase,
+  getNombreCompletoParaClase,
   getAlumnoNombre,
   getAlumnoNombreCompleto,
   getInstructorNombre,
   getInstructorColor,
   getCaballoNombre,
 }: ExportToExcelParams) {
+  // Resolver helpers con retrocompatibilidad
+  const resolverNombre = (clase: Clase): string => {
+    if (getNombreParaClase) return getNombreParaClase(clase);
+    return getAlumnoNombre ? getAlumnoNombre(clase.alumnoId) : "-";
+  };
+  const resolverNombreCompleto = (clase: Clase): string => {
+    if (getNombreCompletoParaClase) return getNombreCompletoParaClase(clase);
+    return getAlumnoNombreCompleto
+      ? getAlumnoNombreCompleto(clase.alumnoId)
+      : "-";
+  };
+
   // Crear workbook y worksheet
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Clases del Día", {
@@ -260,15 +285,13 @@ export async function exportToExcel({
 
       if (clase) {
         // HAY CLASE PROGRAMADA
-        const alumnoNombre = getAlumnoNombre(clase.alumnoId);
         const instructorColor = getInstructorColor(clase.instructorId);
         const instructorNombre = getInstructorNombre(clase.instructorId);
 
         // Texto de la celda
-        let cellText = alumnoNombre;
-        if (clase.esPrueba) {
-          cellText = `🎓 ${alumnoNombre} (PRUEBA)`;
-        }
+        const cellText = clase.esPrueba
+          ? `🎓 ${resolverNombre(clase)} (PRUEBA)`
+          : resolverNombre(clase);
 
         cell.value = cellText;
 
@@ -319,7 +342,7 @@ export async function exportToExcel({
             },
             {
               font: { size: 9 },
-              text: `Alumno: ${getAlumnoNombreCompleto(clase.alumnoId)}\n`,
+              text: `Alumno: ${resolverNombreCompleto(clase)}\n`,
             },
             {
               font: { size: 9 },
@@ -534,4 +557,323 @@ export async function exportToExcel({
 
   const fileName = `clases-${format(selectedDate, "yyyy-MM-dd")}.xlsx`;
   saveAs(blob, fileName);
+}
+
+// ─────────────────────────────────────────────────────────
+// HELPER INTERNO: construye una hoja estilo tabla para un
+// rango de días (semana o mes) usando la misma lógica visual.
+// ─────────────────────────────────────────────────────────
+async function buildRangeSheet(
+  workbook: ExcelJS.Workbook,
+  sheetName: string,
+  titulo: string,
+  subtitulo: string,
+  days: Date[],
+  clases: Clase[],
+  caballos: Caballo[],
+  instructores: ExportToExcelParams["instructores"],
+  getNombreParaClase: (clase: Clase) => string,
+  getNombreCompletoParaClase: (clase: Clase) => string,
+  getInstructorNombre: (id: number) => string,
+  getInstructorColor: (id: number) => string,
+  getCaballoNombre: (id: number) => string,
+) {
+  const caballosOrdenados = [...caballos];
+  const totalCols = days.length + 1; // col 0 = Hora
+
+  const ws = workbook.addWorksheet(sheetName, {
+    views: [{ state: "frozen", xSplit: 1, ySplit: 3 }],
+  });
+
+  // ── Fila 1: Título ──
+  const titleRow = ws.addRow([titulo]);
+  ws.mergeCells(1, 1, 1, totalCols);
+  titleRow.height = 30;
+  titleRow.font = { size: 15, bold: true, color: { argb: "FF1F4788" } };
+  titleRow.alignment = { horizontal: "center", vertical: "middle" };
+  titleRow.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFE7F3FF" },
+  };
+
+  // ── Fila 2: Subtítulo ──
+  const subRow = ws.addRow([subtitulo]);
+  ws.mergeCells(2, 1, 2, totalCols);
+  subRow.height = 20;
+  subRow.font = { size: 10, italic: true, color: { argb: "FF666666" } };
+  subRow.alignment = { horizontal: "center", vertical: "middle" };
+
+  // Por cada caballo → una hoja (rangos grandes tendrían demasiadas columnas si
+  // combinamos caballo × día). En cambio usamos: filas = hora, columnas = días,
+  // y agrupamos por caballo en hojas separadas dentro del mismo workbook.
+
+  // Construir mapa clases por día → caballo → hora
+  const claseMap: Record<string, Record<number, Record<string, Clase>>> = {};
+  days.forEach((d) => {
+    const dk = format(d, "yyyy-MM-dd");
+    claseMap[dk] = {};
+    caballosOrdenados.forEach((c) => {
+      claseMap[dk][c.id] = {};
+    });
+  });
+  clases.forEach((clase) => {
+    if (claseMap[clase.dia]) {
+      const horaKey = clase.hora.slice(0, 5);
+      if (!claseMap[clase.dia][clase.caballoId])
+        claseMap[clase.dia][clase.caballoId] = {};
+      claseMap[clase.dia][clase.caballoId][horaKey] = clase;
+    }
+  });
+
+  // ── Fila 3: cabecera días ──
+  const headerRow = ws.addRow([
+    "Hora / Caballo",
+    ...days.map((d) => format(d, "EEE d/MM", { locale: es })),
+  ]);
+  headerRow.height = 28;
+  headerRow.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
+  headerRow.alignment = {
+    horizontal: "center",
+    vertical: "middle",
+    wrapText: true,
+  };
+  headerRow.getCell(1).fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FF2C3E50" },
+  };
+  days.forEach((_, i) => {
+    headerRow.getCell(i + 2).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF4472C4" },
+    };
+    headerRow.getCell(i + 2).border = {
+      top: { style: "medium", color: { argb: "FF000000" } },
+      bottom: { style: "medium", color: { argb: "FF000000" } },
+      left: { style: "thin", color: { argb: "FF000000" } },
+      right: { style: "thin", color: { argb: "FF000000" } },
+    };
+  });
+
+  // ── Filas de datos: una sección por caballo ──
+  caballosOrdenados.forEach((caballo) => {
+    // Sub-cabecera de caballo
+    const caballoRow = ws.addRow([caballo.nombre, ...days.map(() => "")]);
+    ws.mergeCells(caballoRow.number, 1, caballoRow.number, totalCols);
+    caballoRow.height = 22;
+    caballoRow.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
+    caballoRow.alignment = { horizontal: "center", vertical: "middle" };
+    caballoRow.getCell(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: caballo.tipo === "PRIVADO" ? "FFD4A017" : "FF5B7FA6" },
+    };
+
+    // Filas de horarios
+    TIME_SLOTS.forEach((hora) => {
+      const dataRow = ws.addRow([hora, ...days.map(() => "")]);
+      dataRow.height = 22;
+
+      // Celda hora
+      const horaCell = dataRow.getCell(1);
+      horaCell.font = { bold: true, size: 10, color: { argb: "FF2C3E50" } };
+      horaCell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFF8F9FA" },
+      };
+      horaCell.alignment = { horizontal: "center", vertical: "middle" };
+      horaCell.border = {
+        left: { style: "medium", color: { argb: "FF000000" } },
+        right: { style: "medium", color: { argb: "FF000000" } },
+        top: { style: "thin", color: { argb: "FFCCCCCC" } },
+        bottom: { style: "thin", color: { argb: "FFCCCCCC" } },
+      };
+
+      // Celdas de días
+      days.forEach((day, dayIdx) => {
+        const dk = format(day, "yyyy-MM-dd");
+        const clase = claseMap[dk]?.[caballo.id]?.[hora];
+        const cell = dataRow.getCell(dayIdx + 2);
+
+        if (clase) {
+          const instructorColor = getInstructorColor(clase.instructorId);
+          const bgColor = lightenColor(instructorColor, 70);
+          const nombre = getNombreParaClase(clase);
+          cell.value = clase.esPrueba ? `🎓 ${nombre}` : nombre;
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: hexToARGB(bgColor) },
+          };
+          cell.font = { bold: true, size: 9, color: { argb: "FF000000" } };
+          cell.alignment = {
+            horizontal: "center",
+            vertical: "middle",
+            wrapText: true,
+          };
+          cell.border = clase.esPrueba
+            ? {
+                top: { style: "medium", color: { argb: "FFFF8C00" } },
+                left: { style: "medium", color: { argb: "FFFF8C00" } },
+                bottom: { style: "medium", color: { argb: "FFFF8C00" } },
+                right: { style: "medium", color: { argb: "FFFF8C00" } },
+              }
+            : {
+                top: { style: "thin", color: { argb: "FFCCCCCC" } },
+                left: { style: "thin", color: { argb: "FFCCCCCC" } },
+                bottom: { style: "thin", color: { argb: "FFCCCCCC" } },
+                right: { style: "thin", color: { argb: "FFCCCCCC" } },
+              };
+          cell.note = {
+            texts: [
+              { font: { size: 9, bold: true }, text: "Detalles:\n" },
+              {
+                font: { size: 9 },
+                text: `Alumno: ${getNombreCompletoParaClase(clase)}\n`,
+              },
+              {
+                font: { size: 9 },
+                text: `Instructor: ${getInstructorNombre(clase.instructorId)}\n`,
+              },
+              {
+                font: { size: 9 },
+                text: `Caballo: ${getCaballoNombre(clase.caballoId)}\n`,
+              },
+              {
+                font: { size: 9 },
+                text: `Especialidad: ${clase.especialidad}\n`,
+              },
+              { font: { size: 9 }, text: `Estado: ${clase.estado}` },
+            ],
+          };
+        } else {
+          cell.value = "—";
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: {
+              argb: caballo.tipo === "PRIVADO" ? "FFFFFEF0" : "FFFFFFFF",
+            },
+          };
+          cell.font = { color: { argb: "FFCCCCCC" }, size: 9 };
+          cell.alignment = { horizontal: "center", vertical: "middle" };
+          cell.border = {
+            top: { style: "thin", color: { argb: "FFEEEEEE" } },
+            left: { style: "thin", color: { argb: "FFEEEEEE" } },
+            bottom: { style: "thin", color: { argb: "FFEEEEEE" } },
+            right: { style: "thin", color: { argb: "FFEEEEEE" } },
+          };
+        }
+      });
+    });
+  });
+
+  // Anchos de columna
+  ws.getColumn(1).width = 14;
+  days.forEach((_, i) => {
+    ws.getColumn(i + 2).width = 16;
+  });
+}
+
+// ─────────────────────────────────────────────────────────
+// EXPORTAR SEMANA
+// ─────────────────────────────────────────────────────────
+export async function exportWeekToExcel({
+  selectedDate,
+  clases,
+  caballos,
+  instructores,
+  getNombreParaClase,
+  getNombreCompletoParaClase,
+  getInstructorNombre,
+  getInstructorColor,
+  getCaballoNombre,
+}: ExportToExcelParams) {
+  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
+  const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+  const titulo = `Clases de Equitación — Semana del ${format(weekStart, "d 'de' MMMM", { locale: es })} al ${format(weekEnd, "d 'de' MMMM 'de' yyyy", { locale: es })}`;
+  const clasesRango = clases.filter(
+    (c) =>
+      c.dia >= format(weekStart, "yyyy-MM-dd") &&
+      c.dia <= format(weekEnd, "yyyy-MM-dd"),
+  );
+  const subtitulo = `Total de clases: ${clasesRango.length}`;
+
+  const workbook = new ExcelJS.Workbook();
+  await buildRangeSheet(
+    workbook,
+    "Semana",
+    titulo,
+    subtitulo,
+    days,
+    clasesRango,
+    caballos,
+    instructores,
+    getNombreParaClase,
+    getNombreCompletoParaClase,
+    getInstructorNombre,
+    getInstructorColor,
+    getCaballoNombre,
+  );
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  saveAs(blob, `clases-semana-${format(weekStart, "yyyy-MM-dd")}.xlsx`);
+}
+
+// ─────────────────────────────────────────────────────────
+// EXPORTAR MES
+// ─────────────────────────────────────────────────────────
+export async function exportMonthToExcel({
+  selectedDate,
+  clases,
+  caballos,
+  instructores,
+  getNombreParaClase,
+  getNombreCompletoParaClase,
+  getInstructorNombre,
+  getInstructorColor,
+  getCaballoNombre,
+}: ExportToExcelParams) {
+  const monthStart = startOfMonth(selectedDate);
+  const monthEnd = endOfMonth(selectedDate);
+  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+  const titulo = `Clases de Equitación — ${format(selectedDate, "MMMM 'de' yyyy", { locale: es })}`;
+  const clasesRango = clases.filter(
+    (c) =>
+      c.dia >= format(monthStart, "yyyy-MM-dd") &&
+      c.dia <= format(monthEnd, "yyyy-MM-dd"),
+  );
+  const subtitulo = `Total de clases: ${clasesRango.length}`;
+
+  const workbook = new ExcelJS.Workbook();
+  await buildRangeSheet(
+    workbook,
+    "Mes",
+    titulo,
+    subtitulo,
+    days,
+    clasesRango,
+    caballos,
+    instructores,
+    getNombreParaClase,
+    getNombreCompletoParaClase,
+    getInstructorNombre,
+    getInstructorColor,
+    getCaballoNombre,
+  );
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  saveAs(blob, `clases-${format(selectedDate, "yyyy-MM")}.xlsx`);
 }
