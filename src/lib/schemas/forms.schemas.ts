@@ -69,8 +69,12 @@ export const alumnoSchema = z.discriminatedUnion("tipoPension", [
   }),
   alumnoBase.extend({
     tipoPension: z.literal("CABALLO_PROPIO"),
-    caballoId: z.coerce.number().nullable().optional(),
-    cuotaPension: z.enum(["ENTERA", "MEDIA", "TERCIO"]),
+    caballoId: z.coerce
+      .number({ invalid_type_error: "Seleccioná un caballo" })
+      .min(1, "Seleccioná un caballo"),
+    cuotaPension: z.enum(["ENTERA", "MEDIA", "TERCIO"], {
+      errorMap: () => ({ message: "Seleccioná una cuota de pensión" }),
+    }),
   }),
 ]);
 

@@ -100,8 +100,14 @@ export function AlumnoForm({
         fechaInscripcion: alumno.fechaInscripcion,
         cantidadClases: alumno.cantidadClases,
         tipoPension: alumno.tipoPension ?? "SIN_CABALLO",
-        cuotaPension: alumno.cuotaPension ?? null,
-        caballoId: alumno.caballoId ?? null,
+        cuotaPension:
+          alumno.tipoPension === "CABALLO_PROPIO"
+            ? (alumno.cuotaPension ?? "ENTERA")
+            : null,
+        caballoId:
+          alumno.tipoPension !== "SIN_CABALLO"
+            ? (alumno.caballoId ?? null)
+            : null,
         activo: alumno.activo,
       } as AlumnoFormValues);
     }
@@ -395,6 +401,11 @@ export function AlumnoForm({
                   </Select>
                 )}
               />
+              {errors.cuotaPension && (
+                <p className="text-sm text-red-500">
+                  {errors.cuotaPension.message}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="caballo">Nombre Caballo</Label>
@@ -419,6 +430,11 @@ export function AlumnoForm({
                   </Select>
                 )}
               />
+              {errors.caballoId && (
+                <p className="text-sm text-red-500">
+                  {errors.caballoId.message}
+                </p>
+              )}
             </div>
           </div>
         )}
