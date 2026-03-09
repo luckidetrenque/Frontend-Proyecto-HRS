@@ -255,7 +255,8 @@ export default function InstructoresPage() {
     { header: "DNI", accessorKey: "dni" as keyof Instructor },
     {
       header: "Teléfono",
-      cell: (row: Instructor) => `(${row.codigoArea.replace("+549", "")}) ${row.telefono.slice(0, row.telefono.length - 4)}-${row.telefono.slice(-4)}`,
+      cell: (row: Instructor) =>
+        `(${row.codigoArea.replace("+549", "")}) ${row.telefono.slice(0, row.telefono.length - 4)}-${row.telefono.slice(-4)}`,
     },
     { header: "Email", accessorKey: "email" as keyof Instructor },
     {
@@ -393,7 +394,10 @@ export default function InstructoresPage() {
                       color: data.color,
                     };
                     if (editingInstructor) {
-                      updateMutation.mutate({ id: editingInstructor.id, data: payload });
+                      updateMutation.mutate({
+                        id: editingInstructor.id,
+                        data: payload,
+                      });
                     } else {
                       createMutation.mutate(payload);
                     }
@@ -451,10 +455,12 @@ export default function InstructoresPage() {
                 key={instructor.id}
                 title={`${instructor.nombre} ${instructor.apellido}`}
                 subtitle=""
-                // TODO subtitle="Descripción crear campo en db"
                 fields={[
                   { label: "DNI", value: instructor.dni },
-                  { label: "Teléfono", value: `(${instructor.codigoArea.replace("+549", "")}) ${instructor.telefono.slice(0, instructor.telefono.length - 4)}-${instructor.telefono.slice(-4)}` },
+                  {
+                    label: "Teléfono",
+                    value: `(${instructor.codigoArea.replace("+549", "")}) ${instructor.telefono.slice(0, instructor.telefono.length - 4)}-${instructor.telefono.slice(-4)}`,
+                  },
                   { label: "Email", value: instructor.email || "-" },
                   {
                     label: "Estado ",
@@ -471,9 +477,9 @@ export default function InstructoresPage() {
                   const instructor = item as Instructor;
                   window.open(
                     encodeURI(
-                      `https://wa.me/${instructor.codigoArea}${instructor.telefono}?text=Hola ${instructor.nombre}, te contactamos desde la Escuela para avisarte que... `
+                      `https://wa.me/${instructor.codigoArea}${instructor.telefono}?text=Hola ${instructor.nombre}, te contactamos desde la Escuela para avisarte que... `,
                     ),
-                    "_blank"
+                    "_blank",
                   );
                 }}
                 onSendEmail={(item) => {

@@ -613,7 +613,7 @@ export default function AlumnosPage() {
                         alumno.caballoNombre ||
                         (alumno.caballoId
                           ? caballos.find((c) => c.id === alumno.caballoId)
-                            ?.nombre || ""
+                              ?.nombre || ""
                           : "");
                       return (
                         <>
@@ -643,7 +643,6 @@ export default function AlumnosPage() {
                     })()}
                   </div>
                 }
-                // TODO subtitle="Descripción crear campo en db"
                 fields={[
                   /* { label: "DNI", value: alumno.dni },
                   { label: "Teléfono", value: '${alumno.codigoArea}-${alumno.telefono}' },
@@ -696,9 +695,9 @@ export default function AlumnosPage() {
                   const alumno = item as Alumno;
                   window.open(
                     encodeURI(
-                      `https://wa.me/${alumno.codigoArea}${alumno.telefono}?text=Hola ${alumno.nombre}, te contactamos desde la Escuela para avisarte que... `
+                      `https://wa.me/${alumno.codigoArea}${alumno.telefono}?text=Hola ${alumno.nombre}, te contactamos desde la Escuela para avisarte que... `,
                     ),
-                    "_blank"
+                    "_blank",
                   );
                 }}
                 onSendEmail={(item) => {
