@@ -136,6 +136,90 @@ export interface ApiErrorResponse {
   errores?: Record<string, string>;
 }
 
+export interface ConfiguracionPrecios {
+  cuota4Clases: number;
+  cuota8Clases: number;
+  cuota12Clases: number;
+  cuota16Clases: number;
+  pensionEntera: number;
+  pensionMedia: number;
+  pensionTercio: number;
+  reservaEscuela: number;
+  honorarioPorClase: number;
+  honorarioBaseMensual: number;
+}
+
+export interface DesglosePlan {
+  cantidadClases: number;
+  alumnosEnPlan: number;
+  cuotaUnitaria: number;
+  subtotal: number;
+}
+
+export interface PuntoEvolucion {
+  mes: string;
+  ingresos: number;
+  egresos: number;
+}
+
+export interface ResumenFinanciero {
+  ingresosCuotasProyectado: number;
+  ingresosPensionesProyectado: number;
+  ingresosTotalProyectado: number;
+  egresoHonorarios: number;
+  balanceProyectado: number;
+  desglosePlanes: DesglosePlan[];
+  evolucion: PuntoEvolucion[];
+}
+
+export interface FilaAlumnoFinanzas {
+  alumnoId: number;
+  nombre: string;
+  apellido: string;
+  plan: number;
+  clasesCompletadas: number;
+  montoCuota: number;
+  tipoPension: string;
+  montoPension: number;
+  totalAlumno: number;
+}
+
+export interface CuotasAlumnos {
+  totalProyectado: number;
+  alumnosActivos: number;
+  filas: FilaAlumnoFinanzas[];
+}
+
+export interface FilaPension {
+  alumnoId: number;
+  nombre: string;
+  apellido: string;
+  tipoPension: string;
+  cuotaPension: string | null;
+  caballoNombre: string | null;
+  monto: number;
+}
+
+export interface Pensiones {
+  totalMensual: number;
+  filas: FilaPension[];
+}
+
+export interface FilaInstructor {
+  instructorId: number;
+  nombre: string;
+  apellido: string;
+  clasesCompletadas: number;
+  honorarioBase: number;
+  honorarioPorClases: number;
+  totalHonorario: number;
+}
+
+export interface Honorarios {
+  totalHonorarios: number;
+  filas: FilaInstructor[];
+}
+
 // Helper function to make API requests with authentication
 async function apiFetch(endpoint: string, options: RequestInit = {}) {
   const credentials = sessionStorage.getItem("authCredentials");
@@ -526,5 +610,54 @@ export const personasPruebaApi = {
   listar: async (): Promise<PersonaPrueba[]> => {
     const response = await apiFetch("/personas-prueba");
     return handleResponse<PersonaPrueba[]>(response);
+  },
+};
+
+export const finanzasApi = {
+  getResumen: async (
+    inicio: string,
+    fin: string,
+  ): Promise<ResumenFinanciero> => {
+    const response = await apiFetch(
+      `/finanzas/resumen?inicio=${inicio}&fin=${fin}`,
+    );
+    return handleResponse<ResumenFinanciero>(response);
+  },
+
+  getCuotasAlumnos: async (
+    inicio: string,
+    fin: string,
+  ): Promise<CuotasAlumnos> => {
+    const response = await apiFetch(
+      `/finanzas/alumnos?inicio=${inicio}&fin=${fin}`,
+    );
+    return handleResponse<CuotasAlumnos>(response);
+  },
+
+  getPensiones: async (): Promise<Pensiones> => {
+    const response = await apiFetch(`/finanzas/pensiones`);
+    return handleResponse<Pensiones>(response);
+  },
+
+  getHonorarios: async (inicio: string, fin: string): Promise<Honorarios> => {
+    const response = await apiFetch(
+      `/finanzas/honorarios?inicio=${inicio}&fin=${fin}`,
+    );
+    return handleResponse<Honorarios>(response);
+  },
+
+  getConfiguracion: async (): Promise<ConfiguracionPrecios> => {
+    const response = await apiFetch(`/finanzas/configuracion`);
+    return handleResponse<ConfiguracionPrecios>(response);
+  },
+
+  updateConfiguracion: async (
+    config: ConfiguracionPrecios,
+  ): Promise<ConfiguracionPrecios> => {
+    const response = await apiFetch(`/finanzas/configuracion`, {
+      method: "PUT",
+      body: JSON.stringify(config),
+    });
+    return handleResponse<ConfiguracionPrecios>(response);
   },
 };
