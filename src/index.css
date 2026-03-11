@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -6,116 +5,116 @@
 
 @layer base {
   :root {
-    /* Elegant equestrian theme - warm earth tones */
-    --background: 30 25% 97%;
-    --foreground: 30 15% 15%;
+    /* Modern minimalist equestrian theme - clean light mode */
+    --background: 210 20% 98%;
+    --foreground: 220 15% 15%;
 
-    --card: 30 20% 99%;
-    --card-foreground: 30 15% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 15%;
 
-    --popover: 30 20% 99%;
-    --popover-foreground: 30 15% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 15%;
 
     /* Deep forest green - main brand */
-    --primary: 150 35% 25%;
-    --primary-foreground: 30 25% 97%;
+    --primary: 155 40% 30%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Warm sand */
-    --secondary: 35 30% 92%;
-    --secondary-foreground: 30 15% 25%;
+    /* Soft sand / beige accent */
+    --secondary: 40 30% 94%;
+    --secondary-foreground: 220 15% 25%;
 
-    /* Soft cream */
-    --muted: 35 20% 94%;
-    --muted-foreground: 30 10% 45%;
+    /* Soft gray */
+    --muted: 210 15% 95%;
+    --muted-foreground: 220 10% 45%;
 
-    /* Gold accent */
-    --accent: 38 70% 50%;
-    --accent-foreground: 30 15% 15%;
+    /* Gold/Amber accent */
+    --accent: 38 85% 55%;
+    --accent-foreground: 220 15% 15%;
 
-    --destructive: 0 65% 50%;
-    --destructive-foreground: 30 25% 97%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 35 20% 88%;
-    --input: 35 20% 88%;
-    --ring: 150 35% 25%;
+    --border: 210 15% 90%;
+    --input: 210 15% 90%;
+    --ring: 155 40% 30%;
 
-    --radius: 0.5rem;
+    --radius: 1rem; /* slightly larger border radius for modern feel */
 
     /* Custom tokens */
-    --success: 150 45% 40%;
+    --success: 150 50% 40%;
     --warning: 38 85% 55%;
-    --info: 200 60% 50%;
+    --info: 210 80% 55%;
 
     /* Gradients */
     --gradient-hero: linear-gradient(
       135deg,
-      hsl(150 35% 25%) 0%,
-      hsl(150 30% 35%) 100%
+      hsl(155 40% 30%) 0%,
+      hsl(155 35% 25%) 100%
     );
     --gradient-card: linear-gradient(
       180deg,
-      hsl(30 20% 99%) 0%,
-      hsl(35 25% 96%) 100%
+      hsl(0 0% 100%) 0%,
+      hsl(210 20% 98% / 0.5) 100%
     );
     --gradient-accent: linear-gradient(
       135deg,
-      hsl(38 70% 50%) 0%,
-      hsl(35 60% 55%) 100%
+      hsl(38 85% 55%) 0%,
+      hsl(35 70% 50%) 100%
     );
 
-    /* Shadows */
-    --shadow-soft: 0 4px 20px -4px hsl(30 15% 15% / 0.08);
-    --shadow-card: 0 2px 12px -2px hsl(30 15% 15% / 0.06);
-    --shadow-hover: 0 8px 30px -8px hsl(30 15% 15% / 0.12);
+    /* Shadows for premium modern feel */
+    --shadow-soft: 0 10px 40px -10px hsl(220 15% 15% / 0.05);
+    --shadow-card: 0 4px 20px -4px hsl(220 15% 15% / 0.05);
+    --shadow-hover: 0 12px 40px -8px hsl(220 15% 15% / 0.1);
 
     /* Sidebar */
-    --sidebar-background: 30 20% 98%;
-    --sidebar-foreground: 30 15% 25%;
-    --sidebar-primary: 150 35% 25%;
-    --sidebar-primary-foreground: 30 25% 97%;
-    --sidebar-accent: 35 30% 94%;
-    --sidebar-accent-foreground: 30 15% 25%;
-    --sidebar-border: 35 20% 90%;
-    --sidebar-ring: 150 35% 25%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 15% 25%;
+    --sidebar-primary: 155 40% 30%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 15% 96%;
+    --sidebar-accent-foreground: 220 15% 25%;
+    --sidebar-border: 210 15% 92%;
+    --sidebar-ring: 155 40% 30%;
   }
 
   .dark {
-    --background: 30 15% 10%;
-    --foreground: 30 20% 95%;
+    --background: 220 20% 8%;
+    --foreground: 210 20% 95%;
 
-    --card: 30 15% 12%;
-    --card-foreground: 30 20% 95%;
+    --card: 220 20% 10%;
+    --card-foreground: 210 20% 95%;
 
-    --popover: 30 15% 12%;
-    --popover-foreground: 30 20% 95%;
+    --popover: 220 20% 10%;
+    --popover-foreground: 210 20% 95%;
 
-    --primary: 150 40% 45%;
-    --primary-foreground: 30 15% 10%;
+    --primary: 155 45% 45%;
+    --primary-foreground: 220 20% 8%;
 
-    --secondary: 30 15% 18%;
-    --secondary-foreground: 30 20% 90%;
+    --secondary: 220 15% 15%;
+    --secondary-foreground: 210 20% 90%;
 
-    --muted: 30 12% 20%;
-    --muted-foreground: 30 15% 60%;
+    --muted: 220 15% 15%;
+    --muted-foreground: 210 15% 60%;
 
-    --accent: 38 65% 55%;
-    --accent-foreground: 30 15% 10%;
+    --accent: 38 85% 55%;
+    --accent-foreground: 220 20% 8%;
 
-    --destructive: 0 60% 45%;
-    --destructive-foreground: 30 20% 95%;
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 210 20% 95%;
 
-    --border: 30 12% 22%;
-    --input: 30 12% 22%;
-    --ring: 150 40% 45%;
+    --border: 220 15% 18%;
+    --input: 220 15% 18%;
+    --ring: 155 45% 45%;
 
-    --sidebar-background: 30 15% 8%;
-    --sidebar-foreground: 30 20% 90%;
-    --sidebar-primary: 150 40% 50%;
-    --sidebar-primary-foreground: 30 15% 10%;
-    --sidebar-accent: 30 12% 18%;
-    --sidebar-accent-foreground: 30 20% 90%;
-    --sidebar-border: 30 12% 18%;
-    --sidebar-ring: 150 40% 50%;
+    --sidebar-background: 220 20% 9%;
+    --sidebar-foreground: 210 20% 90%;
+    --sidebar-primary: 155 45% 45%;
+    --sidebar-primary-foreground: 220 20% 8%;
+    --sidebar-accent: 220 15% 14%;
+    --sidebar-accent-foreground: 210 20% 90%;
+    --sidebar-border: 220 15% 14%;
+    --sidebar-ring: 155 45% 45%;
   }
 }
 
@@ -140,11 +139,11 @@
 
 @layer utilities {
   .font-display {
-    font-family: "Playfair Display", Georgia, serif;
+    font-family: "Outfit", system-ui, sans-serif;
   }
 
   .font-body {
-    font-family: "Source Sans 3", system-ui, sans-serif;
+    font-family: "Inter", system-ui, sans-serif;
   }
 
   .text-balance {

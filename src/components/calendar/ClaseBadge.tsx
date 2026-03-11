@@ -26,8 +26,8 @@ export function ClaseBadge({
   compact = false,
   instructorColor = "#6B7280", // gris por defecto
 }: ClaseBadgeProps) {
-  // Calcular color de texto según el fondo del instructor
-  const textColor = getContrastColor(instructorColor);
+// Calcular color de texto según el fondo del instructor
+  // const textColor = getContrastColor(instructorColor); // Ya no usado, usaremos color de texto del theme para contrastar con fondo suave
 
   // Mapeo de estados a colores de borde
   const borderColors: Record<string, string> = {
@@ -41,20 +41,24 @@ export function ClaseBadge({
 
   const borderColor = borderColors[clase.estado] || "#D1D5DB"; // gris por defecto
 
+  // Fondo translúcido tipo glassmorphism (15% opacidad aprox en hex -> 25)
+  const bgColor = `${instructorColor}25`; 
+
   return (
     <div
       className={cn(
-        "rounded-md px-2 py-1 text-xs font-medium transition-all cursor-pointer hover:shadow-md",
-        compact ? "text-[10px] px-1.5 py-0.5" : "text-xs",
+        "rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 cursor-pointer hover:-translate-y-[2px] hover:shadow-hover border backdrop-blur-sm",
+        compact ? "text-[10px] px-1.5 py-0.5" : "text-xs text-foreground",
       )}
       style={{
-        backgroundColor: instructorColor,
-        color: textColor,
-        borderLeft: `12px solid ${borderColor}`,
+        backgroundColor: bgColor,
+        color: "currentColor",
+        borderLeft: `5px solid ${borderColor}`,
+        borderColor: `${instructorColor}30`,
         boxSizing: "border-box",
       }}
     >
-      <div className="truncate font-semibold text-[12px]">
+      <div className="truncate font-semibold text-[12px] text-foreground">
         <span>{alumnoNombre}</span>
         {caballoNombre && (
           <span title={`Clase ${clase.estado.toLowerCase()}`}>
