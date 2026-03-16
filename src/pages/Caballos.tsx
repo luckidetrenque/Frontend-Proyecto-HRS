@@ -7,7 +7,7 @@ import {
   Table,
   Trash2,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -37,13 +37,13 @@ import { PageHeader } from "@/components/ui/page-header";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useEntityActions } from "@/hooks/useEntityActions";
-import { Caballo, caballosApi, CaballoSearchFilters } from "@/lib/api";
+import { Caballo, caballosApi } from "@/lib/api";
+import { TipoCaballo } from "@/types/enums";
 
 export default function CaballosPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  // ✅ Hook unificado para manejo de acciones
   const {
     editingEntity: editingCaballo,
     entityToDelete: caballoToDelete,
@@ -54,101 +54,35 @@ export default function CaballosPage() {
     closeDelete,
   } = useEntityActions<Caballo>();
 
-  // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
-  const [searchFilters, setSearchFilters] = useState<CaballoSearchFilters>({});
-  const [isSearchActive, setIsSearchActive] = useState(false);
-
-  // Estados de filtros
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [filters, setFilters] = useState({
     tipo: "all",
     disponible: "all",
+    nombre: "",
   });
 
-  // Estados de paginación
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-
-  // 🔍 HANDLER PARA BÚSQUEDA INTELIGENTE
-  const handleSmartSearch = (filters: Record<string, unknown>) => {
-    const typedFilters: CaballoSearchFilters = {};
-
-    if (filters.nombre) typedFilters.nombre = String(filters.nombre);
-    if (filters.tipo)
-      typedFilters.tipo = String(filters.tipo) as "ESCUELA" | "PRIVADO";
-    if (filters.disponible !== undefined)
-      typedFilters.disponible = Boolean(filters.disponible);
-
-    setSearchFilters(typedFilters);
-    setCurrentPage(1);
-  };
-
-  // ✅ Escuchar evento de búsqueda global desde el Layout
-  useEffect(() => {
-    const handleGlobalSearchEvent = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      const { filters, entityType } = customEvent.detail;
-
-      if (entityType === "caballos") {
-        handleSmartSearch(filters);
-      }
-    };
-
-    window.addEventListener("globalSearch", handleGlobalSearchEvent);
-
-    return () => {
-      window.removeEventListener("globalSearch", handleGlobalSearchEvent);
-    };
-  }, []);
-
-  // 🔍 QUERY PARA BÚSQUEDA INTELIGENTE
-  const { data: searchResults, isLoading: isSearching } = useQuery({
-    queryKey: ["caballos", searchFilters],
-    queryFn: () => {
-      if (Object.keys(searchFilters).length > 0) {
-        setIsSearchActive(true);
-        return caballosApi.buscar(searchFilters);
-      }
-      setIsSearchActive(false);
-      return caballosApi.listar();
-    },
-    enabled: true,
+  const { data, isLoading } = useQuery({
+    queryKey: ["caballos", page, pageSize, filters],
+    queryFn: () =>
+      caballosApi.listar({
+        page,
+        size: pageSize,
+        sort: "nombre,asc",
+        tipo:
+          filters.tipo !== "all" ? (filters.tipo as TipoCaballo) : undefined,
+        disponible:
+          filters.disponible !== "all"
+            ? filters.disponible === "true"
+            : undefined,
+        nombre: filters.nombre || undefined,
+      }),
   });
 
-  const { data: allCaballos = [], isLoading: isLoadingAll } = useQuery({
-    queryKey: ["caballos"],
-    queryFn: caballosApi.listar,
-    enabled: !isSearchActive,
-  });
+  const caballos = data?.content ?? [];
+  const totalPages = data?.totalPages ?? 1;
+  const totalItems = data?.totalElements ?? 0;
 
-  const caballos = searchResults || allCaballos;
-  const isLoading = isSearching || isLoadingAll;
-
-  // Filtrar datos
-  const filteredData = useMemo(() => {
-    return caballos.filter((caballo: Caballo) => {
-      if (filters.tipo !== "all" && caballo.tipo !== filters.tipo) {
-        return false;
-      }
-      if (
-        filters.disponible !== "all" &&
-        String(caballo.disponible) !== filters.disponible
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [caballos, filters]);
-
-  // Paginar datos
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    return filteredData.slice(startIndex, endIndex);
-  }, [filteredData, currentPage, pageSize]);
-
-  const totalPages = Math.ceil(filteredData.length / pageSize);
-
-  // Configuración de filtros
   const filterConfig = [
     {
       name: "tipo",
@@ -172,24 +106,14 @@ export default function CaballosPage() {
 
   const handleFilterChange = (name: string, value: string) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
-    setCurrentPage(1);
+    setPage(0);
   };
 
   const handleResetFilters = () => {
-    setFilters({
-      tipo: "all",
-      disponible: "all",
-    });
-    setSearchFilters({});
-    setCurrentPage(1);
+    setFilters({ tipo: "all", disponible: "all", nombre: "" });
+    setPage(0);
   };
 
-  const handlePageSizeChange = (size: number) => {
-    setPageSize(size);
-    setCurrentPage(1);
-  };
-
-  // ✅ Mutaciones con hook unificado
   const createMutation = useMutation({
     mutationFn: caballosApi.crear,
     onSuccess: (data) => {
@@ -339,7 +263,7 @@ export default function CaballosPage() {
                     if (editingCaballo) {
                       updateMutation.mutate({ id: editingCaballo.id, data });
                     } else {
-                      createMutation.mutate(data);
+                      createMutation.mutate(data as Omit<Caballo, "id">);
                     }
                   }}
                   isPending={
@@ -364,13 +288,9 @@ export default function CaballosPage() {
         {viewMode === "table" ? (
           <DataTable
             columns={columns}
-            data={paginatedData}
+            data={caballos}
             isLoading={isLoading}
-            emptyMessage={
-              isSearchActive
-                ? "No se encontraron caballos con esos criterios de búsqueda"
-                : "No hay caballos que coincidan con los filtros"
-            }
+            emptyMessage="No hay caballos que coincidan con los filtros"
             onRowClick={(caballo) => navigate(`/caballos/${caballo.id}`)}
           />
         ) : isLoading ? (
@@ -381,7 +301,7 @@ export default function CaballosPage() {
           </div>
         ) : (
           <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
-            {paginatedData.map((caballo) => (
+            {caballos.map((caballo) => (
               <GenericCard
                 item={caballo}
                 key={caballo.id}
@@ -401,23 +321,27 @@ export default function CaballosPage() {
                 onClick={() => navigate(`/caballos/${caballo.id}`)}
                 onEdit={() => openEdit(caballo)}
                 onDelete={() => openDelete(caballo)}
+                onSendWhatsApp={() => {}}
+                onSendEmail={() => {}}
               />
             ))}
           </div>
         )}
 
-        {filteredData.length > 0 && (
+        {totalItems > 0 && (
           <PaginationControls
-            currentPage={currentPage}
+            currentPage={page + 1}
             totalPages={totalPages}
             pageSize={pageSize}
-            totalItems={filteredData.length}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={handlePageSizeChange}
+            totalItems={totalItems}
+            onPageChange={(p) => setPage(p - 1)}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(0);
+            }}
           />
         )}
 
-        {/* Dialog de Confirmación de Eliminación */}
         <Dialog open={!!caballoToDelete} onOpenChange={closeDelete}>
           <DialogContent>
             <DialogHeader>

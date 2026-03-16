@@ -13,7 +13,7 @@ import {
   Info,
   User,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -81,37 +81,32 @@ export default function ClaseDetalle() {
   } = useEntityActions<Clase>();
 
   // Queries adicionales para los selectores
-  const { data: alumnos = [] } = useQuery({
-    queryKey: ["alumnos"],
-    queryFn: alumnosApi.listar,
+  const { data: alumnosData } = useQuery({
+    queryKey: ["alumnos-select"],
+    queryFn: () =>
+      alumnosApi.listar({ page: 0, size: 200, sort: "apellido,asc" }),
   });
+  const alumnos = alumnosData?.content ?? [];
 
-  // Filtrar solo objetos válidos de Alumno
-  const alumnosValidos = useMemo(() => {
-    return alumnos.filter((alumno: unknown): alumno is Alumno => {
-      return (
-        typeof alumno === "object" &&
-        alumno !== null &&
-        "id" in alumno &&
-        "nombre" in alumno
-      );
-    });
-  }, [alumnos]);
-
-  const { data: instructores = [] } = useQuery({
-    queryKey: ["instructores"],
-    queryFn: instructoresApi.listar,
+  const { data: instructoresData } = useQuery({
+    queryKey: ["instructores-select"],
+    queryFn: () =>
+      instructoresApi.listar({ page: 0, size: 50, sort: "apellido,asc" }),
   });
+  const instructores = instructoresData?.content ?? [];
 
-  const { data: caballos = [] } = useQuery({
-    queryKey: ["caballos"],
-    queryFn: caballosApi.listar,
+  const { data: caballosData } = useQuery({
+    queryKey: ["caballos-select"],
+    queryFn: () =>
+      caballosApi.listar({ page: 0, size: 100, sort: "nombre,asc" }),
   });
+  const caballos = caballosData?.content ?? [];
 
-  const { data: clases = [] } = useQuery({
-    queryKey: ["clases-page"],
-    queryFn: clasesApi.listarDetalladas,
+  const { data: clasesData } = useQuery({
+    queryKey: ["clases-select"],
+    queryFn: () => clasesApi.listar({ page: 0, size: 500, sort: "dia,desc" }),
   });
+  const clases = clasesData?.content ?? [];
 
   const { data: personasPrueba = [] } = useQuery({
     queryKey: ["personas-prueba"],
@@ -479,14 +474,11 @@ export default function ClaseDetalle() {
               {caballo ? (
                 <>
                   <InfoField label="Nombre">{caballo.nombre}</InfoField>
-                  {alumno?.caballoPropio &&
-                    (typeof alumno.caballoPropio === "number"
-                      ? alumno.caballoPropio === caballo.id
-                      : alumno.caballoPropio.id === caballo.id) && (
-                      <div className="mt-2 text-xs font-medium text-success">
-                        ✓ Predeterminado
-                      </div>
-                    )}
+                  {alumno?.caballoId && alumno.caballoId === caballo.id && (
+                    <div className="mt-2 text-xs font-medium text-success">
+                      ✓ Predeterminado
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="text-center py-4 text-sm text-muted-foreground">

@@ -7,7 +7,7 @@ import {
   Table,
   Trash2,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -51,7 +51,6 @@ import {
   caballosApi,
   Clase,
   clasesApi,
-  ClaseSearchFilters,
   Instructor,
   instructoresApi,
   personasPruebaApi,
@@ -72,157 +71,65 @@ export default function ClasesPage() {
 
   const navigate = useNavigate();
 
-  // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
-  const [searchFilters, setSearchFilters] = useState<ClaseSearchFilters>({});
-
-  // 🔍 HANDLER PARA BÚSQUEDA INTELIGENTE
-  const handleSmartSearch = (filters: Record<string, unknown>) => {
-    const typedFilters: ClaseSearchFilters = {};
-
-    if (filters.dia) typedFilters.dia = String(filters.dia);
-    if (filters.hora) typedFilters.hora = String(filters.hora);
-    if (filters.alumnoId) typedFilters.alumnoId = Number(filters.alumnoId);
-    if (filters.instructorId)
-      typedFilters.instructorId = Number(filters.instructorId);
-    if (filters.caballoId) typedFilters.caballoId = Number(filters.caballoId);
-    if (filters.especialidad)
-      typedFilters.especialidad = String(
-        filters.especialidad,
-      ) as Clase["especialidad"];
-    if (filters.estado)
-      typedFilters.estado = String(filters.estado) as Clase["estado"];
-
-    setSearchFilters(typedFilters);
-    setCurrentPage(1);
-  };
-
-  useEffect(() => {
-    const handleGlobalSearchEvent = (e: CustomEvent) => {
-      const { filters, entityType } = e.detail;
-      if (entityType === "clases") {
-        handleSmartSearch(filters);
-      }
-    };
-
-    window.addEventListener("globalSearch", handleGlobalSearchEvent);
-
-    return () => {
-      window.removeEventListener("globalSearch", handleGlobalSearchEvent);
-    };
-  }, []);
-
-  // Estados de filtros
   const [filters, setFilters] = useState({
     dia: "",
     hora: "",
-    alumnoId: "all",
-    instructorId: "all",
-    caballoId: "all",
     especialidad: "all",
     estado: "all",
   });
 
-  // Estados de paginación
-  const [currentPage, setCurrentPage] = useState(1);
+  const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
 
-  // 🔍 QUERY UNIFICADA
-  const { data: clases = [], isLoading } = useQuery({
-    queryKey: ["clases", searchFilters],
-    queryFn: () => {
-      if (Object.keys(searchFilters).length > 0) {
-        return clasesApi.buscar(searchFilters);
-      }
-      return clasesApi.listarDetalladas();
-    },
-    enabled: true,
+  const { data, isLoading } = useQuery({
+    queryKey: ["clases", page, pageSize, filters],
+    queryFn: () =>
+      clasesApi.listar({
+        page,
+        size: pageSize,
+        sort: "dia,desc",
+        estado:
+          filters.estado !== "all"
+            ? (filters.estado as Clase["estado"])
+            : undefined,
+        especialidad:
+          filters.especialidad !== "all"
+            ? (filters.especialidad as Clase["especialidad"])
+            : undefined,
+      }),
   });
 
-  // Determinar si hay búsqueda activa
-  const isSearchActive = Object.keys(searchFilters).length > 0;
+  const clases = data?.content ?? [];
+  const totalPages = data?.totalPages ?? 1;
+  const totalItems = data?.totalElements ?? 0;
 
-  const { data: alumnos = [] } = useQuery({
-    queryKey: ["alumnos"],
-    queryFn: alumnosApi.listar,
+  // Queries para los selectores del formulario (sin paginación visible)
+  const { data: alumnosData } = useQuery({
+    queryKey: ["alumnos-select"],
+    queryFn: () =>
+      alumnosApi.listar({ page: 0, size: 200, sort: "apellido,asc" }),
   });
+  const alumnos = alumnosData?.content ?? [];
+
+  const { data: instructoresData } = useQuery({
+    queryKey: ["instructores-select"],
+    queryFn: () =>
+      instructoresApi.listar({ page: 0, size: 50, sort: "apellido,asc" }),
+  });
+  const instructores = instructoresData?.content ?? [];
+
+  const { data: caballosData } = useQuery({
+    queryKey: ["caballos-select"],
+    queryFn: () =>
+      caballosApi.listar({ page: 0, size: 100, sort: "nombre,asc" }),
+  });
+  const caballos = caballosData?.content ?? [];
 
   const { data: personasPrueba = [] } = useQuery({
     queryKey: ["personas_prueba"],
     queryFn: personasPruebaApi.listar,
   });
 
-  // 🔧 Filtrar solo objetos válidos de Alumno
-  const alumnosValidos = useMemo(() => {
-    return alumnos.filter((alumno: unknown): alumno is Alumno => {
-      return (
-        typeof alumno === "object" &&
-        alumno !== null &&
-        "id" in alumno &&
-        "nombre" in alumno
-      );
-    });
-  }, [alumnos]);
-
-  const { data: instructores = [] } = useQuery({
-    queryKey: ["instructores"],
-    queryFn: instructoresApi.listar,
-  });
-
-  const { data: caballos = [] } = useQuery({
-    queryKey: ["caballos"],
-    queryFn: caballosApi.listar,
-  });
-
-  // Filtrar datos
-  const filteredData = useMemo(() => {
-    return clases.filter((clase: Clase) => {
-      if (filters.dia && clase.dia !== filters.dia) {
-        return false;
-      }
-      if (filters.hora && !clase.hora.startsWith(filters.hora)) {
-        return false;
-      }
-      if (
-        filters.alumnoId !== "all" &&
-        clase.alumnoId !== Number(filters.alumnoId)
-      ) {
-        return false;
-      }
-      if (
-        filters.instructorId !== "all" &&
-        clase.instructorId !== Number(filters.instructorId)
-      ) {
-        return false;
-      }
-      if (
-        filters.caballoId !== "all" &&
-        clase.caballoId !== Number(filters.caballoId)
-      ) {
-        return false;
-      }
-      if (
-        filters.especialidad !== "all" &&
-        clase.especialidad !== filters.especialidad
-      ) {
-        return false;
-      }
-      if (filters.estado !== "all" && clase.estado !== filters.estado) {
-        return false;
-      }
-      return true;
-    });
-  }, [clases, filters]);
-
-  // Paginar datos
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    return filteredData.slice(startIndex, endIndex);
-  }, [filteredData, currentPage, pageSize]);
-
-  const totalPages = Math.ceil(filteredData.length / pageSize);
-
-  // Configuración de filtros
   const filterConfig = [
     {
       name: "dia",
@@ -235,35 +142,6 @@ export default function ClasesPage() {
       label: "Hora",
       type: "time" as const,
       placeholder: "Seleccionar hora",
-    },
-    {
-      name: "alumnoId",
-      label: "Alumno",
-      type: "select" as const,
-      options: alumnosValidos.map((a: Alumno) => ({
-        label: `${a.nombre} ${a.apellido}`,
-        value: String(a.id),
-      })),
-      placeholder: "Todos los alumnos",
-    },
-    {
-      name: "instructorId",
-      label: "Instructor",
-      type: "select" as const,
-      options: instructores.map((i: Instructor) => ({
-        label: `${i.nombre} ${i.apellido}`,
-        value: String(i.id),
-      })),
-      placeholder: "Todos los instructores",
-    },
-    {
-      name: "caballoId",
-      label: "Caballo",
-      type: "select" as const,
-      options: caballos.map((c: Caballo) => ({
-        label: c.nombre,
-        value: String(c.id),
-      })),
     },
     {
       name: "especialidad",
@@ -281,26 +159,12 @@ export default function ClasesPage() {
 
   const handleFilterChange = (name: string, value: string) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
-    setCurrentPage(1);
+    setPage(0);
   };
 
   const handleResetFilters = () => {
-    setFilters({
-      dia: "",
-      hora: "",
-      alumnoId: "all",
-      instructorId: "all",
-      caballoId: "all",
-      especialidad: "all",
-      estado: "all",
-    });
-    setCurrentPage(1);
-    setSearchFilters({});
-  };
-
-  const handlePageSizeChange = (size: number) => {
-    setPageSize(size);
-    setCurrentPage(1);
+    setFilters({ dia: "", hora: "", especialidad: "all", estado: "all" });
+    setPage(0);
   };
 
   const createMutation = useMutation({
@@ -344,13 +208,9 @@ export default function ClasesPage() {
 
   const getNombreParaClase = (clase: Clase): string => {
     if (clase?.alumnoId != null) {
-      const alumno = alumnosValidos.find(
-        (a: Alumno) => a.id === clase.alumnoId,
-      );
+      const alumno = alumnos.find((a: Alumno) => a.id === clase.alumnoId);
       if (alumno) return `${alumno.nombre} ${alumno.apellido}`;
     }
-
-    // Si no hay alumnoId o no se encontró el alumno, devolvemos el nombre de prueba
     return clase?.personaPruebaNombreCompleto ?? "-";
   };
 
@@ -368,9 +228,7 @@ export default function ClasesPage() {
     {
       header: "Dia",
       cell: (row: Clase) =>
-        `${row.dia.split("-")[2]}/${row.dia.split("-")[1]}/${
-          row.dia.split("-")[0]
-        }`,
+        `${row.dia.split("-")[2]}/${row.dia.split("-")[1]}/${row.dia.split("-")[0]}`,
     },
     {
       header: "Hora",
@@ -541,13 +399,9 @@ export default function ClasesPage() {
         {viewMode === "table" ? (
           <DataTable
             columns={columns}
-            data={paginatedData}
+            data={clases}
             isLoading={isLoading}
-            emptyMessage={
-              isSearchActive
-                ? "No se encontraron clases con esos criterios de búsqueda"
-                : "No hay clases que coincidan con los filtros"
-            }
+            emptyMessage="No hay clases que coincidan con los filtros"
             onRowClick={(clase) => navigate(`/clases/${clase.id}`)}
           />
         ) : isLoading ? (
@@ -558,7 +412,7 @@ export default function ClasesPage() {
           </div>
         ) : (
           <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
-            {paginatedData.map((clase) => (
+            {clases.map((clase) => (
               <GenericCard
                 item={clase}
                 key={clase.id}
@@ -582,10 +436,10 @@ export default function ClasesPage() {
                 onClick={() => navigate(`/clases/${clase.id}`)}
                 onEdit={() => openEdit(clase)}
                 onDelete={() => openDelete(clase)}
-                onSendWhatsApp={function (item: unknown): void {
+                onSendWhatsApp={function (): void {
                   throw new Error("Function not implemented.");
                 }}
-                onSendEmail={function (item: unknown): void {
+                onSendEmail={function (): void {
                   throw new Error("Function not implemented.");
                 }}
               />
@@ -593,16 +447,20 @@ export default function ClasesPage() {
           </div>
         )}
 
-        {filteredData.length > 0 && (
+        {totalItems > 0 && (
           <PaginationControls
-            currentPage={currentPage}
+            currentPage={page + 1}
             totalPages={totalPages}
             pageSize={pageSize}
-            totalItems={filteredData.length}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={handlePageSizeChange}
+            totalItems={totalItems}
+            onPageChange={(p) => setPage(p - 1)}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(0);
+            }}
           />
         )}
+
         <Dialog open={!!claseToDelete} onOpenChange={closeDelete}>
           <DialogContent>
             <DialogHeader>

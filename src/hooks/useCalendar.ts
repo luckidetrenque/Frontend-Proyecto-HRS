@@ -66,25 +66,32 @@ export function useCalendar() {
 
   // ─── Queries ────────────────────────────────────────────────────────────────
 
-  const { data: clases = [], isLoading } = useQuery({
+  const { data: clasesData, isLoading } = useQuery({
     queryKey: ["clases"],
-    queryFn: clasesApi.listarDetalladas,
+    queryFn: () => clasesApi.listar({ page: 0, size: 1000, sort: "dia,desc" }),
   });
+  const clases = useMemo(() => clasesData?.content ?? [], [clasesData]);
 
-  const { data: alumnos = [] } = useQuery({
-    queryKey: ["alumnos"],
-    queryFn: alumnosApi.listar,
+  const { data: alumnosData } = useQuery({
+    queryKey: ["alumnos-cal"],
+    queryFn: () =>
+      alumnosApi.listar({ page: 0, size: 500, sort: "apellido,asc" }),
   });
+  const alumnos: Alumno[] = alumnosData?.content ?? [];
 
-  const { data: instructores = [] } = useQuery({
-    queryKey: ["instructores"],
-    queryFn: instructoresApi.listar,
+  const { data: instructoresData } = useQuery({
+    queryKey: ["instructores-cal"],
+    queryFn: () =>
+      instructoresApi.listar({ page: 0, size: 50, sort: "apellido,asc" }),
   });
+  const instructores: Instructor[] = instructoresData?.content ?? [];
 
-  const { data: caballos = [] } = useQuery({
-    queryKey: ["caballos"],
-    queryFn: caballosApi.listar,
+  const { data: caballosData } = useQuery({
+    queryKey: ["caballos-cal"],
+    queryFn: () =>
+      caballosApi.listar({ page: 0, size: 100, sort: "nombre,asc" }),
   });
+  const caballos: Caballo[] = caballosData?.content ?? [];
 
   const { data: personasPrueba = [] } = useQuery({
     queryKey: ["personas-prueba"],

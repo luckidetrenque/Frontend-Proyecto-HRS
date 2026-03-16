@@ -12,7 +12,7 @@ import {
   Table,
   Trash2,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -43,19 +43,12 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useEntityActions } from "@/hooks/useEntityActions";
 import { useValidarDniDuplicado } from "@/hooks/useValidarDniDuplicado";
-import {
-  Alumno,
-  alumnosApi,
-  AlumnoSearchFilters,
-  caballosApi,
-  clasesApi,
-} from "@/lib/api";
+import { Alumno, alumnosApi, caballosApi, clasesApi } from "@/lib/api";
 
 export default function AlumnosPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  // ✅ Hook unificado para manejo de acciones
   const {
     editingEntity: editingAlumno,
     entityToDelete: alumnoToDelete,
@@ -67,7 +60,6 @@ export default function AlumnosPage() {
   } = useEntityActions<Alumno>();
 
   const [validacionHabilitada, setValidacionHabilitada] = useState(false);
-
   const [dni, setDni] = useState<Alumno["dni"]>("");
 
   const { data: validacionDni } = useValidarDniDuplicado(
@@ -76,71 +68,30 @@ export default function AlumnosPage() {
     editingAlumno?.id,
   );
 
-  // Deshabilitar validación si no está habilitada O si el DNI es muy corto
   const validacionActiva =
     validacionHabilitada && dni.length >= 9
       ? validacionDni
       : { duplicado: false, mensaje: "" };
 
-  // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
-  const [searchFilters, setSearchFilters] = useState<AlumnoSearchFilters>({});
-
-  // 🔍 QUERY UNIFICADA - reemplaza las dos queries anteriores
-  const { data: alumnos = [], isLoading } = useQuery({
-    queryKey: ["alumnos", searchFilters],
-    queryFn: () => {
-      // Si hay filtros de búsqueda, usar endpoint de búsqueda
-      if (Object.keys(searchFilters).length > 0) {
-        return alumnosApi.buscar(searchFilters);
-      }
-      // Si no hay filtros, listar todos
-      return alumnosApi.listar();
-    },
-    enabled: true,
-  });
-
-  // Consulta de clases del mes actual
   const mesActual = new Date().getMonth() + 1;
   const añoActual = new Date().getFullYear();
   const mesActualNombre = new Date().toLocaleString("es-ES", { month: "long" });
-  const { data: clases = [] } = useQuery({
-    queryKey: ["clases-mes", mesActual, añoActual],
-    queryFn: () => clasesApi.listar(),
-    enabled: true,
-  });
 
-  // Determinar si hay búsqueda activa (derivado, no estado)
-  const isSearchActive = Object.keys(searchFilters).length > 0;
-  // Estados de filtros
+  // Query clases del mes actual para la columna "Clases restantes"
+  const { data: clasesMesData } = useQuery({
+    queryKey: ["clases-mes", mesActual, añoActual],
+    queryFn: () => clasesApi.listar({ page: 0, size: 500, sort: "dia,desc" }),
+  });
+  const clases = clasesMesData?.content ?? [];
+
   const [filters, setFilters] = useState({
     cantidadClases: "all",
     activo: "all",
     propietario: "all",
   });
 
-  // Estados de paginación
-  const [currentPage, setCurrentPage] = useState(1);
+  const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
-
-  useEffect(() => {
-    const handleGlobalSearchEvent = (e: CustomEvent) => {
-      const { filters, entityType } = e.detail;
-      if (entityType === "alumnos") {
-        handleSmartSearch(filters);
-      }
-    };
-
-    window.addEventListener(
-      "globalSearch",
-      handleGlobalSearchEvent as EventListener,
-    );
-    return () => {
-      window.removeEventListener(
-        "globalSearch",
-        handleGlobalSearchEvent as EventListener,
-      );
-    };
-  }, []);
 
   useEffect(() => {
     if (isDialogOpen) {
@@ -149,75 +100,37 @@ export default function AlumnosPage() {
     }
   }, [isDialogOpen, editingAlumno]);
 
-  const { data: caballos = [] } = useQuery({
-    queryKey: ["caballos"],
-    queryFn: caballosApi.listar,
+  const { data: caballosData } = useQuery({
+    queryKey: ["caballos-select"],
+    queryFn: () =>
+      caballosApi.listar({ page: 0, size: 100, sort: "nombre,asc" }),
+  });
+  const caballos = caballosData?.content ?? [];
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["alumnos", page, pageSize, filters],
+    queryFn: () =>
+      alumnosApi.listar({
+        page,
+        size: pageSize,
+        sort: "apellido,asc",
+        activo:
+          filters.activo !== "all" ? filters.activo === "true" : undefined,
+        propietario:
+          filters.propietario !== "all"
+            ? filters.propietario === "true"
+            : undefined,
+        cantidadClases:
+          filters.cantidadClases !== "all"
+            ? Number(filters.cantidadClases)
+            : undefined,
+      }),
   });
 
-  // 🔍 HANDLER PARA BÚSQUEDA INTELIGENTE
-  const handleSmartSearch = (filters: Record<string, unknown>) => {
-    const typedFilters: AlumnoSearchFilters = {};
+  const alumnos = data?.content ?? [];
+  const totalPages = data?.totalPages ?? 1;
+  const totalItems = data?.totalElements ?? 0;
 
-    if (filters.nombre) typedFilters.nombre = String(filters.nombre);
-    if (filters.apellido) typedFilters.apellido = String(filters.apellido);
-    if (filters.activo !== undefined)
-      typedFilters.activo = Boolean(filters.activo);
-    if (filters.propietario !== undefined)
-      typedFilters.propietario = Boolean(filters.propietario);
-    if (filters.fechaInscripcion)
-      typedFilters.fechaInscripcion = String(filters.fechaInscripcion);
-    if (filters.fechaNacimiento)
-      typedFilters.fechaNacimiento = String(filters.fechaNacimiento);
-
-    setSearchFilters(typedFilters);
-    setCurrentPage(1); // Reset a página 1 al buscar
-  };
-
-  // Filtrar datos - agregando validación de objetos válidos
-  const filteredData = useMemo(() => {
-    // Primero filtrar solo objetos válidos de Alumno
-    const validAlumnos = alumnos.filter((alumno: unknown): alumno is Alumno => {
-      return (
-        typeof alumno === "object" &&
-        alumno !== null &&
-        "id" in alumno &&
-        "nombre" in alumno
-      );
-    });
-
-    return validAlumnos.filter((alumno: Alumno) => {
-      if (
-        filters.cantidadClases !== "all" &&
-        String(alumno.cantidadClases) !== filters.cantidadClases
-      ) {
-        return false;
-      }
-      if (
-        filters.activo !== "all" &&
-        String(alumno.activo) !== filters.activo
-      ) {
-        return false;
-      }
-      if (
-        filters.propietario !== "all" &&
-        String(alumno.propietario) !== filters.propietario
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [alumnos, filters]);
-
-  // Paginar datos
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    return filteredData.slice(startIndex, endIndex);
-  }, [filteredData, currentPage, pageSize]);
-
-  const totalPages = Math.ceil(filteredData.length / pageSize);
-
-  // Configuración de filtros
   const filterConfig = [
     {
       name: "cantidadClases",
@@ -291,22 +204,12 @@ export default function AlumnosPage() {
 
   const handleFilterChange = (name: string, value: string) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
-    setCurrentPage(1);
+    setPage(0);
   };
 
   const handleResetFilters = () => {
-    setFilters({
-      cantidadClases: "all",
-      activo: "all",
-      propietario: "all",
-    });
-    setSearchFilters({}); // También limpiar búsqueda inteligente
-    setCurrentPage(1);
-  };
-
-  const handlePageSizeChange = (size: number) => {
-    setPageSize(size);
-    setCurrentPage(1);
+    setFilters({ cantidadClases: "all", activo: "all", propietario: "all" });
+    setPage(0);
   };
 
   const columns = [
@@ -343,12 +246,6 @@ export default function AlumnosPage() {
         );
       },
     },
-    /* {
-      header: "DNI",
-      cell: (row: Alumno) => <ProtectedData value={row.dni} />,
-    },
-    { header: "Teléfono", accessorKey: "telefono" as keyof Alumno },
-    { header: "Email", accessorKey: "email" as keyof Alumno }, */
     {
       header: "Inscripción",
       cell: (row: Alumno) => {
@@ -357,12 +254,6 @@ export default function AlumnosPage() {
         return `${day}/${month}/${year}`;
       },
     },
-    /*     {
-      header: "Clases/Mes",
-      cell: (row: Alumno) => (
-        <span className="font-medium">{row.cantidadClases}</span>
-      ),
-    }, */
     {
       header: "Estado",
       cell: (row: Alumno) => (
@@ -371,30 +262,9 @@ export default function AlumnosPage() {
         </StatusBadge>
       ),
     },
-    /* {
-      header: "Pensión/Reserva",
-      cell: (row: Alumno) => (
-        <StatusBadge
-          status={row.tipoPension === "SIN_CABALLO" ? "success" : "default"}
-        >
-          {row.tipoPension === "SIN_CABALLO"
-            ? "—"
-            : [
-              row.tipoPension === "CABALLO_PROPIO" ? "Propio" : "Escuela",
-              row.cuotaPension
-                ? row.cuotaPension.charAt(0) +
-                row.cuotaPension.slice(1).toLowerCase()
-                : null,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-        </StatusBadge>
-      ),
-    }, */
     {
       header: `Clases (${mesActualNombre.charAt(0).toUpperCase() + mesActualNombre.slice(1)})`,
       cell: (row: Alumno) => {
-        // Usar nombreParticipante para identificar al alumno
         const nombreCompleto = `${row.nombre} ${row.apellido}`;
         const clasesAlumnoMes = clases.filter(
           (c: {
@@ -572,7 +442,6 @@ export default function AlumnosPage() {
       </div>
 
       <div className="space-y-4">
-        {/* Filtros tradicionales (opcional) */}
         <FilterBar
           filters={filterConfig}
           values={filters}
@@ -584,13 +453,9 @@ export default function AlumnosPage() {
         {viewMode === "table" ? (
           <DataTable
             columns={columns}
-            data={paginatedData}
+            data={alumnos}
             isLoading={isLoading}
-            emptyMessage={
-              isSearchActive
-                ? "No se encontraron alumnos con esos criterios de búsqueda"
-                : "No hay alumnos que coincidan con los filtros"
-            }
+            emptyMessage="No hay alumnos que coincidan con los filtros"
             onRowClick={(alumno) => navigate(`/alumnos/${alumno.id}`)}
           />
         ) : isLoading ? (
@@ -601,7 +466,7 @@ export default function AlumnosPage() {
           </div>
         ) : (
           <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
-            {paginatedData.map((alumno) => (
+            {alumnos.map((alumno) => (
               <GenericCard
                 item={alumno}
                 key={alumno.id}
@@ -644,9 +509,6 @@ export default function AlumnosPage() {
                   </div>
                 }
                 fields={[
-                  /* { label: "DNI", value: alumno.dni },
-                  { label: "Teléfono", value: '${alumno.codigoArea}-${alumno.telefono}' },
-                  { label: "Email", value: alumno.email || "-" }, */
                   {
                     label: "Inscripción",
                     value: alumno.fechaInscripcion || "-",
@@ -680,13 +542,6 @@ export default function AlumnosPage() {
                     trueLabel: "Activo",
                     falseLabel: "Inactivo",
                   },
-                  /* {
-                    label: "Propietario ",
-                    value: alumno.propietario,
-                    type: "badge",
-                    trueLabel: "Sí",
-                    falseLabel: "No",
-                  }, */
                 ]}
                 onClick={() => navigate(`/alumnos/${alumno.id}`)}
                 onEdit={() => openEdit(alumno)}
@@ -710,16 +565,21 @@ export default function AlumnosPage() {
             ))}
           </div>
         )}
-        {filteredData.length > 0 && (
+
+        {totalItems > 0 && (
           <PaginationControls
-            currentPage={currentPage}
+            currentPage={page + 1}
             totalPages={totalPages}
             pageSize={pageSize}
-            totalItems={filteredData.length}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={handlePageSizeChange}
+            totalItems={totalItems}
+            onPageChange={(p) => setPage(p - 1)}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(0);
+            }}
           />
         )}
+
         <Dialog open={!!alumnoToDelete} onOpenChange={closeDelete}>
           <DialogContent>
             <DialogHeader>

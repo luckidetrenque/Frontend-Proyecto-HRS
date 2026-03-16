@@ -9,7 +9,7 @@ import {
   Table,
   Trash2,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -40,11 +40,7 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useEntityActions } from "@/hooks/useEntityActions";
 import { useValidarDniDuplicado } from "@/hooks/useValidarDniDuplicado";
-import {
-  Instructor,
-  instructoresApi,
-  InstructorSearchFilters,
-} from "@/lib/api";
+import { Instructor, instructoresApi } from "@/lib/api";
 
 export default function InstructoresPage() {
   const queryClient = useQueryClient();
@@ -59,7 +55,6 @@ export default function InstructoresPage() {
   } = useEntityActions<Instructor>();
 
   const [dni, setDni] = useState("");
-
   const [validacionHabilitada, setValidacionHabilitada] = useState(false);
   const { data: validacionDni } = useValidarDniDuplicado(
     "instructores",
@@ -74,35 +69,9 @@ export default function InstructoresPage() {
 
   const navigate = useNavigate();
 
-  // 🔍 ESTADO PARA BÚSQUEDA INTELIGENTE
-  const [searchFilters, setSearchFilters] = useState<InstructorSearchFilters>(
-    {},
-  );
-  const [isSearchActive, setIsSearchActive] = useState(false);
-
-  // Estados de filtros
-  const [filters, setFilters] = useState({
-    activo: "all",
-  });
-
-  // Estados de paginación
-  const [currentPage, setCurrentPage] = useState(1);
+  const [filters, setFilters] = useState({ activo: "all" });
+  const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
-
-  // 🔍 HANDLER PARA BÚSQUEDA INTELIGENTE
-  const handleSmartSearch = (filters: Record<string, unknown>) => {
-    const typedFilters: InstructorSearchFilters = {};
-
-    if (filters.nombre) typedFilters.nombre = String(filters.nombre);
-    if (filters.apellido) typedFilters.apellido = String(filters.apellido);
-    if (filters.activo !== undefined)
-      typedFilters.activo = Boolean(filters.activo);
-    if (filters.fechaNacimiento)
-      typedFilters.fechaNacimiento = String(filters.fechaNacimiento);
-
-    setSearchFilters(typedFilters);
-    setCurrentPage(1);
-  };
 
   useEffect(() => {
     if (isDialogOpen) {
@@ -111,72 +80,22 @@ export default function InstructoresPage() {
     }
   }, [isDialogOpen, editingInstructor]);
 
-  useEffect(() => {
-    const handleGlobalSearchEvent = (e: CustomEvent) => {
-      const { filters, entityType } = e.detail;
-      if (entityType === "instructores") {
-        handleSmartSearch(filters);
-      }
-    };
-    // Registrar el listener
-    window.addEventListener("globalSearch", handleGlobalSearchEvent);
-
-    // Cleanup: remover el listener al desmontar
-    return () => {
-      window.removeEventListener("globalSearch", handleGlobalSearchEvent);
-    };
-  }, []);
-
-  // 🔍 QUERY PARA BÚSQUEDA INTELIGENTE
-  const { data: searchResults, isLoading: isSearching } = useQuery({
-    queryKey: ["instructores", searchFilters],
-    queryFn: () => {
-      // Si hay filtros de búsqueda, usar endpoint de búsqueda
-      if (Object.keys(searchFilters).length > 0) {
-        setIsSearchActive(true);
-        return instructoresApi.buscar(searchFilters);
-      }
-      // Si no hay filtros, listar todos
-      setIsSearchActive(false);
-      return instructoresApi.listar();
-    },
-    enabled: true,
+  const { data, isLoading } = useQuery({
+    queryKey: ["instructores", page, pageSize, filters],
+    queryFn: () =>
+      instructoresApi.listar({
+        page,
+        size: pageSize,
+        sort: "apellido,asc",
+        activo:
+          filters.activo !== "all" ? filters.activo === "true" : undefined,
+      }),
   });
 
-  // Query original (como fallback)
-  const { data: allInstructores = [], isLoading: isLoadingAll } = useQuery({
-    queryKey: ["instructores"],
-    queryFn: instructoresApi.listar,
-    enabled: !isSearchActive, // Solo cargar si no hay búsqueda activa
-  });
+  const instructores = data?.content ?? [];
+  const totalPages = data?.totalPages ?? 1;
+  const totalItems = data?.totalElements ?? 0;
 
-  // Usar resultados de búsqueda o todos los instructores
-  const instructores = searchResults || allInstructores;
-  const isLoading = isSearching || isLoadingAll;
-
-  // Filtrar datos
-  const filteredData = useMemo(() => {
-    return instructores.filter((instructor: Instructor) => {
-      if (
-        filters.activo !== "all" &&
-        String(instructor.activo) !== filters.activo
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [instructores, filters]);
-
-  // Paginar datos
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    return filteredData.slice(startIndex, endIndex);
-  }, [filteredData, currentPage, pageSize]);
-
-  const totalPages = Math.ceil(filteredData.length / pageSize);
-
-  // Configuración de filtros
   const filterConfig = [
     {
       name: "activo",
@@ -191,20 +110,12 @@ export default function InstructoresPage() {
 
   const handleFilterChange = (name: string, value: string) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
-    setCurrentPage(1);
+    setPage(0);
   };
 
   const handleResetFilters = () => {
-    setFilters({
-      activo: "all",
-    });
-    setSearchFilters({}); // ✅ AGREGAR ESTA LÍNEA
-    setCurrentPage(1);
-  };
-
-  const handlePageSizeChange = (size: number) => {
-    setPageSize(size);
-    setCurrentPage(1);
+    setFilters({ activo: "all" });
+    setPage(0);
   };
 
   const createMutation = useMutation({
@@ -430,13 +341,9 @@ export default function InstructoresPage() {
         {viewMode === "table" ? (
           <DataTable
             columns={columns}
-            data={paginatedData}
+            data={instructores}
             isLoading={isLoading}
-            emptyMessage={
-              isSearchActive
-                ? "No se encontraron instructores con esos criterios de búsqueda"
-                : "No hay instructores que coincidan con los filtros"
-            }
+            emptyMessage="No hay instructores que coincidan con los filtros"
             onRowClick={(instructor) =>
               navigate(`/instructores/${instructor.id}`)
             }
@@ -449,7 +356,7 @@ export default function InstructoresPage() {
           </div>
         ) : (
           <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
-            {paginatedData.map((instructor) => (
+            {instructores.map((instructor) => (
               <GenericCard
                 item={instructor}
                 key={instructor.id}
@@ -471,7 +378,7 @@ export default function InstructoresPage() {
                   },
                 ]}
                 onClick={() => navigate(`/instructores/${instructor.id}`)}
-                onEdit={() => openEdit(instructor)} // ← CAMBIAR
+                onEdit={() => openEdit(instructor)}
                 onDelete={() => openDelete(instructor)}
                 onSendWhatsApp={(item) => {
                   const instructor = item as Instructor;
@@ -493,22 +400,26 @@ export default function InstructoresPage() {
           </div>
         )}
 
-        {filteredData.length > 0 && (
+        {totalItems > 0 && (
           <PaginationControls
-            currentPage={currentPage}
+            currentPage={page + 1}
             totalPages={totalPages}
             pageSize={pageSize}
-            totalItems={filteredData.length}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={handlePageSizeChange}
+            totalItems={totalItems}
+            onPageChange={(p) => setPage(p - 1)}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(0);
+            }}
           />
         )}
+
         <Dialog open={!!instructorToDelete} onOpenChange={closeDelete}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Eliminar instructor</DialogTitle>
               <DialogDescription>
-                ¿Seguro que deseas eliminar a {instructorToDelete?.nombre}
+                ¿Seguro que deseas eliminar a {instructorToDelete?.nombre}{" "}
                 {instructorToDelete?.apellido}? Esta acción no se puede
                 deshacer.
               </DialogDescription>

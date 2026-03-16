@@ -95,10 +95,12 @@ export default function AlumnoDetalle() {
     enabled: !!alumnoId,
   });
 
-  const { data: caballos = [] } = useQuery({
+  const { data: caballosData } = useQuery({
     queryKey: ["caballos"],
-    queryFn: caballosApi.listar,
+    queryFn: () =>
+      caballosApi.listar({ page: 0, size: 100, sort: "nombre,asc" }),
   });
+  const caballos = caballosData?.content ?? [];
 
   const [dni, setDni] = useState<Alumno["dni"]>("");
   const [validacionHabilitada, setValidacionHabilitada] = useState(false);

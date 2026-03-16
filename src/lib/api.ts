@@ -90,6 +90,7 @@ export interface AlumnoSearchFilters {
   apellido?: string;
   activo?: boolean;
   propietario?: boolean;
+  cantidadClases?: number;
   fechaInscripcion?: string;
   fechaNacimiento?: string;
 }
@@ -116,15 +117,6 @@ export interface ClaseSearchFilters {
   caballoId?: number;
   especialidad?: EspecialidadClase;
   estado?: EstadoClase;
-}
-
-// Tipo para respuestas de búsqueda que pueden tener mensaje
-interface SearchResponse<T> {
-  mensaje?: string;
-  alumnos?: T[];
-  instructores?: T[];
-  caballos?: T[];
-  clases?: T[];
 }
 
 export interface ApiErrorResponse {
@@ -220,6 +212,22 @@ export interface Honorarios {
   filas: FilaInstructor[];
 }
 
+export interface PageResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number; // página actual 0-indexed
+  size: number;
+  first: boolean;
+  last: boolean;
+}
+
+export interface PageParams {
+  page: number; // 0-indexed
+  size: number;
+  sort?: string; // ej: "apellido,asc"
+}
+
 // Helper function to make API requests with authentication
 async function apiFetch(endpoint: string, options: RequestInit = {}) {
   const credentials = sessionStorage.getItem("authCredentials");
@@ -278,9 +286,21 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 // Alumnos
 export const alumnosApi = {
-  listar: async (): Promise<Alumno[]> => {
-    const response = await apiFetch("/alumnos");
-    return handleResponse<Alumno[]>(response);
+  listar: async (
+    params: PageParams & AlumnoSearchFilters,
+  ): Promise<PageResponse<Alumno>> => {
+    const query = new URLSearchParams();
+    query.append("page", String(params.page));
+    query.append("size", String(params.size));
+    if (params.sort) query.append("sort", params.sort);
+    if (params.activo !== undefined)
+      query.append("activo", String(params.activo));
+    if (params.propietario !== undefined)
+      query.append("propietario", String(params.propietario));
+    if (params.cantidadClases !== undefined)
+      query.append("cantidadClases", String(params.cantidadClases));
+    const response = await apiFetch(`/alumnos?${query.toString()}`);
+    return handleResponse<PageResponse<Alumno>>(response);
   },
   obtener: async (id: number): Promise<Alumno> => {
     const response = await apiFetch(`/alumnos/${id}`);
@@ -315,32 +335,21 @@ export const alumnosApi = {
     });
     if (!response.ok) throw new Error("Error al eliminar");
   },
-  buscar: async (filters: AlumnoSearchFilters): Promise<Alumno[]> => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        params.append(key, String(value));
-      }
-    });
-
-    const response = await apiFetch(`/alumnos/buscar?${params.toString()}`);
-    const data = await handleResponse<Alumno[] | SearchResponse<Alumno>>(
-      response,
-    );
-
-    // Si el backend devuelve un objeto con mensaje y alumnos
-    if (Array.isArray(data)) {
-      return data;
-    }
-    return data.alumnos || [];
-  },
 };
 
 // Instructores
 export const instructoresApi = {
-  listar: async (): Promise<Instructor[]> => {
-    const response = await apiFetch("/instructores");
-    return handleResponse<Instructor[]>(response);
+  listar: async (
+    params: PageParams & InstructorSearchFilters,
+  ): Promise<PageResponse<Instructor>> => {
+    const query = new URLSearchParams();
+    query.append("page", String(params.page));
+    query.append("size", String(params.size));
+    if (params.sort) query.append("sort", params.sort);
+    if (params.activo !== undefined)
+      query.append("activo", String(params.activo));
+    const response = await apiFetch(`/instructores?${query.toString()}`);
+    return handleResponse<PageResponse<Instructor>>(response);
   },
   obtener: async (id: number): Promise<Instructor> => {
     const response = await apiFetch(`/instructores/${id}`);
@@ -375,33 +384,23 @@ export const instructoresApi = {
     });
     if (!response.ok) throw new Error("Error al eliminar");
   },
-  buscar: async (filters: InstructorSearchFilters): Promise<Instructor[]> => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        params.append(key, String(value));
-      }
-    });
-
-    const response = await apiFetch(
-      `/instructores/buscar?${params.toString()}`,
-    );
-    const data = await handleResponse<
-      Instructor[] | SearchResponse<Instructor>
-    >(response);
-
-    if (Array.isArray(data)) {
-      return data;
-    }
-    return data.instructores || [];
-  },
 };
 
 // Caballos
 export const caballosApi = {
-  listar: async (): Promise<Caballo[]> => {
-    const response = await apiFetch("/caballos");
-    return handleResponse<Caballo[]>(response);
+  listar: async (
+    params: PageParams & CaballoSearchFilters,
+  ): Promise<PageResponse<Caballo>> => {
+    const query = new URLSearchParams();
+    query.append("page", String(params.page));
+    query.append("size", String(params.size));
+    if (params.sort) query.append("sort", params.sort);
+    if (params.tipo) query.append("tipo", params.tipo);
+    if (params.disponible !== undefined)
+      query.append("disponible", String(params.disponible));
+    if (params.nombre) query.append("nombre", params.nombre);
+    const response = await apiFetch(`/caballos?${query.toString()}`);
+    return handleResponse<PageResponse<Caballo>>(response);
   },
   obtener: async (id: number): Promise<Caballo> => {
     const response = await apiFetch(`/caballos/${id}`);
@@ -436,35 +435,21 @@ export const caballosApi = {
     });
     if (!response.ok) throw new Error("Error al eliminar");
   },
-  buscar: async (filters: CaballoSearchFilters): Promise<Caballo[]> => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        params.append(key, String(value));
-      }
-    });
-
-    const response = await apiFetch(`/caballos/buscar?${params.toString()}`);
-    const data = await handleResponse<Caballo[] | SearchResponse<Caballo>>(
-      response,
-    );
-
-    if (Array.isArray(data)) {
-      return data;
-    }
-    return data.caballos || [];
-  },
 };
 
 // Clases
 export const clasesApi = {
-  listar: async (): Promise<Clase[]> => {
-    const response = await apiFetch("/clases");
-    return handleResponse<Clase[]>(response);
-  },
-  listarDetalladas: async (): Promise<ClaseDetallada[]> => {
-    const response = await apiFetch(`/clases/detalles`);
-    return handleResponse<ClaseDetallada[]>(response);
+  listar: async (
+    params: PageParams & ClaseSearchFilters,
+  ): Promise<PageResponse<ClaseDetallada>> => {
+    const query = new URLSearchParams();
+    query.append("page", String(params.page));
+    query.append("size", String(params.size));
+    if (params.sort) query.append("sort", params.sort);
+    if (params.estado) query.append("estado", params.estado);
+    if (params.especialidad) query.append("especialidad", params.especialidad);
+    const response = await apiFetch(`/clases?${query.toString()}`);
+    return handleResponse<PageResponse<ClaseDetallada>>(response);
   },
   obtener: async (
     id: number,
@@ -507,25 +492,6 @@ export const clasesApi = {
     });
     if (!response.ok) throw new Error("Error al eliminar");
   },
-  buscar: async (filters: ClaseSearchFilters): Promise<Clase[]> => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        params.append(key, String(value));
-      }
-    });
-
-    const response = await apiFetch(`/clases/buscar?${params.toString()}`);
-    const data = await handleResponse<Clase[] | SearchResponse<Clase>>(
-      response,
-    );
-
-    if (Array.isArray(data)) {
-      return data;
-    }
-    return data.clases || [];
-  },
-
   buscarPorAlumno: async (alumnoId: number): Promise<Clase[]> => {
     // Realiza la petición usando el ID directamente en la URL
     const response = await apiFetch(`/clases/alumno/${alumnoId}/detalles`);

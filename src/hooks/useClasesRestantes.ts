@@ -13,8 +13,8 @@ export const useClasesRestantes = (alumnoId: number, fecha: Date) => {
       const ultimoDia = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0);
       const fin = format(ultimoDia, "yyyy-MM-dd");
 
-      const todasLasClases = await clasesApi.listar();
-      return todasLasClases.filter(
+      const response = await clasesApi.listar({ page: 0, size: 500, sort: "dia,asc" });
+      return response.content.filter(
         (c) => c.alumnoId === alumnoId && c.dia >= inicio && c.dia <= fin,
       );
     },
