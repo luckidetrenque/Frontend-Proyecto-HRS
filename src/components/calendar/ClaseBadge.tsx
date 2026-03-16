@@ -50,13 +50,14 @@ export function ClaseBadge({
         "rounded-md px-2 py-1 text-xs font-medium transition-all duration-300 cursor-pointer hover:-translate-y-[2px] hover:shadow-hover border backdrop-blur-sm",
         compact ? "text-[10px] px-1.5 py-0.5" : "text-xs text-foreground",
       )}
-      style={{
-        backgroundColor: bgColor,
-        color: "currentColor",
-        borderLeft: `5px solid ${borderColor}`,
-        borderColor: `${instructorColor}30`,
-        boxSizing: "border-box",
-      }}
+style={{
+  backgroundColor: bgColor,
+  color: "currentColor",
+  border: `1px solid ${instructorColor}30`,
+  borderLeft: `5px solid ${borderColor}`,
+  borderRight: `5px solid ${borderColor}`,
+  boxSizing: "border-box",
+}}
     >
       <div className="truncate font-semibold text-[12px] text-foreground">
         <span>{alumnoNombre}</span>

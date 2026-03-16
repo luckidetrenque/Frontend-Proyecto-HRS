@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  CalendarCheck,
   ChessKnight,
   House,
   IdCard,
@@ -232,7 +231,7 @@ export default function AlumnosPage() {
             )}
             {caballoNombre && row.tipoPension === "RESERVA_ESCUELA" && (
               <StatusBadge status="escuela">
-                <CalendarCheck className="inline mr-1 w-4 h-4" />
+                <ChessKnight className="inline mr-1 w-4 h-4" />
                 {caballoNombre}
               </StatusBadge>
             )}
@@ -281,7 +280,7 @@ export default function AlumnosPage() {
         );
         const restantes = row.cantidadClases - clasesAlumnoMes.length;
         return (
-          <span>
+          <span className={restantes === 0 ? "text-red-500 font-bold" : ""}>
             {restantes} / {row.cantidadClases}
           </span>
         );
@@ -435,7 +434,7 @@ export default function AlumnosPage() {
             Cuota Pensión
           </StatusBadge>
           <StatusBadge status="escuela">
-            <CalendarCheck className="inline mr-1 w-4 h-4" />
+            <ChessKnight className="inline mr-1 w-4 h-4" />
             Reserva Escuela
           </StatusBadge>
         </div>
@@ -492,7 +491,7 @@ export default function AlumnosPage() {
                           {caballoNombre &&
                             alumno.tipoPension === "RESERVA_ESCUELA" && (
                               <StatusBadge status="escuela">
-                                <CalendarCheck className="inline mr-1 w-4 h-4" />
+                                <ChessKnight className="inline mr-1 w-4 h-4" />
                                 {caballoNombre}
                               </StatusBadge>
                             )}
