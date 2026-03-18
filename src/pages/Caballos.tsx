@@ -57,9 +57,9 @@ export default function CaballosPage() {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [filters, setFilters] = useState({
+    nombre: "",
     tipo: "all",
     disponible: "all",
-    nombre: "",
   });
 
   const { data, isLoading } = useQuery({
@@ -69,13 +69,13 @@ export default function CaballosPage() {
         page,
         size: pageSize,
         sort: "nombre,asc",
+        nombre: filters.nombre || undefined,
         tipo:
           filters.tipo !== "all" ? (filters.tipo as TipoCaballo) : undefined,
         disponible:
           filters.disponible !== "all"
             ? filters.disponible === "true"
             : undefined,
-        nombre: filters.nombre || undefined,
       }),
   });
 
@@ -84,6 +84,12 @@ export default function CaballosPage() {
   const totalItems = data?.totalElements ?? 0;
 
   const filterConfig = [
+    {
+      name: "nombre",
+      label: "Nombre",
+      type: "text" as const,
+      placeholder: "Buscar por nombre...",
+    },
     {
       name: "tipo",
       label: "Tipo",
@@ -106,11 +112,13 @@ export default function CaballosPage() {
 
   const handleFilterChange = (name: string, value: string) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
-    setPage(0);
+    if (name !== "nombre") {
+      setPage(0);
+    }
   };
 
   const handleResetFilters = () => {
-    setFilters({ tipo: "all", disponible: "all", nombre: "" });
+    setFilters({ nombre: "", tipo: "all", disponible: "all" });
     setPage(0);
   };
 
@@ -225,7 +233,6 @@ export default function CaballosPage() {
               >
                 <Table className="h-4 w-4" />
               </Button>
-
               <Button
                 variant={viewMode === "cards" ? "default" : "outline"}
                 onClick={() => setViewMode("cards")}
@@ -285,6 +292,7 @@ export default function CaballosPage() {
           onReset={handleResetFilters}
           isLoading={isLoading}
         />
+
         {viewMode === "table" ? (
           <DataTable
             columns={columns}

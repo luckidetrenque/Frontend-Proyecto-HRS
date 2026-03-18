@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { useState } from "react";
+import { Maximize2, Minimize2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { CalendarControls } from "@/components/calendar/CalendarControls";
 import { CalendarToolbar } from "@/components/calendar/CalendarToolbar";
@@ -9,6 +10,7 @@ import { MonthView } from "@/components/calendar/MonthView";
 import { WeekView } from "@/components/calendar/WeekView";
 import { ClaseForm } from "@/components/forms/ClaseForm";
 import { Layout } from "@/components/Layout";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -22,6 +24,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { useCalendar } from "@/hooks/useCalendar";
 import { useClasesRestantes } from "@/hooks/useClasesRestantes";
 import { Alumno, Instructor } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { puedeEditarClase } from "@/utils/validacionesClases";
 
 export default function CalendarioPage() {
@@ -80,11 +83,36 @@ export default function CalendarioPage() {
   } = useCalendar();
 
   const [alumnoId, setAlumnoId] = useState<string>("");
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // Verificar clases restantes del alumno
   const { estaAgotado } = useClasesRestantes(
     alumnoId ? Number(alumnoId) : 0,
     currentDate,
   );
+
+  // Cerrar con Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isExpanded) {
+        setIsExpanded(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isExpanded]);
+
+  // Bloquear scroll del body cuando está expandido
+  useEffect(() => {
+    if (isExpanded) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isExpanded]);
 
   // Configuración de filtros
   const filterConfig = [
@@ -109,6 +137,133 @@ export default function CalendarioPage() {
       placeholder: "Todos los instructores",
     },
   ];
+
+  // Título del Card según vista
+  const cardTitle =
+    viewMode === "day"
+      ? `${format(currentDate, "EEEE d 'de' MMMM", { locale: es })} — ${
+          filteredClases.filter(
+            (c) => c.dia === format(currentDate, "yyyy-MM-dd"),
+          ).length
+        } clases`
+      : viewMode === "week"
+        ? `Semana del ${format(currentDate, "d 'de' MMMM", { locale: es })}`
+        : format(currentDate, "MMMM yyyy", { locale: es });
+
+  const calendarCard = (
+    <Card
+      className={cn(
+        "overflow-hidden transition-all duration-300",
+        isExpanded
+          ? "fixed inset-2 z-50 flex flex-col shadow-2xl rounded-xl"
+          : "relative",
+      )}
+    >
+      <CardHeader
+        className={cn(
+          "border-b bg-secondary/30 py-3 flex-row items-center justify-between shrink-0",
+          isExpanded && "px-6",
+        )}
+      >
+        <CardTitle className="text-base font-medium capitalize">
+          {cardTitle}
+        </CardTitle>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsExpanded((v) => !v)}
+          title={isExpanded ? "Contraer (Esc)" : "Expandir a pantalla completa"}
+          className="h-7 w-7 shrink-0"
+        >
+          {isExpanded ? (
+            <Minimize2 className="h-4 w-4" />
+          ) : (
+            <Maximize2 className="h-4 w-4" />
+          )}
+        </Button>
+      </CardHeader>
+
+      <CardContent
+        className={cn(
+          "p-0",
+          isExpanded && "flex-1 overflow-hidden",
+        )}
+        // Doble click en el contenido para togglear
+        onDoubleClick={(e) => {
+          // Evitar que dispare si el doble click es sobre un botón, input, select, etc.
+          const target = e.target as HTMLElement;
+          const interactive = target.closest(
+            "button, a, input, select, textarea, [role='button'], [data-radix-popper-content-wrapper]",
+          );
+          if (!interactive) {
+            setIsExpanded((v) => !v);
+          }
+        }}
+      >
+        {viewMode === "day" ? (
+          <DayView
+            selectedDate={currentDate}
+            clases={filteredClases}
+            caballos={caballos}
+            onStatusChange={handleStatusChange}
+            onCellClick={handleCellClick}
+            onEditClase={handleEditClase}
+            onDeleteClase={handleDeleteClase}
+            puedeEditarClase={puedeEditarClase}
+            getAlumnoNombre={getAlumnoNombre}
+            getAlumnoNombreCompleto={getAlumnoNombreCompleto}
+            getNombreParaClase={getNombreParaClase}
+            getNombreCompletoParaClase={getNombreCompletoParaClase}
+            getInstructorNombre={getInstructorNombre}
+            getCaballoNombre={getCaballoNombre}
+            getInstructorColor={getInstructorColor}
+            conflictSet={conflictSet}
+            isExpanded={isExpanded}
+          />
+        ) : viewMode === "month" ? (
+          <MonthView
+            currentDate={currentDate}
+            calendarDays={calendarDays}
+            clasesByDate={clasesByDate}
+            onDayClick={handleDayClick}
+            onGoToDay={handleGoToDay}
+            onStatusChange={handleStatusChange}
+            onEditClase={handleEditClase}
+            onDeleteClase={handleDeleteClase}
+            puedeEditarClase={puedeEditarClase}
+            getAlumnoNombre={getAlumnoNombre}
+            getAlumnoApellido={getAlumnoApellido}
+            getAlumnoNombreCompleto={getAlumnoNombreCompleto}
+            getNombreParaClase={getNombreParaClase}
+            getNombreCompletoParaClase={getNombreCompletoParaClase}
+            getInstructorNombre={getInstructorNombre}
+            getCaballoNombre={getCaballoNombre}
+            getInstructorColor={getInstructorColor}
+          />
+        ) : (
+          <WeekView
+            calendarDays={calendarDays}
+            clasesByDate={clasesByDate}
+            onDayClick={handleDayClick}
+            onGoToDay={handleGoToDay}
+            onStatusChange={handleStatusChange}
+            onEditClase={handleEditClase}
+            onDeleteClase={handleDeleteClase}
+            puedeEditarClase={puedeEditarClase}
+            getAlumnoNombre={getAlumnoNombre}
+            getAlumnoApellido={getAlumnoApellido}
+            getAlumnoNombreCompleto={getAlumnoNombreCompleto}
+            getNombreParaClase={getNombreParaClase}
+            getNombreCompletoParaClase={getNombreCompletoParaClase}
+            getInstructorNombre={getInstructorNombre}
+            getCaballoNombre={getCaballoNombre}
+            getInstructorColor={getInstructorColor}
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
 
   return (
     <Layout>
@@ -158,103 +313,33 @@ export default function CalendarioPage() {
         />
       </div>
 
-      {/* Vista del Calendario */}
-      {viewMode === "day" ? (
-        <Card className="overflow-hidden">
-          <CardHeader className="border-b bg-secondary/30 py-3">
-            <CardTitle className="text-base font-medium">
-              {format(currentDate, "EEEE d 'de' MMMM", { locale: es })} —
-              <span className="ml-2 text-muted-foreground">
-                {
-                  filteredClases.filter(
-                    (c) => c.dia === format(currentDate, "yyyy-MM-dd"),
-                  ).length
-                }{" "}
-                clases
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <DayView
-              selectedDate={currentDate}
-              clases={filteredClases}
-              caballos={caballos}
-              onStatusChange={handleStatusChange}
-              onCellClick={handleCellClick}
-              onEditClase={handleEditClase}
-              onDeleteClase={handleDeleteClase}
-              puedeEditarClase={puedeEditarClase}
-              getAlumnoNombre={getAlumnoNombre}
-              getAlumnoNombreCompleto={getAlumnoNombreCompleto}
-              getNombreParaClase={getNombreParaClase}
-              getNombreCompletoParaClase={getNombreCompletoParaClase}
-              getInstructorNombre={getInstructorNombre}
-              getCaballoNombre={getCaballoNombre}
-              getInstructorColor={getInstructorColor}
-              conflictSet={conflictSet}
-            />
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="overflow-hidden">
-          <CardContent className="p-0">
-            {viewMode === "month" ? (
-              <MonthView
-                currentDate={currentDate}
-                calendarDays={calendarDays}
-                clasesByDate={clasesByDate}
-                onDayClick={handleDayClick}
-                onGoToDay={handleGoToDay}
-                onStatusChange={handleStatusChange}
-                onEditClase={handleEditClase}
-                onDeleteClase={handleDeleteClase}
-                puedeEditarClase={puedeEditarClase}
-                getAlumnoNombre={getAlumnoNombre}
-                getAlumnoApellido={getAlumnoApellido}
-                getAlumnoNombreCompleto={getAlumnoNombreCompleto}
-                getNombreParaClase={getNombreParaClase}
-                getNombreCompletoParaClase={getNombreCompletoParaClase}
-                getInstructorNombre={getInstructorNombre}
-                getCaballoNombre={getCaballoNombre}
-                getInstructorColor={getInstructorColor}
-              />
-            ) : (
-              <WeekView
-                calendarDays={calendarDays}
-                clasesByDate={clasesByDate}
-                onDayClick={handleDayClick}
-                onGoToDay={handleGoToDay}
-                onStatusChange={handleStatusChange}
-                onEditClase={handleEditClase}
-                onDeleteClase={handleDeleteClase}
-                puedeEditarClase={puedeEditarClase}
-                getAlumnoNombre={getAlumnoNombre}
-                getAlumnoApellido={getAlumnoApellido}
-                getAlumnoNombreCompleto={getAlumnoNombreCompleto}
-                getNombreParaClase={getNombreParaClase}
-                getNombreCompletoParaClase={getNombreCompletoParaClase}
-                getInstructorNombre={getInstructorNombre}
-                getCaballoNombre={getCaballoNombre}
-                getInstructorColor={getInstructorColor}
-              />
-            )}
-          </CardContent>
-        </Card>
+      {/* Overlay oscuro cuando está expandido */}
+      {isExpanded && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+          onClick={() => setIsExpanded(false)}
+        />
       )}
 
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-        {instructores.map((instructor) => (
-          <div key={instructor.id} className="flex items-center gap-2">
-            <div
-              className="h-3 w-3 rounded-full border"
-              style={{ backgroundColor: instructor.color }}
-            />
-            <span className="text-sm text-muted-foreground">
-              {instructor.nombre} {instructor.apellido}
-            </span>
-          </div>
-        ))}
-      </div>
+      {/* Vista del Calendario (unificada) */}
+      {calendarCard}
+
+      {/* Leyenda de instructores */}
+      {!isExpanded && (
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
+          {instructores.map((instructor) => (
+            <div key={instructor.id} className="flex items-center gap-2">
+              <div
+                className="h-3 w-3 rounded-full border"
+                style={{ backgroundColor: instructor.color }}
+              />
+              <span className="text-sm text-muted-foreground">
+                {instructor.nombre} {instructor.apellido}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Diálogo Crear/Editar Clase */}
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>

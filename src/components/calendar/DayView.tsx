@@ -34,6 +34,7 @@ interface DayViewProps {
   getCaballoNombre: (id: number) => string;
   getInstructorColor: (id: number) => string;
   conflictSet: Set<string>;
+  isExpanded?: boolean;
 }
 
 export function DayView({
@@ -50,6 +51,7 @@ export function DayView({
   getCaballoNombre,
   getInstructorColor,
   conflictSet,
+  isExpanded = false,
 }: DayViewProps) {
   const [popoverOpen, setPopoverOpen] = useState<string | null>(null);
 
@@ -66,14 +68,13 @@ export function DayView({
 
   const claseMap = useMemo(() => {
     const map: Record<string, Clase> = {};
-    const continuacionMap: Record<string, Clase> = {}; // ← nuevo
+    const continuacionMap: Record<string, Clase> = {};
 
     clasesDelDia.forEach((clase) => {
       const horaKey = clase.hora.slice(0, 5);
       const key = `${clase.caballoId}-${horaKey}`;
       map[key] = clase;
 
-      // Si dura 60 min, ocupa también la franja siguiente
       if ((clase.duracion ?? 60) >= 60) {
         const [h, m] = horaKey.split(":").map(Number);
         const totalMin = h * 60 + m + 30;
@@ -86,27 +87,22 @@ export function DayView({
     return { map, continuacionMap };
   }, [clasesDelDia]);
 
-  // Orden de los caballos alfabéticamente
-  // const caballosOrdenados = useMemo(() => {
-  //   return [...caballos].sort((a, b) => a.nombre.localeCompare(b.nombre));
-  // }, [caballos]);
-
-  // Orden de los caballos según el backend
   const caballosOrdenados = useMemo(() => {
     return [...caballos];
   }, [caballos]);
 
   const obtenerNombreAMostrar = (c) => {
-    // Si 'c' no existe, devolvemos un string vacío para evitar el error
     if (!c) return "";
-
     return c.especialidad === "MONTA"
       ? getInstructorNombre(c.instructorId)
       : getNombreCompletoParaClase(c);
   };
 
   return (
-    <div className="overflow-auto max-h-[calc(100vh-200px)]">
+    <div className={cn(
+      "overflow-auto",
+      !isExpanded ? "max-h-[calc(100vh-260px)]" : "h-full",
+    )}>
       <table className="w-full min-w-[800px] border-collapse">
         {/* CABECERA */}
         <thead className="sticky top-0 z-20">
@@ -131,25 +127,6 @@ export function DayView({
                 >
                   {caballo.nombre}
                 </span>
-                {/* <div className="flex flex-col items-center gap-0.5">
-                  <span
-                    className={cn(
-                      caballo.tipo === "PRIVADO" && "text-primary font-bold",
-                    )}
-                  >
-                    {caballo.nombre}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-[10px] font-normal px-1.5 py-0.5 rounded-full",
-                      caballo.tipo === "PRIVADO"
-                        ? "bg-primary/10 text-primary"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {caballo.tipo === "PRIVADO" ? "Privado" : "Escuela"}
-                  </span>
-                </div> */}
               </th>
             ))}
           </tr>
@@ -178,14 +155,11 @@ export function DayView({
                     key={key}
                     className={cn(
                       "border border-border p-1 text-center transition-colors relative",
-                      // Continuación de clase de 60min
                       esContinuacion && "bg-muted/20 border-dashed",
-                      // Conflicto
                       !clase &&
                         !esContinuacion &&
                         hasConflict &&
                         "bg-red-100 border-red-400 hover:bg-red-200",
-                      // Libre
                       !clase &&
                         !esContinuacion &&
                         !hasConflict &&
@@ -194,7 +168,7 @@ export function DayView({
                     )}
                     title={
                       esContinuacion
-                        ? `Continúa clase de ${obtenerNombreAMostrar(claseContinuacion)} (60 min)` // <--- CAMBIO AQUÍ
+                        ? `Continúa clase de ${obtenerNombreAMostrar(claseContinuacion)} (60 min)`
                         : clase
                           ? `Clase ${clase.estado.toLowerCase()} con el instructor ${getInstructorNombre(clase.instructorId)}`
                           : `Agregar clase para ${caballo.nombre} a las ${hora}`
@@ -205,7 +179,6 @@ export function DayView({
                       }
                     }}
                   >
-                    {/* ⚠ Tooltip visual de conflicto */}
                     {!clase && !esContinuacion && hasConflict && (
                       <span
                         className="absolute top-1 right-1 text-[10px] text-red-600"
@@ -215,7 +188,6 @@ export function DayView({
                       </span>
                     )}
 
-                    {/* Celda de continuación de clase 60 min */}
                     {esContinuacion && claseContinuacion && (
                       <ClasePopover
                         clase={claseContinuacion}
@@ -240,7 +212,6 @@ export function DayView({
                                 🎓
                               </span>
                             )}
-                            {/* Badge igual al de inicio pero con borde izquierdo para indicar continuación */}
                             <ClaseBadge
                               clase={claseContinuacion}
                               alumnoNombre={obtenerNombreAMostrar(
@@ -276,7 +247,6 @@ export function DayView({
                       />
                     )}
 
-                    {/* Celda con clase (inicio) */}
                     {clase && (
                       <ClasePopover
                         clase={clase}
@@ -317,7 +287,6 @@ export function DayView({
                       />
                     )}
 
-                    {/* Celda vacía */}
                     {!clase && !esContinuacion && (
                       <span className="text-xs text-muted-foreground/30">
                         —

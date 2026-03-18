@@ -507,14 +507,14 @@ export default function ClaseDetalle() {
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
               <div className="flex-1 w-full space-y-2">
-                <label className="text-sm font-medium">Nuevo Estado</label>
+                <Label htmlFor="nuevo-estado">Nuevo Estado</Label>
                 <Select
                   value={nuevoEstado || clase.estado}
                   onValueChange={(value) =>
                     setNuevoEstado(value as Clase["estado"])
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="nuevo-estado">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

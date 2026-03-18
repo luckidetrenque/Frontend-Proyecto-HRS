@@ -69,7 +69,11 @@ export default function InstructoresPage() {
 
   const navigate = useNavigate();
 
-  const [filters, setFilters] = useState({ activo: "all" });
+  const [filters, setFilters] = useState({
+    nombre: "",
+    apellido: "",
+    activo: "all",
+  });
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
 
@@ -87,6 +91,8 @@ export default function InstructoresPage() {
         page,
         size: pageSize,
         sort: "apellido,asc",
+        nombre: filters.nombre || undefined,
+        apellido: filters.apellido || undefined,
         activo:
           filters.activo !== "all" ? filters.activo === "true" : undefined,
       }),
@@ -97,6 +103,18 @@ export default function InstructoresPage() {
   const totalItems = data?.totalElements ?? 0;
 
   const filterConfig = [
+    {
+      name: "nombre",
+      label: "Nombre",
+      type: "text" as const,
+      placeholder: "Buscar por nombre...",
+    },
+    {
+      name: "apellido",
+      label: "Apellido",
+      type: "text" as const,
+      placeholder: "Buscar por apellido...",
+    },
     {
       name: "activo",
       label: "Estado",
@@ -110,11 +128,13 @@ export default function InstructoresPage() {
 
   const handleFilterChange = (name: string, value: string) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
-    setPage(0);
+    if (name !== "nombre" && name !== "apellido") {
+      setPage(0);
+    }
   };
 
   const handleResetFilters = () => {
-    setFilters({ activo: "all" });
+    setFilters({ nombre: "", apellido: "", activo: "all" });
     setPage(0);
   };
 
@@ -256,7 +276,6 @@ export default function InstructoresPage() {
               >
                 <Table className="h-4 w-4" />
               </Button>
-
               <Button
                 variant={viewMode === "cards" ? "default" : "outline"}
                 onClick={() => setViewMode("cards")}

@@ -9,6 +9,6 @@ export const InfoField = ({
 }) => (
   <div>
     <p className="text-sm text-muted-foreground mb-1">{label}</p>
-    <p className="font-medium">{children}</p>
+    <div className="font-medium">{children}</div>
   </div>
 );

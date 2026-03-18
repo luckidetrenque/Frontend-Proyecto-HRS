@@ -76,7 +76,6 @@ export default function AlumnosPage() {
   const añoActual = new Date().getFullYear();
   const mesActualNombre = new Date().toLocaleString("es-ES", { month: "long" });
 
-  // Query clases del mes actual para la columna "Clases restantes"
   const { data: clasesMesData } = useQuery({
     queryKey: ["clases-mes", mesActual, añoActual],
     queryFn: () => clasesApi.listar({ page: 0, size: 500, sort: "dia,desc" }),
@@ -84,6 +83,8 @@ export default function AlumnosPage() {
   const clases = clasesMesData?.content ?? [];
 
   const [filters, setFilters] = useState({
+    nombre: "",
+    apellido: "",
     cantidadClases: "all",
     activo: "all",
     propietario: "all",
@@ -113,6 +114,8 @@ export default function AlumnosPage() {
         page,
         size: pageSize,
         sort: "apellido,asc",
+        nombre: filters.nombre || undefined,
+        apellido: filters.apellido || undefined,
         activo:
           filters.activo !== "all" ? filters.activo === "true" : undefined,
         propietario:
@@ -131,6 +134,18 @@ export default function AlumnosPage() {
   const totalItems = data?.totalElements ?? 0;
 
   const filterConfig = [
+    {
+      name: "nombre",
+      label: "Nombre",
+      type: "text" as const,
+      placeholder: "Buscar por nombre...",
+    },
+    {
+      name: "apellido",
+      label: "Apellido",
+      type: "text" as const,
+      placeholder: "Buscar por apellido...",
+    },
     {
       name: "cantidadClases",
       label: "Clases/Mes",
@@ -203,11 +218,21 @@ export default function AlumnosPage() {
 
   const handleFilterChange = (name: string, value: string) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
-    setPage(0);
+    // Para campos de texto no reseteamos la página en cada keystroke,
+    // el backend filtra en tiempo real igual. Para selects sí.
+    if (name !== "nombre" && name !== "apellido") {
+      setPage(0);
+    }
   };
 
   const handleResetFilters = () => {
-    setFilters({ cantidadClases: "all", activo: "all", propietario: "all" });
+    setFilters({
+      nombre: "",
+      apellido: "",
+      cantidadClases: "all",
+      activo: "all",
+      propietario: "all",
+    });
     setPage(0);
   };
 
@@ -364,7 +389,6 @@ export default function AlumnosPage() {
               >
                 <Table className="h-4 w-4" />
               </Button>
-
               <Button
                 variant={viewMode === "cards" ? "default" : "outline"}
                 onClick={() => setViewMode("cards")}
@@ -588,12 +612,10 @@ export default function AlumnosPage() {
                 {alumnoToDelete?.apellido}? Esta acción no se puede deshacer.
               </DialogDescription>
             </DialogHeader>
-
             <DialogFooter>
               <Button variant="outline" onClick={closeDelete}>
                 Cancelar
               </Button>
-
               <Button
                 variant="destructive"
                 onClick={() => {

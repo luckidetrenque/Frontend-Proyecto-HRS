@@ -22,7 +22,6 @@ export interface Alumno {
   cantidadClases: number;
   propietario: boolean;
   activo: boolean;
-  /* caballoPropio?: number | Caballo; */
   tipoPension: TipoPension;
   cuotaPension?: CuotaPension | null;
   caballoId?: number | null;
@@ -117,6 +116,8 @@ export interface ClaseSearchFilters {
   caballoId?: number;
   especialidad?: EspecialidadClase;
   estado?: EstadoClase;
+  nombreAlumno?: string;
+  apellidoAlumno?: string;
 }
 
 export interface ApiErrorResponse {
@@ -232,10 +233,9 @@ export interface PageParams {
 async function apiFetch(endpoint: string, options: RequestInit = {}) {
   const credentials = sessionStorage.getItem("authCredentials");
 
-  // Definimos los headers usando el tipo Record para evitar el 'any'
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(options.headers as Record<string, string>), // Mantenemos headers existentes si los hay
+    ...(options.headers as Record<string, string>),
   };
 
   if (credentials) {
@@ -244,7 +244,7 @@ async function apiFetch(endpoint: string, options: RequestInit = {}) {
 
   return fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
-    headers, // Ahora headers es un objeto de tipo Record<string, string>
+    headers,
   });
 }
 
@@ -259,24 +259,18 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
   if (!response.ok) {
     const errorData: ApiErrorResponse = await response.json().catch(() => ({}));
-    // Si hay errores de validación (como el del teléfono), los unimos en un solo string
     if (errorData.errores) {
       const mensajesValidacion = Object.values(errorData.errores).join(". ");
       throw new Error(mensajesValidacion);
     }
-
-    // Si no hay errores específicos, usamos el mensaje general o el estado
     const errorMessage =
       errorData.mensaje || errorData.error || `Error ${response.status}`;
     throw new Error(errorMessage);
   }
 
-  // Parse response data
   const data = await response.json();
-
   const result = data as T & { __successMessage?: string };
 
-  // Attach success message if present (para poder accederlo después)
   if (data.mensaje || data.message) {
     result.__successMessage = data.mensaje || data.message;
   }
@@ -299,6 +293,8 @@ export const alumnosApi = {
       query.append("propietario", String(params.propietario));
     if (params.cantidadClases !== undefined)
       query.append("cantidadClases", String(params.cantidadClases));
+    if (params.nombre) query.append("nombre", params.nombre);
+    if (params.apellido) query.append("apellido", params.apellido);
     const response = await apiFetch(`/alumnos?${query.toString()}`);
     return handleResponse<PageResponse<Alumno>>(response);
   },
@@ -348,6 +344,8 @@ export const instructoresApi = {
     if (params.sort) query.append("sort", params.sort);
     if (params.activo !== undefined)
       query.append("activo", String(params.activo));
+    if (params.nombre) query.append("nombre", params.nombre);
+    if (params.apellido) query.append("apellido", params.apellido);
     const response = await apiFetch(`/instructores?${query.toString()}`);
     return handleResponse<PageResponse<Instructor>>(response);
   },
@@ -448,6 +446,9 @@ export const clasesApi = {
     if (params.sort) query.append("sort", params.sort);
     if (params.estado) query.append("estado", params.estado);
     if (params.especialidad) query.append("especialidad", params.especialidad);
+    if (params.nombreAlumno) query.append("nombreAlumno", params.nombreAlumno);
+    if (params.apellidoAlumno)
+      query.append("apellidoAlumno", params.apellidoAlumno);
     const response = await apiFetch(`/clases?${query.toString()}`);
     return handleResponse<PageResponse<ClaseDetallada>>(response);
   },
@@ -493,37 +494,22 @@ export const clasesApi = {
     if (!response.ok) throw new Error("Error al eliminar");
   },
   buscarPorAlumno: async (alumnoId: number): Promise<Clase[]> => {
-    // Realiza la petición usando el ID directamente en la URL
     const response = await apiFetch(`/clases/alumno/${alumnoId}/detalles`);
-
-    // Maneja la respuesta (ajusta el tipo si ClaseResponseDto es distinto a Clase)
     const data = await handleResponse<Clase[]>(response);
-
     return data || [];
   },
-
   buscarPorInstructor: async (instructorId: number): Promise<Clase[]> => {
-    // Realiza la petición usando el ID directamente en la URL
     const response = await apiFetch(
       `/clases/instructor/${instructorId}/detalles`,
     );
-
-    // Maneja la respuesta (ajusta el tipo si ClaseResponseDto es distinto a Clase)
     const data = await handleResponse<Clase[]>(response);
-
     return data || [];
   },
-
   buscarPorCaballo: async (caballoId: number): Promise<Clase[]> => {
-    // Realiza la petición usando el ID directamente en la URL
     const response = await apiFetch(`/clases/caballo/${caballoId}/detalles`);
-
-    // Maneja la respuesta (ajusta el tipo si ClaseResponseDto es distinto a Clase)
     const data = await handleResponse<Clase[]>(response);
-
     return data || [];
   },
-
   cambiarEstado: async (
     id: number,
     estado: Clase["estado"],
@@ -536,8 +522,6 @@ export const clasesApi = {
     });
     return handleResponse<Clase>(response);
   },
-
-  // Calendario
   copiarClases: async (
     payload?: unknown,
   ): Promise<unknown & { __successMessage?: string }> => {
@@ -548,7 +532,6 @@ export const clasesApi = {
     });
     return handleResponse<unknown>(response);
   },
-
   eliminarClases: async (
     payload?: unknown,
   ): Promise<unknown & { __successMessage?: string }> => {
@@ -589,7 +572,6 @@ export const finanzasApi = {
     );
     return handleResponse<ResumenFinanciero>(response);
   },
-
   getCuotasAlumnos: async (
     inicio: string,
     fin: string,
@@ -599,24 +581,20 @@ export const finanzasApi = {
     );
     return handleResponse<CuotasAlumnos>(response);
   },
-
   getPensiones: async (): Promise<Pensiones> => {
     const response = await apiFetch(`/finanzas/pensiones`);
     return handleResponse<Pensiones>(response);
   },
-
   getHonorarios: async (inicio: string, fin: string): Promise<Honorarios> => {
     const response = await apiFetch(
       `/finanzas/honorarios?inicio=${inicio}&fin=${fin}`,
     );
     return handleResponse<Honorarios>(response);
   },
-
   getConfiguracion: async (): Promise<ConfiguracionPrecios> => {
     const response = await apiFetch(`/finanzas/configuracion`);
     return handleResponse<ConfiguracionPrecios>(response);
   },
-
   updateConfiguracion: async (
     config: ConfiguracionPrecios,
   ): Promise<ConfiguracionPrecios> => {

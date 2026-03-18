@@ -72,6 +72,8 @@ export default function ClasesPage() {
   const navigate = useNavigate();
 
   const [filters, setFilters] = useState({
+    nombreAlumno: "",
+    apellidoAlumno: "",
     dia: "",
     hora: "",
     especialidad: "all",
@@ -88,6 +90,8 @@ export default function ClasesPage() {
         page,
         size: pageSize,
         sort: "dia,desc",
+        nombreAlumno: filters.nombreAlumno || undefined,
+        apellidoAlumno: filters.apellidoAlumno || undefined,
         estado:
           filters.estado !== "all"
             ? (filters.estado as Clase["estado"])
@@ -103,7 +107,6 @@ export default function ClasesPage() {
   const totalPages = data?.totalPages ?? 1;
   const totalItems = data?.totalElements ?? 0;
 
-  // Queries para los selectores del formulario (sin paginación visible)
   const { data: alumnosData } = useQuery({
     queryKey: ["alumnos-select"],
     queryFn: () =>
@@ -132,6 +135,18 @@ export default function ClasesPage() {
 
   const filterConfig = [
     {
+      name: "nombreAlumno",
+      label: "Nombre alumno",
+      type: "text" as const,
+      placeholder: "Buscar por nombre...",
+    },
+    {
+      name: "apellidoAlumno",
+      label: "Apellido alumno",
+      type: "text" as const,
+      placeholder: "Buscar por apellido...",
+    },
+    {
       name: "dia",
       label: "Día",
       type: "date" as const,
@@ -159,11 +174,20 @@ export default function ClasesPage() {
 
   const handleFilterChange = (name: string, value: string) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
-    setPage(0);
+    if (name !== "nombreAlumno" && name !== "apellidoAlumno") {
+      setPage(0);
+    }
   };
 
   const handleResetFilters = () => {
-    setFilters({ dia: "", hora: "", especialidad: "all", estado: "all" });
+    setFilters({
+      nombreAlumno: "",
+      apellidoAlumno: "",
+      dia: "",
+      hora: "",
+      especialidad: "all",
+      estado: "all",
+    });
     setPage(0);
   };
 
@@ -330,7 +354,6 @@ export default function ClasesPage() {
               >
                 <Table className="h-4 w-4" />
               </Button>
-
               <Button
                 variant={viewMode === "cards" ? "default" : "outline"}
                 onClick={() => setViewMode("cards")}

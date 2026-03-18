@@ -10,12 +10,11 @@ import {
   User,
   X,
 } from "lucide-react";
-import { ReactNode, useCallback, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ReactNode, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 import { HelpSystem } from "@/components/HelpSystem";
 import { Button } from "@/components/ui/button";
-import SmartSearch from "@/components/ui/smart-search";
 import { UserDropdown } from "@/components/UserDropdown";
 import { cn } from "@/lib/utils";
 
@@ -38,34 +37,11 @@ const navigation = [
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // Nuevo estado
-  const navigate = useNavigate();
-
-  // Determinar el tipo de entidad según la ruta actual
-  const entityType = useMemo(() => {
-    if (location.pathname.startsWith("/alumnos")) return "alumnos";
-    if (location.pathname.startsWith("/instructores")) return "instructores";
-    if (location.pathname.startsWith("/caballos")) return "caballos";
-    if (location.pathname.startsWith("/clases")) return "clases";
-    return null;
-  }, [location.pathname]);
-
-  // Handler para la búsqueda global
-  const handleGlobalSearch = useCallback(
-    (filters: Record<string, unknown>) => {
-      // Emitir evento personalizado con los filtros
-      window.dispatchEvent(
-        new CustomEvent("globalSearch", {
-          detail: { filters, entityType },
-        }),
-      );
-    },
-    [entityType],
-  );
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row transition-all duration-300 overflow-x-hidden">
-      {/* Mobile Header (Only visible on small screens) */}
+      {/* Mobile Header */}
       <header className="md:hidden sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="container flex h-16 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-3">
@@ -123,11 +99,11 @@ export function Layout({ children }: LayoutProps) {
         </nav>
       )}
 
-      {/* Desktop Sidebar (Hidden on small screens) */}
+      {/* Desktop Sidebar */}
       <aside
         className={cn(
           "hidden md:flex flex-col border-r border-border bg-card/60 backdrop-blur-xl sticky top-0 h-screen overflow-y-auto transition-all duration-300 relative",
-          isSidebarCollapsed ? "w-20" : "w-64 lg:w-72"
+          isSidebarCollapsed ? "w-20" : "w-64 lg:w-72",
         )}
       >
         {/* Toggle Button */}
@@ -139,11 +115,16 @@ export function Layout({ children }: LayoutProps) {
           {isSidebarCollapsed ? (
             <ChevronRight className="h-4 w-4" />
           ) : (
-            <Menu className="h-4 w-4" /> // Usamos Menu (o ChevronLeft) para contraer
+            <Menu className="h-4 w-4" />
           )}
         </button>
 
-        <div className={cn("p-6 flex items-center transition-all", isSidebarCollapsed ? "justify-center px-0" : "gap-3")}>
+        <div
+          className={cn(
+            "p-6 flex items-center transition-all",
+            isSidebarCollapsed ? "justify-center px-0" : "gap-3",
+          )}
+        >
           <div className="flex shrink-0 h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-soft">
             <ChessKnight className="h-5 w-5 text-primary-foreground" />
           </div>
@@ -173,7 +154,12 @@ export function Layout({ children }: LayoutProps) {
                     : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground",
                 )}
               >
-                <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "opacity-100" : "opacity-70")} />
+                <item.icon
+                  className={cn(
+                    "h-5 w-5 shrink-0",
+                    isActive ? "opacity-100" : "opacity-70",
+                  )}
+                />
                 {!isSidebarCollapsed && (
                   <span className="truncate">{item.name}</span>
                 )}
@@ -182,11 +168,19 @@ export function Layout({ children }: LayoutProps) {
           })}
         </nav>
 
-        <div className={cn("p-4 mt-auto border-t border-border/50", isSidebarCollapsed ? "flex justify-center" : "")}>
+        <div
+          className={cn(
+            "p-4 mt-auto border-t border-border/50",
+            isSidebarCollapsed ? "flex justify-center" : "",
+          )}
+        >
           {!isSidebarCollapsed ? (
             <UserDropdown />
           ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground" title="Usuario">
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground"
+              title="Usuario"
+            >
               <User className="h-5 w-5" />
             </div>
           )}
@@ -194,27 +188,15 @@ export function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Main Content Area */}
-      <main 
+      <main
         className={cn(
           "flex-1 flex flex-col min-h-screen transition-all duration-300 max-w-full",
-          !isSidebarCollapsed ? "md:max-w-[calc(100vw-16rem)] lg:max-w-[calc(100vw-18rem)]" : "md:max-w-[calc(100vw-5rem)]"
+          !isSidebarCollapsed
+            ? "md:max-w-[calc(100vw-16rem)] lg:max-w-[calc(100vw-18rem)]"
+            : "md:max-w-[calc(100vw-5rem)]",
         )}
       >
-        {/* Top bar for Desktop search */}
-        {entityType && (
-          <div className="hidden md:flex h-16 border-b border-border bg-card/30 backdrop-blur-md items-center px-8 sticky top-0 z-30">
-            <div className="flex-1 max-w-md">
-              <SmartSearch
-                entityType={entityType}
-                onSearch={handleGlobalSearch}
-              />
-            </div>
-          </div>
-        )}
-        
-        <div className="p-6 md:p-8 flex-1">
-          {children}
-        </div>
+        <div className="p-6 md:p-8 flex-1">{children}</div>
         <HelpSystem />
         <OnboardingTour />
       </main>
