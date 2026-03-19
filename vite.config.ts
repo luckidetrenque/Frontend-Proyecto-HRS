@@ -12,15 +12,37 @@ export default defineConfig(({ mode }) => ({
   plugins: [react(), mode === "development" && componentTagger()].filter(
     Boolean,
   ),
-  sourcemap: false,
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
+  },
+  build: {
+    minify: "esbuild",
+    esbuildOptions: {
+      drop: ["console", "debugger"],
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core - cambia poco, se cachea bien
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          // Librerías de datos/query
+          "vendor-query": ["@tanstack/react-query"],
+          // UI components (shadcn/radix)
+          "vendor-ui": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-tooltip",
+            "@radix-ui/react-popover",
+          ],
+          // Iconos
+          "vendor-icons": ["lucide-react"],
+          // Gráficos (pesados, solo los usan Finanzas y Reportes)
+          "vendor-charts": ["recharts"],
+        },
       },
     },
   },

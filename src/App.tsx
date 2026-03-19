@@ -1,5 +1,5 @@
-import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import IdleHandler from "@/components/auth/IdleHandler";
