@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 
@@ -7,23 +8,24 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthProvider";
-import AlumnoDetalle from "@/pages/AlumnoDetalle";
 
-import AlumnosPage from "./pages/Alumnos";
-import CaballoDetalle from "./pages/CaballoDetalle";
-import CaballosPage from "./pages/Caballos";
-import CalendarioPage from "./pages/Calendario";
-import ClaseDetalle from "./pages/ClaseDetalle";
-import ClasesPage from "./pages/Clases";
-import Finanzas from "./pages/Finanzas";
-import Index from "./pages/Index";
-import InstructorDetalle from "./pages/InstructorDetalle";
-import InstructoresPage from "./pages/Instructores";
-import Login from "./pages/Login";
-import NotFound from "./pages/NotFound";
-import Profile from "./pages/Profile";
-import Register from "./pages/Register";
-import Reportes from "./pages/Reportes";
+// Lazy loading components
+const AlumnoDetalle = lazy(() => import("@/pages/AlumnoDetalle"));
+const AlumnosPage = lazy(() => import("./pages/Alumnos"));
+const CaballoDetalle = lazy(() => import("./pages/CaballoDetalle"));
+const CaballosPage = lazy(() => import("./pages/Caballos"));
+const CalendarioPage = lazy(() => import("./pages/Calendario"));
+const ClaseDetalle = lazy(() => import("./pages/ClaseDetalle"));
+const ClasesPage = lazy(() => import("./pages/Clases"));
+const Finanzas = lazy(() => import("./pages/Finanzas"));
+const Index = lazy(() => import("./pages/Index"));
+const InstructorDetalle = lazy(() => import("./pages/InstructorDetalle"));
+const InstructoresPage = lazy(() => import("./pages/Instructores"));
+const Login = lazy(() => import("./pages/Login"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Register = lazy(() => import("./pages/Register"));
+const Reportes = lazy(() => import("./pages/Reportes"));
 
 const queryClient = new QueryClient();
 
@@ -35,118 +37,124 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <IdleHandler />
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Index />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/alumnos"
-              element={
-                <ProtectedRoute>
-                  <AlumnosPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/caballos"
-              element={
-                <ProtectedRoute>
-                  <CaballosPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/instructores"
-              element={
-                <ProtectedRoute>
-                  <InstructoresPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/clases"
-              element={
-                <ProtectedRoute>
-                  <ClasesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/calendario"
-              element={
-                <ProtectedRoute>
-                  <CalendarioPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reportes"
-              element={
-                <ProtectedRoute>
-                  <Reportes />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/finanzas"
-              element={
-                <ProtectedRoute>
-                  <Finanzas />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/alumnos/:id"
-              element={
-                <ProtectedRoute>
-                  <AlumnoDetalle />
-                </ProtectedRoute>
-              }
-            />
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          }>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Index />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/alumnos"
+                element={
+                  <ProtectedRoute>
+                    <AlumnosPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/caballos"
+                element={
+                  <ProtectedRoute>
+                    <CaballosPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/instructores"
+                element={
+                  <ProtectedRoute>
+                    <InstructoresPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clases"
+                element={
+                  <ProtectedRoute>
+                    <ClasesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/calendario"
+                element={
+                  <ProtectedRoute>
+                    <CalendarioPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reportes"
+                element={
+                  <ProtectedRoute>
+                    <Reportes />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/finanzas"
+                element={
+                  <ProtectedRoute>
+                    <Finanzas />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/alumnos/:id"
+                element={
+                  <ProtectedRoute>
+                    <AlumnoDetalle />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/caballos/:id"
-              element={
-                <ProtectedRoute>
-                  <CaballoDetalle />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/instructores/:id"
-              element={
-                <ProtectedRoute>
-                  <InstructorDetalle />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/clases/:id"
-              element={
-                <ProtectedRoute>
-                  <ClaseDetalle />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/caballos/:id"
+                element={
+                  <ProtectedRoute>
+                    <CaballoDetalle />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/instructores/:id"
+                element={
+                  <ProtectedRoute>
+                    <InstructorDetalle />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clases/:id"
+                element={
+                  <ProtectedRoute>
+                    <ClaseDetalle />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
