@@ -92,7 +92,7 @@ export default function Profile() {
                 </div>
                 <div className="p-4 rounded-lg bg-muted/30 border border-border">
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Teléfono</p>
-                  <p className="font-medium">{miPerfilInstructor.codigoArea && `+${miPerfilInstructor.codigoArea}`} {miPerfilInstructor.telefono}</p>
+                  <p className="font-medium">{miPerfilInstructor.codigoArea && `${miPerfilInstructor.codigoArea}`} {miPerfilInstructor.telefono}</p>
                 </div>
                 <div className="p-4 rounded-lg bg-muted/30 border border-border">
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Fecha de Alta</p>
