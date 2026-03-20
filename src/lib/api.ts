@@ -257,6 +257,10 @@ async function handleResponse<T>(response: Response): Promise<T> {
     throw new Error("Sesión no autorizada");
   }
 
+  if (response.status === 403) {
+    throw new Error("No tienes permisos para realizar esta acción (403 Forbidden)");
+  }
+
   if (!response.ok) {
     const errorData: ApiErrorResponse = await response.json().catch(() => ({}));
     if (errorData.errores) {
@@ -348,6 +352,10 @@ export const instructoresApi = {
     if (params.apellido) query.append("apellido", params.apellido);
     const response = await apiFetch(`/instructores?${query.toString()}`);
     return handleResponse<PageResponse<Instructor>>(response);
+  },
+  obtenerMiPerfil: async (): Promise<Instructor> => {
+    const response = await apiFetch(`/instructores/me`);
+    return handleResponse<Instructor>(response);
   },
   obtener: async (id: number): Promise<Instructor> => {
     const response = await apiFetch(`/instructores/${id}`);

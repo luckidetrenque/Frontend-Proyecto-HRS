@@ -6,11 +6,13 @@ import {
   CircleDollarSign,
   GraduationCap,
   NotebookPen,
+  Shield,
   User,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Layout } from "@/components/Layout";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Card,
   CardContent,
@@ -69,9 +71,25 @@ const modules = [
     href: "/finanzas",
     color: "bg-success",
   },
+  {
+    title: "Usuarios",
+    description: "Administración de cuentas y seguridad",
+    icon: Shield,
+    href: "/usuarios",
+    color: "bg-destructive",
+  },
 ];
 
 const Index = () => {
+  const { user } = useAuth();
+  const filteredModules = modules.filter((mod) => {
+    if (user?.rol === "ADMIN") return true;
+    if (user?.rol === "INSTRUCTOR") {
+      return ["Clases", "Calendario", "Caballos", "Alumnos", "Reportes"].includes(mod.title);
+    }
+    return false; // ALUMNO no ve módulos de gestión en el hero
+  });
+
   return (
     <Layout>
       {/* Hero Section */}
@@ -80,14 +98,15 @@ const Index = () => {
           Sistema de Gestión de la Escuela de Equitación
         </h1>
         <p className="text-muted-foreground">
-          Administra alumnos, instructores, caballos, clases, calendario,
-          reportes y finanzas desde un solo lugar.
+          {user?.rol === "ADMIN" 
+            ? "Administra alumnos, instructores, caballos, clases, calendario, reportes y finanzas desde un solo lugar."
+            : "Administra alumnos, caballos, clases, calendario y reportes referidos a tus clases."}
         </p>
       </div>
 
       {/* Module Cards */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {modules.map((module, index) => (
+        {filteredModules.map((module, index) => (
           <Link
             key={module.href}
             to={module.href}

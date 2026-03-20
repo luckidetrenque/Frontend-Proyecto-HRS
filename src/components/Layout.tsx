@@ -7,11 +7,13 @@ import {
   GraduationCap,
   Menu,
   NotebookPen,
+  Shield,
   User,
   X,
 } from "lucide-react";
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 import { HelpSystem } from "@/components/HelpSystem";
 import { Button } from "@/components/ui/button";
@@ -32,12 +34,22 @@ const navigation = [
   { name: "Calendario", href: "/calendario", icon: CalendarDays },
   { name: "Reportes", href: "/reportes", icon: BarChart },
   { name: "Finanzas", href: "/finanzas", icon: CircleDollarSign },
+  { name: "Usuarios", href: "/usuarios", icon: Shield },
 ];
 
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const { user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  const filteredNavigation = navigation.filter((item) => {
+    if (user?.rol === "ADMIN") return true;
+    if (user?.rol === "INSTRUCTOR") {
+      return ["Clases", "Calendario", "Caballos", "Alumnos", "Reportes"].includes(item.name);
+    }
+    return false; // ALUMNO no ve módulos de gestión
+  });
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row transition-all duration-300 overflow-x-hidden">
@@ -73,7 +85,7 @@ export function Layout({ children }: LayoutProps) {
       {mobileMenuOpen && (
         <nav className="md:hidden fixed inset-0 top-16 z-40 bg-background/95 backdrop-blur-sm border-t border-border p-4">
           <div className="flex flex-col gap-2">
-            {navigation.map((item) => {
+            {filteredNavigation.map((item) => {
               const isActive = location.pathname.startsWith(item.href);
               return (
                 <Link
@@ -102,7 +114,7 @@ export function Layout({ children }: LayoutProps) {
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "hidden md:flex flex-col border-r border-border bg-card/60 backdrop-blur-xl sticky top-0 h-screen overflow-y-auto transition-all duration-300 relative",
+          "hidden md:flex flex-col border-r border-border bg-card/60 backdrop-blur-xl sticky top-0 h-screen overflow-y-auto overflow-x-hidden transition-all duration-300 relative",
           isSidebarCollapsed ? "w-20" : "w-64 lg:w-72",
         )}
       >
@@ -139,7 +151,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
 
         <nav className="flex-1 px-4 space-y-2 py-4">
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             const isActive = location.pathname.startsWith(item.href);
             return (
               <Link
@@ -174,16 +186,7 @@ export function Layout({ children }: LayoutProps) {
             isSidebarCollapsed ? "flex justify-center" : "",
           )}
         >
-          {!isSidebarCollapsed ? (
-            <UserDropdown />
-          ) : (
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground"
-              title="Usuario"
-            >
-              <User className="h-5 w-5" />
-            </div>
-          )}
+          <UserDropdown />
         </div>
       </aside>
 

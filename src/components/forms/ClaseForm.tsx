@@ -1,7 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 import {
   ESPECIALIDADES_OPTIONS,
@@ -25,6 +27,7 @@ import {
   Clase,
   Instructor,
   PersonaPrueba,
+  instructoresApi,
   personasPruebaApi,
 } from "@/lib/api";
 import { ClaseFormValues, claseSchema } from "@/lib/schemas/forms.schemas";
@@ -110,6 +113,14 @@ export function ClaseForm({
     },
   });
 
+  const { user } = useAuth();
+  const { data: miPerfilInstructor } = useQuery({
+    queryKey: ["instructor-me"],
+    queryFn: instructoresApi.obtenerMiPerfil,
+    enabled: user?.rol === "INSTRUCTOR",
+    staleTime: Infinity,
+  });
+
   // Observar campos reactivos
   const especialidad = useWatch({ control, name: "especialidad" });
   const esPruebaChecked = useWatch({ control, name: "esPruebaChecked" });
@@ -147,6 +158,13 @@ export function ClaseForm({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clase, currentDate, prefilledCaballoId, prefilledHora]);
+
+  // Si es instructor forzamos campo instructor a mi perfil
+  useEffect(() => {
+    if (user?.rol === "INSTRUCTOR" && miPerfilInstructor && !clase) {
+      setValue("instructorId", String(miPerfilInstructor.id));
+    }
+  }, [user, miPerfilInstructor, clase, setValue]);
 
   // Auto-seleccionar caballo del alumno
   useEffect(() => {
@@ -450,7 +468,7 @@ export function ClaseForm({
               name="instructorId"
               control={control}
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
+                <Select value={field.value} onValueChange={field.onChange} disabled={user?.rol === "INSTRUCTOR"}>
                   <SelectTrigger
                     className={errors.instructorId ? "border-red-500" : ""}
                   >

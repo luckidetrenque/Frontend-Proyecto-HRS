@@ -26,6 +26,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Register = lazy(() => import("./pages/Register"));
 const Reportes = lazy(() => import("./pages/Reportes"));
+const UsuariosPage = lazy(() => import("./pages/Usuarios"));
 
 const queryClient = new QueryClient();
 
@@ -56,7 +57,7 @@ const App = () => (
               <Route
                 path="/alumnos"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
                     <AlumnosPage />
                   </ProtectedRoute>
                 }
@@ -64,7 +65,7 @@ const App = () => (
               <Route
                 path="/caballos"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
                     <CaballosPage />
                   </ProtectedRoute>
                 }
@@ -72,7 +73,7 @@ const App = () => (
               <Route
                 path="/instructores"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
                     <InstructoresPage />
                   </ProtectedRoute>
                 }
@@ -80,7 +81,7 @@ const App = () => (
               <Route
                 path="/clases"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
                     <ClasesPage />
                   </ProtectedRoute>
                 }
@@ -88,7 +89,7 @@ const App = () => (
               <Route
                 path="/calendario"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
                     <CalendarioPage />
                   </ProtectedRoute>
                 }
@@ -104,7 +105,7 @@ const App = () => (
               <Route
                 path="/reportes"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
                     <Reportes />
                   </ProtectedRoute>
                 }
@@ -112,15 +113,23 @@ const App = () => (
               <Route
                 path="/finanzas"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
                     <Finanzas />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/usuarios"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN"]}>
+                    <UsuariosPage />
                   </ProtectedRoute>
                 }
               />
               <Route
                 path="/alumnos/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
                     <AlumnoDetalle />
                   </ProtectedRoute>
                 }
@@ -129,7 +138,7 @@ const App = () => (
               <Route
                 path="/caballos/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
                     <CaballoDetalle />
                   </ProtectedRoute>
                 }
@@ -137,7 +146,7 @@ const App = () => (
               <Route
                 path="/instructores/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
                     <InstructorDetalle />
                   </ProtectedRoute>
                 }
@@ -145,7 +154,7 @@ const App = () => (
               <Route
                 path="/clases/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
                     <ClaseDetalle />
                   </ProtectedRoute>
                 }

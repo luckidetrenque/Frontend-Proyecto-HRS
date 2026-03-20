@@ -79,6 +79,10 @@ export const clearCredentials = (): void => {
 
 // ✅ Helper para parsear errores del backend de forma consistente
 const parseApiError = async (response: Response): Promise<never> => {
+  if (response.status === 403) {
+    throw new Error("No tienes permisos para realizar esta acción (403 Forbidden)");
+  }
+
   try {
     const errorData: ApiErrorResponse = await response.json();
 
@@ -222,4 +226,39 @@ export const authenticatedFetch = async (
       ...(credentials && { Authorization: `Basic ${credentials}` }),
     },
   });
+};
+
+// --- Funciones de Administración de Usuarios ---
+
+export const getUsers = async (): Promise<User[]> => {
+  const response = await authenticatedFetch(`${API_BASE_URL}/users`);
+  if (!response.ok) {
+    await parseApiError(response);
+  }
+  return response.json();
+};
+
+export const updateUserAdmin = async (
+  id: number,
+  data: { rol?: string; activo?: boolean },
+): Promise<void> => {
+  const response = await authenticatedFetch(`${API_BASE_URL}/users/${id}/admin`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    await parseApiError(response);
+  }
+};
+
+export const deleteUser = async (id: number): Promise<void> => {
+  const response = await authenticatedFetch(`${API_BASE_URL}/users/${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    await parseApiError(response);
+  }
 };

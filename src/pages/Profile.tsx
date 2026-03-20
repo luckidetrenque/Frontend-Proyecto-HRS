@@ -12,7 +12,9 @@ import {
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { useAuth } from "@/contexts/AuthContext";
+import { Instructor, instructoresApi } from "@/lib/api";
 import { updateProfile } from "@/services/authService";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -37,6 +39,13 @@ export default function Profile() {
     sessionStorage.setItem("user", JSON.stringify(updatedUser));
   };
 
+  const { data: miPerfilInstructor } = useQuery<Instructor>({
+    queryKey: ["instructor-me"],
+    queryFn: instructoresApi.obtenerMiPerfil,
+    enabled: user?.rol === "INSTRUCTOR",
+    retry: 1,
+  });
+
   if (!user) {
     return (
       <Layout>
@@ -56,6 +65,56 @@ export default function Profile() {
 
       {/* Profile Information */}
       <ProfileInfo onUpdate={handleUpdateProfile} />
+
+      {/* Si es instructor, mostramos info extendida del Instructor */}
+      {user.rol === "INSTRUCTOR" && miPerfilInstructor && (
+        <Card className="mt-6 border-accent/20">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
+                <Shield className="h-5 w-5 text-accent" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Datos de Instructor</CardTitle>
+                <CardDescription>Esta es tu vinculación oficial en el sistema</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Nombre Completo</p>
+                  <p className="font-medium">{miPerfilInstructor.nombre} {miPerfilInstructor.apellido}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">DNI</p>
+                  <p className="font-medium">{miPerfilInstructor.dni}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Teléfono</p>
+                  <p className="font-medium">{miPerfilInstructor.codigoArea && `+${miPerfilInstructor.codigoArea}`} {miPerfilInstructor.telefono}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Fecha de Alta</p>
+                  <p className="font-medium">{miPerfilInstructor.activo ? "Alta Activa" : "Baja"}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Color de Agenda</p>
+                  <div className="flex items-center gap-2">
+                     <div className="h-4 w-4 rounded-full border border-border" style={{ backgroundColor: miPerfilInstructor.color || '#cccccc' }} />
+                     <p className="font-medium">{miPerfilInstructor.color || 'Gris por defecto'}</p>
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Estado</p>
+                  <p className={`font-medium ${miPerfilInstructor.activo ? 'text-success' : 'text-destructive'}`}>
+                    {miPerfilInstructor.activo ? 'Activo' : 'Inactivo'}
+                  </p>
+                </div>
+             </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Additional Cards */}
       <div className="mt-6 grid gap-6 md:grid-cols-2">
