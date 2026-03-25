@@ -23,6 +23,7 @@ interface InstructorFormProps {
   onCancel?: () => void;
   validacionDni?: { duplicado: boolean; mensaje: string };
   onDniChange?: (dni: string) => void;
+  ocultarColor?: boolean;
 }
 
 export function InstructorForm({
@@ -32,6 +33,7 @@ export function InstructorForm({
   onCancel,
   validacionDni,
   onDniChange,
+  ocultarColor = false,
 }: InstructorFormProps) {
   const {
     register,
@@ -197,6 +199,7 @@ export function InstructorForm({
         </div>
 
         {/* Color */}
+        {!ocultarColor && (
         <Controller
           name="color"
           control={control}
@@ -231,9 +234,10 @@ export function InstructorForm({
             </div>
           )}
         />
+        )}
 
         {/* Activo — solo en edición */}
-        {instructor && (
+        {!ocultarColor && instructor && (
           <Controller
             name="activo"
             control={control}

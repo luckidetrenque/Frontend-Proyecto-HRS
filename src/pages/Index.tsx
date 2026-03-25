@@ -9,6 +9,8 @@ import {
   Shield,
   User,
 } from "lucide-react";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 
 import { Layout } from "@/components/Layout";
@@ -82,6 +84,14 @@ const modules = [
 
 const Index = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user?.rol === "ALUMNO") {
+      navigate("/mis-clases", { replace: true });
+    }
+  }, [user, navigate]);
+  
   const filteredModules = modules.filter((mod) => {
     if (user?.rol === "ADMIN") return true;
     if (user?.rol === "INSTRUCTOR") {

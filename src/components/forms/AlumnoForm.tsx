@@ -46,6 +46,7 @@ interface AlumnoFormProps {
   onCancel?: () => void;
   validacionDni?: { duplicado: boolean; mensaje: string };
   onDniChange?: (dni: string) => void;
+  soloContacto?: boolean;
 }
 
 export function AlumnoForm({
@@ -56,6 +57,7 @@ export function AlumnoForm({
   onCancel,
   validacionDni,
   onDniChange,
+  soloContacto = false,
 }: AlumnoFormProps) {
   const {
     register,
@@ -302,6 +304,7 @@ export function AlumnoForm({
               control={control}
               render={({ field }) => (
                 <Select
+                disabled={soloContacto}
                   value={String(field.value)}
                   onValueChange={(v) => field.onChange(Number(v))}
                 >
@@ -329,6 +332,7 @@ export function AlumnoForm({
               control={control}
               render={({ field }) => (
                 <Select
+                disabled={soloContacto}
                   value={field.value}
                   onValueChange={(v) => {
                     field.onChange(v as TipoPension);
@@ -366,6 +370,7 @@ export function AlumnoForm({
               render={({ field }) => (
                 <div className="flex items-center gap-3 pt-6">
                   <Switch
+                  disabled={soloContacto}
                     id="activo"
                     checked={field.value}
                     onCheckedChange={field.onChange}
@@ -387,6 +392,7 @@ export function AlumnoForm({
                 control={control}
                 render={({ field }) => (
                   <Select
+                  disabled={soloContacto}
                     value={String(field.value ?? "ENTERA")}
                     onValueChange={field.onChange}
                   >
@@ -414,6 +420,7 @@ export function AlumnoForm({
                 control={control}
                 render={({ field }) => (
                   <Select
+                  disabled={soloContacto}
                     value={field.value ? String(field.value) : ""}
                     onValueChange={(v) => field.onChange(v ? Number(v) : null)}
                   >

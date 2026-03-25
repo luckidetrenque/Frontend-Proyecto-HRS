@@ -335,6 +335,19 @@ export const alumnosApi = {
     });
     if (!response.ok) throw new Error("Error al eliminar");
   },
+  obtenerMiPerfil: async (): Promise<Alumno> => {
+  const response = await apiFetch(`/alumnos/me`);
+  return handleResponse<Alumno>(response);
+},
+buscar: async (filters: AlumnoSearchFilters): Promise<Alumno[]> => {
+  const query = new URLSearchParams();
+  if (filters.dni) query.append("dni", filters.dni);
+  if (filters.nombre) query.append("nombre", filters.nombre);
+  if (filters.apellido) query.append("apellido", filters.apellido);
+  const response = await apiFetch(`/alumnos?${query.toString()}&page=0&size=10`);
+  const page = await handleResponse<PageResponse<Alumno>>(response);
+  return page.content;
+},
 };
 
 // Instructores
@@ -352,10 +365,6 @@ export const instructoresApi = {
     if (params.apellido) query.append("apellido", params.apellido);
     const response = await apiFetch(`/instructores?${query.toString()}`);
     return handleResponse<PageResponse<Instructor>>(response);
-  },
-  obtenerMiPerfil: async (): Promise<Instructor> => {
-    const response = await apiFetch(`/instructores/me`);
-    return handleResponse<Instructor>(response);
   },
   obtener: async (id: number): Promise<Instructor> => {
     const response = await apiFetch(`/instructores/${id}`);
@@ -390,6 +399,18 @@ export const instructoresApi = {
     });
     if (!response.ok) throw new Error("Error al eliminar");
   },
+  obtenerMiPerfil: async (): Promise<Instructor> => {
+  const response = await apiFetch(`/instructores/me`);
+  return handleResponse<Instructor>(response);
+},
+buscar: async (filters: InstructorSearchFilters): Promise<Instructor[]> => {
+  const query = new URLSearchParams();
+  if (filters.nombre) query.append("nombre", filters.nombre);
+  if (filters.apellido) query.append("apellido", filters.apellido);
+  const response = await apiFetch(`/instructores?${query.toString()}&page=0&size=10`);
+  const page = await handleResponse<PageResponse<Instructor>>(response);
+  return page.content;
+},
 };
 
 // Caballos

@@ -1,5 +1,6 @@
 import {
   BarChart,
+  BookOpen,
   CalendarDays,
   ChessKnight,
   ChevronRight,
@@ -35,6 +36,7 @@ const navigation = [
   { name: "Reportes", href: "/reportes", icon: BarChart },
   { name: "Finanzas", href: "/finanzas", icon: CircleDollarSign },
   { name: "Usuarios", href: "/usuarios", icon: Shield },
+  { name: "Mis Clases", href: "/mis-clases", icon: BookOpen }
 ];
 
 export function Layout({ children }: LayoutProps) {
@@ -47,6 +49,9 @@ export function Layout({ children }: LayoutProps) {
     if (user?.rol === "ADMIN") return true;
     if (user?.rol === "INSTRUCTOR") {
       return ["Clases", "Calendario", "Caballos", "Alumnos", "Reportes"].includes(item.name);
+    }
+    if (user?.rol === "ALUMNO") {
+      return ["Mis Clases"].includes(item.name);
     }
     return false; // ALUMNO no ve módulos de gestión
   });
