@@ -80,6 +80,13 @@ const modules = [
     href: "/usuarios",
     color: "bg-destructive",
   },
+  {
+    title: "Mis Clases",
+    description: "Clases en las que estás inscripto",
+    icon: NotebookPen,
+    href: "/mis-clases",
+    color: "bg-info",
+  },
 ];
 
 const Index = () => {
@@ -93,7 +100,8 @@ const Index = () => {
   }, [user, navigate]);
   
   const filteredModules = modules.filter((mod) => {
-    if (user?.rol === "ADMIN") return true;
+    if (user?.rol === "ADMIN") 
+      return ["Clases", "Calendario", "Caballos", "Alumnos", "Reportes", "Finanzas", "Usuarios", "Instructores"].includes(mod.title);
     if (user?.rol === "INSTRUCTOR") {
       return ["Clases", "Calendario", "Caballos", "Alumnos", "Reportes"].includes(mod.title);
     }

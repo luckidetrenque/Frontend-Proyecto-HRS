@@ -46,7 +46,8 @@ export function Layout({ children }: LayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const filteredNavigation = navigation.filter((item) => {
-    if (user?.rol === "ADMIN") return true;
+    if (user?.rol === "ADMIN") 
+       return ["Clases", "Calendario", "Caballos", "Alumnos", "Reportes", "Finanzas", "Usuarios", "Instructores"].includes(item.name);
     if (user?.rol === "INSTRUCTOR") {
       return ["Clases", "Calendario", "Caballos", "Alumnos", "Reportes"].includes(item.name);
     }
@@ -143,15 +144,19 @@ export function Layout({ children }: LayoutProps) {
           )}
         >
           <div className="flex shrink-0 h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-soft">
+            <a href="/">
             <ChessKnight className="h-5 w-5 text-primary-foreground" />
+            </a>
           </div>
           {!isSidebarCollapsed && (
-            <div className="animate-fade-in truncate">
-              <h1 className="font-display text-lg font-bold text-foreground">
-                Escuela HRS
-              </h1>
+            <a href="/">
+            <div className="animate-fade-in truncate">              
+                <h1 className="font-display text-lg font-bold text-foreground">
+                  Escuela HRS
+                </h1>
               <p className="text-xs text-muted-foreground">Sistema de Gestión</p>
             </div>
+            </a>
           )}
         </div>
 
