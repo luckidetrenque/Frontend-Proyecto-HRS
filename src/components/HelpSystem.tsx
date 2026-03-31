@@ -1,43 +1,27 @@
 /**
- * HelpSystem.tsx - VERSIÓN ACTUALIZADA Y COMPLETA
+ * HelpSystem.tsx - VERSIÓN 3.0 — AYUDA ADAPTADA POR ROL
  * Sistema de Ayuda Integrado para Escuela de Equitación
  *
- * INSTRUCCIONES DE USO:
- * 1. Importar en Layout.tsx: import { HelpSystem } from '@/components/HelpSystem';
- * 2. Agregar al final del Layout: <HelpSystem />
- * 3. El botón flotante aparecerá automáticamente en todas las páginas
- *
- * ACTUALIZACIONES:
- * ✅ Documentación completa de Clases de Prueba
- * ✅ Validaciones del sistema detalladas
- * ✅ Tipos de pensión completos
- * ✅ Herramientas del calendario
- * ✅ Estados de clase (ACA/ASA)
- * ✅ Sección de Validaciones separada
- * ✅ Problemas comunes y soluciones
+ * NOVEDADES v3.0:
+ * ✅ Contenido diferente para ADMIN, INSTRUCTOR y ALUMNO
+ * ✅ Workflows, validaciones y tips filtrados según lo que cada rol puede hacer
+ * ✅ Badge de rol visible en el header del modal
+ * ✅ Soporte para rutas con parámetros (/alumnos/:id → /alumnos)
+ * ✅ Fallback: si un rol no tiene contenido para una ruta, usa el de ADMIN
  */
 
 import {
   AlertTriangle,
-  BarChart,
   BookOpen,
-  Calendar,
-  CalendarDays,
-  CheckCircle,
   ChevronRight,
   HelpCircle,
   Info,
-  Landmark,
   Lightbulb,
   Search,
-  UserCheck,
-  Users,
-  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -47,1014 +31,922 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/contexts/AuthContext";
 
-type WorkflowStep = {
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+
+type Role = "ADMIN" | "INSTRUCTOR" | "ALUMNO";
+
+type WorkflowStep = { title: string; content: string };
+type Workflow = { title: string; icon: string; steps: WorkflowStep[] };
+type Validation = {
+  rule: string;
+  description: string;
+  severity: "error" | "warning" | "info";
+};
+type HelpContent = {
   title: string;
-  content: string;
+  description: string;
+  workflows: Workflow[];
+  tips: string[];
+  validations: Validation[];
 };
 
-type Workflow = {
-  title: string;
-  icon: string;
-  steps: WorkflowStep[];
-};
+// ─── Helper: normalizar rol ───────────────────────────────────────────────────
 
-// 📚 CONTENIDO DE AYUDA ESPECÍFICO PARA CADA PÁGINA
-const helpContent = {
+function normalizeRole(rol?: string): Role {
+  if (!rol) return "ALUMNO";
+  const r = rol.replace("ROLE_", "").toUpperCase();
+  if (r === "ADMIN" || r === "INSTRUCTOR") return r as Role;
+  return "ALUMNO";
+}
+
+// ─── Contenido por ruta y rol ─────────────────────────────────────────────────
+// Estructura: helpContent[basePath][role] = HelpContent
+// Si el rol no tiene entrada para esa ruta, se usa ADMIN como fallback.
+
+const helpContent: Record<string, Partial<Record<Role, HelpContent>>> = {
+
+  // ══════════════════════════════════════════════════════════════════════════
   "/": {
-    title: "Página Principal",
-    description: "Bienvenido al sistema de gestión de la escuela",
-    workflows: [
-      {
-        title: "Primeros Pasos",
+    ADMIN: {
+      title: "Panel Principal — Administrador",
+      description: "Acceso completo a todos los módulos del sistema",
+      workflows: [{
+        title: "Primeros pasos",
         icon: "🚀",
         steps: [
-          {
-            title: "Acceso Rápido",
-            content:
-              "Haz clic en cualquier tarjeta para acceder directamente a esa sección del sistema.",
-          },
-          {
-            title: "Navegación",
-            content:
-              "Usa el menú lateral izquierdo para moverte entre las diferentes secciones.",
-          },
-          {
-            title: "Búsqueda Global",
-            content:
-              "Utiliza la barra de búsqueda superior para encontrar alumnos, instructores o caballos rápidamente.",
-          },
+          { title: "Navegación", content: "Usá el menú lateral para acceder a Alumnos, Instructores, Caballos, Clases, Calendario, Reportes, Finanzas y Usuarios." },
+          { title: "Accesos rápidos", content: "Las tarjetas del panel llevan directamente a cada módulo." },
+          { title: "Sesión", content: "La sesión cierra automáticamente tras 15 minutos de inactividad." },
         ],
-      },
-    ],
-    tips: [
-      "Las tarjetas muestran estadísticas en tiempo real",
-      "El sistema guarda automáticamente tu sesión",
-      "Puedes volver al inicio en cualquier momento haciendo clic en el logo",
-    ],
-    validations: [],
+      }],
+      tips: [
+        "Como administrador tenés acceso total: usuarios, finanzas y configuración de precios",
+        "El módulo Usuarios permite cambiar roles y suspender cuentas",
+        "En Finanzas podés configurar cuotas, pensiones y honorarios",
+      ],
+      validations: [],
+    },
+    INSTRUCTOR: {
+      title: "Panel Principal — Instructor",
+      description: "Acceso a tus clases y la gestión de alumnos y caballos",
+      workflows: [{
+        title: "Primeros pasos",
+        icon: "🚀",
+        steps: [
+          { title: "Tus módulos", content: "Tenés acceso a Alumnos, Caballos, Clases, Calendario y Reportes." },
+          { title: "Tu calendario", content: "En el Calendario filtrá por tu nombre para ver solo tus clases." },
+          { title: "Tu perfil", content: "En Mi Perfil podés actualizar tus datos de contacto. El color lo gestiona el administrador." },
+        ],
+      }],
+      tips: [
+        "Filtrá el calendario por tu nombre para ver solo tus clases del día",
+        "Podés cambiar el estado de tus clases directamente desde el popover del calendario",
+        "En Reportes podés ver estadísticas de tus clases y eficiencia",
+      ],
+      validations: [],
+    },
+    ALUMNO: {
+      title: "Panel Principal — Alumno",
+      description: "Consultá tus clases y el calendario de la escuela",
+      workflows: [{
+        title: "Por dónde empezar",
+        icon: "🚀",
+        steps: [
+          { title: "Mis Clases", content: "En 'Mis Clases' encontrás el historial completo de tus clases con estadísticas." },
+          { title: "Calendario", content: "En el Calendario podés ver todas las clases y reservar una nueva." },
+          { title: "Tu perfil", content: "En Mi Perfil podés actualizar tus datos de contacto." },
+        ],
+      }],
+      tips: [
+        "Usá 'Mis Clases' para ver cuántas clases te quedan en el mes",
+        "Podés reservar clases desde el Calendario haciendo clic en el día deseado",
+        "Tus reservas quedan pendientes hasta que el instructor o admin las confirmen",
+      ],
+      validations: [],
+    },
   },
+
+  // ══════════════════════════════════════════════════════════════════════════
   "/alumnos": {
-    title: "Gestión de Alumnos",
-    description: "Administra la información de todos los alumnos inscriptos",
-    workflows: [
-      {
-        title: "Agregar un Nuevo Alumno",
-        icon: "➕",
-        steps: [
-          {
-            title: "Paso 1: Abrir formulario",
-            content:
-              'Haz clic en el botón "Nuevo Alumno" en la esquina superior derecha.',
-          },
-          {
-            title: "Paso 2: Completar datos personales",
-            content:
-              "Ingresa nombre, apellido, DNI (solo números sin puntos) y fecha de nacimiento.",
-          },
-          {
-            title: "Paso 3: Datos de contacto",
-            content:
-              "Completa teléfono (sin 0 ni 15, ej: 221234567) y email opcional. El sistema agregará automáticamente +549 al teléfono.",
-          },
-          {
-            title: "Paso 4: Seleccionar plan de clases",
-            content:
-              "Elige la cantidad de clases mensuales: 4, 8, 12 o 16 clases.",
-          },
-          {
-            title: "Paso 5: Configurar pensión de caballo",
-            content:
-              "Selecciona el tipo: Sin caballo asignado, Reserva caballo de escuela, o Caballo propio.",
-          },
-          {
-            title: "Paso 6: Asignar caballo (si aplica)",
-            content:
-              "Si seleccionaste reserva o caballo propio, elige el caballo y la cuota de pensión (Entera/Media/Tercio).",
-          },
-          {
-            title: "Paso 7: Guardar",
-            content:
-              'Haz clic en "Crear Alumno". El sistema validará el DNI y creará el registro automáticamente.',
-          },
-        ],
-      },
-      {
-        title: "Editar un Alumno Existente",
-        icon: "✏️",
-        steps: [
-          {
-            title: "Método 1: Desde la tabla",
-            content:
-              'Haz clic en el menú de tres puntos (⋮) al final de la fila del alumno y selecciona "Editar".',
-          },
-          {
-            title: "Método 2: Desde el perfil",
-            content:
-              'Haz clic en la fila del alumno para ver su perfil completo, luego clic en "Editar".',
-          },
-          {
-            title: "Realizar cambios",
-            content:
-              "Modifica los campos necesarios. Puedes cambiar el plan, el caballo asignado, o marcar como inactivo.",
-          },
-          {
-            title: "Guardar cambios",
-            content:
-              'Haz clic en "Guardar Cambios". El sistema validará y actualizará la información.',
-          },
-        ],
-      },
-      {
-        title: "Eliminar un Alumno",
-        icon: "🗑️",
-        steps: [
-          {
-            title: "Acceder al menú",
-            content:
-              "Haz clic en el menú de tres puntos (⋮) al final de la fila del alumno.",
-          },
-          {
-            title: "Seleccionar eliminar",
-            content: 'Elige "Eliminar" del menú desplegable.',
-          },
-          {
-            title: "Confirmar",
-            content:
-              "Confirma la acción en el diálogo. Esta acción no se puede deshacer.",
-          },
-        ],
-      },
-      {
-        title: "Contactar Alumno",
-        icon: "📱",
-        steps: [
-          {
-            title: "Abrir menú de acciones",
-            content:
-              "Haz clic en el menú de tres puntos (⋮) al final de la fila.",
-          },
-          {
-            title: "Elegir método",
-            content:
-              'Selecciona "Enviar WhatsApp" o "Enviar correo" según prefieras.',
-          },
-          {
-            title: "Mensaje automático",
-            content:
-              "Para WhatsApp, se abre un mensaje pre-cargado que puedes personalizar antes de enviar.",
-          },
-        ],
-      },
-      {
-        title: "Filtrar y Buscar Alumnos",
-        icon: "🔍",
-        steps: [
-          {
-            title: "Usar búsqueda global",
-            content:
-              "Escribe nombre o apellido en la barra de búsqueda superior para filtrado en tiempo real.",
-          },
-          {
-            title: "Aplicar filtros",
-            content:
-              "Usa los selectores de filtro para mostrar solo alumnos por plan (4/8/12/16 clases), estado (Activo/Inactivo), o propietarios.",
-          },
-          {
-            title: "Resetear filtros",
-            content:
-              'Haz clic en "Limpiar Filtros" para volver a ver todos los alumnos.',
-          },
-        ],
-      },
-      {
-        title: "Cambiar Vista: Tabla / Cards",
-        icon: "👁️",
-        steps: [
-          {
-            title: "Vista Tabla",
-            content:
-              'Haz clic en "Tabla" para ver todos los alumnos en formato tradicional de filas y columnas.',
-          },
-          {
-            title: "Vista Cards",
-            content:
-              'Haz clic en "Cards" para ver tarjetas visuales con información clave de cada alumno.',
-          },
-        ],
-      },
-    ],
-    tips: [
-      "El teléfono se formatea automáticamente con el prefijo argentino +549",
-      "Los alumnos inactivos no aparecen al programar clases",
-      "Haz clic en cualquier fila de la tabla para ver el perfil completo del alumno",
-      "Los alumnos propietarios tienen asignado un caballo específico (escuela o privado)",
-      "La validación de DNI duplicado es automática al escribir",
-    ],
-    validations: [
-      {
-        rule: "DNI único",
-        description:
-          "No se permiten DNI duplicados. El sistema valida automáticamente al escribir 9 o más dígitos.",
-        severity: "error",
-      },
-      {
-        rule: "Formato de teléfono",
-        description:
-          "El sistema agrega automáticamente +549 para números argentinos. Ingresa sin 0 ni 15.",
-        severity: "info",
-      },
-      {
-        rule: "Estado activo/inactivo",
-        description:
-          "Solo los alumnos activos aparecen al programar clases. Los inactivos pueden tomar clases de prueba.",
-        severity: "warning",
-      },
-    ],
+    ADMIN: {
+      title: "Gestión de Alumnos — Administrador",
+      description: "Registrá y administrá alumnos, planes y pensiones",
+      workflows: [
+        {
+          title: "Registrar un Nuevo Alumno",
+          icon: "➕",
+          steps: [
+            { title: "Paso 1", content: 'Clic en "Nuevo Alumno".' },
+            { title: "Paso 2: Datos personales", content: "Nombre, apellido, DNI (solo números), fecha de nacimiento." },
+            { title: "Paso 3: Contacto", content: "Código de área y teléfono sin 0 ni 15. El sistema agrega +549." },
+            { title: "Paso 4: Plan", content: "Elegí 4, 8, 12 o 16 clases mensuales." },
+            { title: "Paso 5: Tipo de pensión", content: "Sin caballo asignado / Reserva caballo de escuela / Caballo propio." },
+            { title: "Paso 6: Caballo y cuota", content: "Si elegiste Reserva o Caballo propio, seleccioná el caballo. Para Caballo propio elegís cuota: Entera, Media o Tercio." },
+            { title: "Paso 7: Guardar", content: 'Clic en "Crear Alumno". Valida el DNI antes de guardar.' },
+          ],
+        },
+        {
+          title: "Tipos de Pensión",
+          icon: "🐴",
+          steps: [
+            { title: "Sin Caballo Asignado", content: "Se le asigna un caballo disponible en cada clase." },
+            { title: "Reserva Caballo de Escuela", content: "El alumno usa siempre el mismo caballo de escuela." },
+            { title: "Caballo Propio", content: "El alumno tiene su propio caballo en pensión. Requiere cuota: Entera, Media o Tercio." },
+          ],
+        },
+        {
+          title: "Editar, Inactivar o Contactar",
+          icon: "✏️",
+          steps: [
+            { title: "Editar", content: 'Clic en menú (⋮) → "Editar", o desde el perfil del alumno.' },
+            { title: "Inactivar", content: 'Deseleccioná "Está activo". El alumno no aparecerá en la programación regular.' },
+            { title: "Contactar", content: '"Enviar WhatsApp" abre un mensaje pre-cargado. "Enviar correo" abre el cliente de email.' },
+          ],
+        },
+      ],
+      tips: [
+        "Los alumnos inactivos pueden tomar clases de prueba",
+        "La columna de clases muestra restantes/contratadas para el mes actual",
+        "Clic en cualquier fila para ver el perfil completo con historial de clases",
+      ],
+      validations: [
+        { rule: "DNI único", description: "No se permiten DNI duplicados. Se valida en tiempo real.", severity: "error" },
+        { rule: "Cuota requerida para Caballo Propio", description: "Si el tipo de pensión es Caballo Propio, la cuota (Entera/Media/Tercio) es obligatoria.", severity: "error" },
+        { rule: "Caballo requerido para Caballo Propio", description: "Si el tipo de pensión es Caballo Propio, debés seleccionar el caballo.", severity: "error" },
+        { rule: "Alumnos inactivos", description: "Los alumnos inactivos solo aparecen al crear clases de prueba.", severity: "warning" },
+        { rule: "Teléfono", description: "Ingresá sin 0 ni 15. El sistema agrega +549 automáticamente.", severity: "info" },
+      ],
+    },
+    INSTRUCTOR: {
+      title: "Alumnos — Consulta e Inscripción",
+      description: "Buscá, consultá y contactá a los alumnos",
+      workflows: [
+        {
+          title: "Buscar un Alumno",
+          icon: "🔍",
+          steps: [
+            { title: "Filtrar", content: "Escribí nombre o apellido en los campos de filtro." },
+            { title: "Ver perfil", content: "Clic en cualquier fila para ver el perfil completo e historial de clases." },
+            { title: "Contactar", content: 'Clic en menú (⋮) → "Enviar WhatsApp" o "Enviar correo".' },
+          ],
+        },
+        {
+          title: "Editar Datos Básicos",
+          icon: "✏️",
+          steps: [
+            { title: "Editar", content: 'Clic en menú (⋮) → "Editar".' },
+            { title: "Modificar", content: "Podés actualizar datos de contacto y estado activo/inactivo." },
+          ],
+        },
+      ],
+      tips: [
+        "Podés ver el historial completo de clases de cada alumno en su perfil",
+        "Filtrá por estado Activo para ver solo los alumnos programables",
+      ],
+      validations: [
+        { rule: "DNI único", description: "No se permiten DNI duplicados.", severity: "error" },
+        { rule: "Alumnos inactivos", description: "Los alumnos inactivos no aparecen al programar clases regulares.", severity: "warning" },
+      ],
+    },
   },
+
+  // ══════════════════════════════════════════════════════════════════════════
   "/instructores": {
-    title: "Gestión de Instructores",
-    description: "Administra el equipo de instructores de la escuela",
-    workflows: [
-      {
-        title: "Agregar un Nuevo Instructor",
-        icon: "➕",
-        steps: [
-          {
-            title: "Paso 1: Abrir formulario",
-            content:
-              'Haz clic en el botón "Nuevo Instructor" en la esquina superior derecha.',
-          },
-          {
-            title: "Paso 2: Datos personales",
-            content:
-              "Completa nombre, apellido, DNI (solo números), y fecha de nacimiento.",
-          },
-          {
-            title: "Paso 3: Contacto",
-            content: "Ingresa teléfono (sin 0 ni 15) y email opcional.",
-          },
-          {
-            title: "Paso 4: Asignar color",
-            content:
-              "Selecciona un color único para identificar al instructor en el calendario. Hay 7 colores predefinidos.",
-          },
-          {
-            title: "Paso 5: Guardar",
-            content:
-              'Haz clic en "Crear Instructor". El instructor quedará activo automáticamente.',
-          },
-        ],
-      },
-      {
-        title: "Editar un Instructor",
-        icon: "✏️",
-        steps: [
-          {
-            title: "Abrir formulario",
-            content:
-              'Haz clic en el menú (⋮) y selecciona "Editar", o accede desde el perfil del instructor.',
-          },
-          {
-            title: "Modificar datos",
-            content:
-              "Cambia cualquier campo necesario, incluyendo el color de identificación.",
-          },
-          {
-            title: "Cambiar estado",
-            content:
-              'Usa el switch "Está activo" para activar/desactivar al instructor.',
-          },
-          {
-            title: "Guardar",
-            content: 'Haz clic en "Guardar Cambios" para actualizar.',
-          },
-        ],
-      },
-      {
-        title: "Sistema de Colores",
-        icon: "🎨",
-        steps: [
-          {
-            title: "Colores en el calendario",
-            content:
-              "Cada clase se muestra con el color del instructor asignado para fácil identificación visual.",
-          },
-          {
-            title: "Colores predefinidos",
-            content:
-              "Hay 7 colores disponibles: rojo, púrpura, naranja, rosa, amarillo, azul y verde.",
-          },
-          {
-            title: "Cambiar color",
-            content:
-              "Puedes cambiar el color de un instructor en cualquier momento desde su formulario de edición.",
-          },
-        ],
-      },
-    ],
-    tips: [
-      "El color del instructor se usa en el calendario para identificar rápidamente quién da cada clase",
-      "Los instructores inactivos no aparecen al programar clases",
-      "La validación de DNI duplicado funciona igual que en alumnos",
-    ],
-    validations: [
-      {
-        rule: "DNI único",
-        description: "No se permiten instructores con DNI duplicado.",
-        severity: "error",
-      },
-      {
-        rule: "Color único recomendado",
-        description:
-          "Aunque no es obligatorio, se recomienda asignar colores diferentes para mejor identificación.",
-        severity: "info",
-      },
-      {
-        rule: "Estado activo",
-        description:
-          "Solo los instructores activos pueden ser asignados a nuevas clases.",
-        severity: "warning",
-      },
-    ],
-  },
-  "/caballos": {
-    title: "Gestión de Caballos",
-    description: "Control de caballos de la escuela y privados",
-    workflows: [
-      {
-        title: "Registrar un Caballo de Escuela",
-        icon: "🐴",
-        steps: [
-          {
-            title: "Paso 1: Abrir formulario",
-            content: 'Haz clic en "Nuevo Caballo".',
-          },
-          {
-            title: "Paso 2: Ingresar nombre",
-            content: "Escribe el nombre del caballo.",
-          },
-          {
-            title: "Paso 3: Seleccionar tipo",
-            content:
-              'Elige "Escuela" del selector de tipo. Los caballos de escuela están disponibles para todos los alumnos.',
-          },
-          {
-            title: "Paso 4: Guardar",
-            content:
-              'Haz clic en "Crear Caballo". Quedará disponible automáticamente.',
-          },
-        ],
-      },
-      {
-        title: "Registrar un Caballo Privado",
-        icon: "🏇",
-        steps: [
-          {
-            title: "Paso 1: Crear el caballo",
-            content:
-              'Sigue los pasos anteriores pero selecciona "Privado" como tipo.',
-          },
-          {
-            title: "Paso 2: Vincular al propietario",
-            content:
-              'Ve a la sección Alumnos, edita el alumno propietario y asigna este caballo en el campo "Caballo propio".',
-          },
-          {
-            title: "Paso 3: Configurar pensión",
-            content:
-              "Al asignar el caballo al alumno, selecciona la cuota de pensión (Entera/Media/Tercio).",
-          },
-        ],
-      },
-      {
-        title: "Marcar Caballo como No Disponible",
-        icon: "⚠️",
-        steps: [
-          {
-            title: "Editar caballo",
-            content: "Accede al formulario de edición del caballo.",
-          },
-          {
-            title: "Desactivar disponibilidad",
-            content:
-              'Desmarca el switch "Está disponible" si el caballo está enfermo, lesionado o en descanso.',
-          },
-          {
-            title: "Guardar",
-            content:
-              "El caballo no aparecerá en los selectores al programar clases.",
-          },
-        ],
-      },
-    ],
-    tips: [
-      "Los caballos de tipo ESCUELA pueden ser usados por cualquier alumno",
-      "Los caballos PRIVADOS solo pueden ser usados por su propietario",
-      'Marca como "no disponible" temporalmente en lugar de eliminar',
-    ],
-    validations: [
-      {
-        rule: "Caballos privados restringidos",
-        description:
-          "Los caballos privados solo pueden ser asignados a clases de su propietario.",
-        severity: "error",
-      },
-      {
-        rule: "Disponibilidad",
-        description:
-          "Los caballos marcados como no disponibles no aparecen al programar clases.",
-        severity: "warning",
-      },
-    ],
-  },
-  "/clases": {
-    title: "Gestión de Clases",
-    description: "Programa y gestiona las clases de equitación",
-    workflows: [
-      {
-        title: "Programar una Clase Regular",
-        icon: "📝",
-        steps: [
-          {
-            title: "Paso 1: Abrir formulario",
-            content: 'Haz clic en "Nueva Clase".',
-          },
-          {
-            title: "Paso 2: Seleccionar fecha y hora",
-            content:
-              "Elige el día y la hora de inicio. El sistema validará que no termine después de las 18:30.",
-          },
-          {
-            title: "Paso 3: Elegir alumno",
-            content:
-              "Selecciona el alumno del selector. Si tiene caballo asignado, aparecerá preseleccionado.",
-          },
-          {
-            title: "Paso 4: Asignar instructor",
-            content: "Elige el instructor que dará la clase.",
-          },
-          {
-            title: "Paso 5: Seleccionar caballo",
-            content:
-              "Si el alumno tiene caballo asignado, aparecerá por defecto. Puedes cambiarlo si es necesario.",
-          },
-          {
-            title: "Paso 6: Especialidad y duración",
-            content:
-              "Selecciona la especialidad (Equitación/Adiestramiento/Equinoterapia/Monta) y duración (30 o 60 minutos).",
-          },
-          {
-            title: "Paso 7: Guardar",
-            content:
-              "La clase se creará con estado PROGRAMADA automáticamente.",
-          },
-        ],
-      },
-      {
-        title: "Crear Clase de Prueba - Persona Nueva",
-        icon: "🎓",
-        steps: [
-          {
-            title: "Paso 1: Marcar como clase de prueba",
-            content: 'Al crear la clase, marca el checkbox "Clase de Prueba".',
-          },
-          {
-            title: "Paso 2: Seleccionar tipo",
-            content: 'Elige la opción "Persona nueva" en los radio buttons.',
-          },
-          {
-            title: "Paso 3: Ingresar datos",
-            content:
-              "Escribe el nombre y apellido de la persona que tomará la clase de prueba. NO es necesario crear una cuenta de alumno.",
-          },
-          {
-            title: "Paso 4: Completar resto de datos",
-            content:
-              "Selecciona instructor, caballo, especialidad y horario como en una clase normal.",
-          },
-          {
-            title: "Paso 5: Guardar",
-            content:
-              "La clase se creará y aparecerá con el emoji 🎓 y borde naranja en el calendario.",
-          },
-        ],
-      },
-      {
-        title: "Crear Clase de Prueba - Alumno Existente",
-        icon: "🎯",
-        steps: [
-          {
-            title: "Paso 1: Marcar como clase de prueba",
-            content: 'Marca el checkbox "Clase de Prueba" al crear la clase.',
-          },
-          {
-            title: "Paso 2: Seleccionar tipo",
-            content: 'Elige "Alumno existente" en los radio buttons.',
-          },
-          {
-            title: "Paso 3: Seleccionar alumno",
-            content:
-              "Busca y selecciona el alumno en el selector. IMPORTANTE: El alumno debe estar INACTIVO.",
-          },
-          {
-            title: "Paso 4: Validación automática",
-            content:
-              "El sistema verificará: (1) Que el alumno no tenga clases de esa especialidad, (2) Que no haya tomado clase de prueba de esa especialidad antes.",
-          },
-          {
-            title: "Paso 5: Completar y guardar",
-            content:
-              "Si pasa las validaciones, completa los demás datos y guarda.",
-          },
-        ],
-      },
-      {
-        title: "Clase de Especialidad MONTA",
-        icon: "🏇",
-        steps: [
-          {
-            title: "Seleccionar especialidad",
-            content: 'Elige "MONTA" del selector de especialidad.',
-          },
-          {
-            title: "Alumno asignado automáticamente",
-            content:
-              "El sistema asignará automáticamente el alumno comodín (ID 1) para monta libre.",
-          },
-          {
-            title: "Completar datos",
-            content:
-              "Solo necesitas elegir instructor, caballo, hora y duración.",
-          },
-        ],
-      },
-      {
-        title: "Cambiar Estado de una Clase",
-        icon: "🔄",
-        steps: [
-          {
-            title: "Desde la lista",
-            content: "Accede al detalle de la clase haciendo clic en la fila.",
-          },
-          {
-            title: "Usar selector de estado",
-            content:
-              "En el detalle, verás un selector con todos los estados disponibles.",
-          },
-          {
-            title: "Seleccionar nuevo estado",
-            content:
-              "Elige entre: PROGRAMADA, INICIADA, COMPLETADA, CANCELADA, ACA (Ausencia Con Aviso), ASA (Ausencia Sin Aviso).",
-          },
-          {
-            title: "Confirmar",
-            content: 'Haz clic en "Actualizar Estado" para guardar el cambio.',
-          },
-        ],
-      },
-      {
-        title: "Editar una Clase",
-        icon: "✏️",
-        steps: [
-          {
-            title: "Verificar estado",
-            content:
-              "Solo se pueden editar clases en estado PROGRAMADA. Las clases COMPLETADAS, INICIADAS o CANCELADAS no son editables.",
-          },
-          {
-            title: "Abrir formulario",
-            content: 'Haz clic en el menú (⋮) y selecciona "Editar".',
-          },
-          {
-            title: "Modificar datos",
-            content:
-              "Cambia los campos necesarios: hora, instructor, caballo, etc.",
-          },
-          {
-            title: "Guardar",
-            content:
-              "El sistema volverá a validar horarios y conflictos antes de guardar.",
-          },
-        ],
-      },
-    ],
-    tips: [
-      "Las clases de prueba NO cuentan para la cuota mensual del alumno",
-      "El sistema valida automáticamente que no haya conflictos de horario (mismo caballo o instructor)",
-      "Las clases de 60 minutos ocupan dos franjas horarias en el calendario",
-      "Los alumnos con clases restantes del mes verán una alerta al programar",
-    ],
-    validations: [
-      {
-        rule: "Horario límite 18:30",
-        description:
-          "Ninguna clase puede terminar después de las 18:30. El sistema calcula automáticamente la hora de fin según la duración.",
-        severity: "error",
-      },
-      {
-        rule: "Clase de prueba - Alumno inactivo",
-        description:
-          "Las clases de prueba para alumnos existentes solo pueden asignarse a alumnos INACTIVOS.",
-        severity: "error",
-      },
-      {
-        rule: "Clase de prueba - Sin especialidad previa",
-        description:
-          "Un alumno no puede tener clase de prueba de una especialidad que ya tomó antes.",
-        severity: "error",
-      },
-      {
-        rule: "Clase de prueba - No repetible",
-        description:
-          "No se puede asignar más de una clase de prueba de la misma especialidad al mismo alumno.",
-        severity: "error",
-      },
-      {
-        rule: "Restricción de edición",
-        description:
-          "No se pueden editar clases COMPLETADAS, INICIADAS o CANCELADAS. Son registro histórico.",
-        severity: "warning",
-      },
-      {
-        rule: "Conflictos de horario",
-        description:
-          "El sistema verifica que el caballo y el instructor no tengan otra clase a la misma hora.",
-        severity: "warning",
-      },
-      {
-        rule: "Clases restantes",
-        description:
-          "El sistema monitorea las clases restantes del alumno y muestra alertas, pero permite crear clases aunque se agote el cupo.",
-        severity: "info",
-      },
-    ],
-  },
-  "/calendario": {
-    title: "Calendario de Clases",
-    description: "Vista interactiva de las clases programadas",
-    workflows: [
-      {
-        title: "Crear Clase desde el Calendario",
-        icon: "➕",
-        steps: [
-          {
-            title: "Cambiar a Vista Día",
-            content:
-              'Haz doble clic en el selector de vista y elige "Día" para ver el calendario estilo Excel.',
-          },
-          {
-            title: "Hacer doble clic en celda vacía",
-            content:
-              "Haz doble clic en cualquier celda vacía (intersección de hora + caballo).",
-          },
-          {
-            title: "Datos precargados",
-            content:
-              "El formulario se abre con el día, hora y caballo ya seleccionados automáticamente.",
-          },
-          {
-            title: "Completar resto",
-            content: "Solo necesitas elegir alumno, instructor y especialidad.",
-          },
-          {
-            title: "Guardar",
-            content: "La clase aparecerá inmediatamente en el calendario.",
-          },
-        ],
-      },
-      {
-        title: "Ver Detalle de una Clase",
+    ADMIN: {
+      title: "Gestión de Instructores — Administrador",
+      description: "Administrá el equipo de instructores y sus colores de agenda",
+      workflows: [
+        {
+          title: "Registrar un Nuevo Instructor",
+          icon: "➕",
+          steps: [
+            { title: "Paso 1", content: 'Clic en "Nuevo Instructor".' },
+            { title: "Paso 2: Datos", content: "Nombre, apellido, DNI, fecha de nacimiento, teléfono y email." },
+            { title: "Paso 3: Color", content: "Elegí un color único de los 7 disponibles. Aparecerá en todas sus clases del calendario." },
+            { title: "Paso 4", content: 'Clic en "Crear Instructor". Queda activo automáticamente.' },
+          ],
+        },
+        {
+          title: "Cambiar Color o Estado",
+          icon: "🎨",
+          steps: [
+            { title: "Editar", content: 'Clic en menú (⋮) → "Editar".' },
+            { title: "Color", content: "Solo el administrador puede cambiar el color del instructor." },
+            { title: "Activar/Inactivar", content: 'Switch "Está activo". Los inactivos no aparecen al programar clases.' },
+          ],
+        },
+      ],
+      tips: [
+        "Elegí colores bien diferenciados para facilitar la lectura del calendario",
+        "Los instructores inactivos no aparecen en los selectores de clases",
+      ],
+      validations: [
+        { rule: "DNI único", description: "No se permiten instructores con DNI duplicado.", severity: "error" },
+        { rule: "Color único recomendado", description: "Asigná colores diferentes para identificar a cada instructor.", severity: "info" },
+        { rule: "Estado activo", description: "Solo los instructores activos pueden asignarse a nuevas clases.", severity: "warning" },
+      ],
+    },
+    INSTRUCTOR: {
+      title: "Instructores — Consulta",
+      description: "Información del equipo de instructores",
+      workflows: [{
+        title: "Ver perfil de un instructor",
         icon: "👁️",
         steps: [
-          {
-            title: "Hacer clic en la clase",
-            content: "En cualquier vista, haz clic sobre una clase existente.",
-          },
-          {
-            title: "Popover de información",
-            content:
-              "Se abre un popover mostrando: Alumno, Instructor, Caballo, Estado, Observaciones.",
-          },
-          {
-            title: "Acciones rápidas",
-            content:
-              "Desde el popover puedes cambiar el estado, editar o eliminar la clase.",
-          },
+          { title: "Buscar", content: "Filtrá por nombre o apellido." },
+          { title: "Ver historial", content: "Clic en la fila para ver el perfil con estadísticas de clases." },
         ],
-      },
-      {
-        title: "Copiar Clases de una Semana",
-        icon: "📋",
-        steps: [
-          {
-            title: "Abrir herramienta",
-            content:
-              'Haz clic en el botón "Copiar Clases" en la barra de herramientas.',
-          },
-          {
-            title: "Seleccionar semana origen",
-            content: "Elige un día cualquiera de la semana que quieres copiar.",
-          },
-          {
-            title: "Seleccionar semana destino",
-            content:
-              "Elige un día de la semana donde quieres pegar las clases.",
-          },
-          {
-            title: "Cantidad de semanas",
-            content:
-              "Indica cuántas semanas consecutivas quieres copiar (por defecto: 1).",
-          },
-          {
-            title: "Confirmar",
-            content:
-              "El sistema copiará TODAS las clases de la semana completa (lunes a domingo).",
-          },
-        ],
-      },
-      {
-        title: "Eliminar Clases en Rango",
-        icon: "🗑️",
-        steps: [
-          {
-            title: "Abrir herramienta",
-            content:
-              'Haz clic en "Eliminar Clases" en la barra de herramientas.',
-          },
-          {
-            title: "Seleccionar fechas",
-            content: "Elige la fecha de inicio y fecha de fin del rango.",
-          },
-          {
-            title: "Confirmar",
-            content:
-              "El sistema eliminará TODAS las clases entre esas fechas. Esta acción no se puede deshacer.",
-          },
-        ],
-      },
-      {
-        title: "Cancelar Todas las Clases del Día",
-        icon: "❌",
-        steps: [
-          {
-            title: "Ir a Vista Día",
-            content: "Cambia a la vista de día del calendario.",
-          },
-          {
-            title: "Abrir herramienta",
-            content:
-              'Haz clic en el botón "Cancelar Día" (visible solo en vista día).',
-          },
-          {
-            title: "Seleccionar motivo",
-            content:
-              "Elige entre: Lluvia, Feriado, Mantenimiento, Evento Especial, Emergencia, u Otro.",
-          },
-          {
-            title: "Observaciones (opcional)",
-            content: 'Si eliges "Otro", escribe el motivo de la cancelación.',
-          },
-          {
-            title: "Confirmar",
-            content:
-              "Solo se cancelarán las clases en estado PROGRAMADA. Las COMPLETADAS o CANCELADAS no se tocarán.",
-          },
-        ],
-      },
-      {
-        title: "Exportar Calendario a Excel",
-        icon: "📊",
-        steps: [
-          {
-            title: "Vista Día",
-            content:
-              "El botón de exportación solo está disponible en Vista Día.",
-          },
-          {
-            title: "Hacer clic en Exportar",
-            content:
-              'Haz clic en el botón "Exportar Excel" en la barra de herramientas.',
-          },
-          {
-            title: "Descarga automática",
-            content:
-              "Se descargará un archivo Excel con formato profesional: título, fecha, clases con colores de instructores, leyenda, y listo para imprimir.",
-          },
-        ],
-      },
-      {
-        title: "Cambiar Estado Rápido",
-        icon: "⚡",
-        steps: [
-          {
-            title: "Hacer clic en la clase",
-            content: "Abre el popover de la clase haciendo clic sobre ella.",
-          },
-          {
-            title: "Usar selector de estado",
-            content: "En el popover, selecciona el nuevo estado del dropdown.",
-          },
-          {
-            title: "Confirmación instantánea",
-            content:
-              "El cambio se guarda automáticamente y el color de la clase se actualiza.",
-          },
-        ],
-      },
-      {
-        title: "Aplicar Filtros",
+      }],
+      tips: [
+        "Cada instructor tiene un color único visible en el calendario",
+        "Tu propio perfil está en 'Mi Perfil' (menú del usuario arriba a la derecha)",
+      ],
+      validations: [],
+    },
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  "/caballos": {
+    ADMIN: {
+      title: "Gestión de Caballos — Administrador",
+      description: "Control de caballos de escuela y privados",
+      workflows: [
+        {
+          title: "Registrar Caballo de Escuela",
+          icon: "🐴",
+          steps: [
+            { title: "Paso 1", content: 'Clic en "Nuevo Caballo".' },
+            { title: "Paso 2", content: "Escribí el nombre." },
+            { title: "Paso 3", content: 'Seleccioná tipo "Escuela". Disponible para todos los alumnos.' },
+            { title: "Paso 4", content: 'Clic en "Crear Caballo".' },
+          ],
+        },
+        {
+          title: "Registrar Caballo Privado",
+          icon: "🏇",
+          steps: [
+            { title: "Crear", content: 'Seleccioná tipo "Privado".' },
+            { title: "Vincular", content: "Editá el alumno propietario → cambiá pensión a Caballo propio → seleccioná este caballo." },
+            { title: "Cuota", content: "Elegí Entera, Media o Tercio en el alumno propietario." },
+          ],
+        },
+        {
+          title: "Marcar como No Disponible",
+          icon: "⚠️",
+          steps: [
+            { title: "Editar", content: "Abrí el formulario de edición." },
+            { title: "Deshabilitar", content: 'Desmarcá "Está disponible". No aparecerá al programar clases.' },
+          ],
+        },
+      ],
+      tips: [
+        "Los caballos PRIVADOS solo los puede usar su propietario",
+        "Marcá como no disponible en lugar de eliminar para bajas temporales",
+        "En el perfil del caballo podés ver sus propietarios y el historial de clases",
+      ],
+      validations: [
+        { rule: "Caballo privado restringido", description: "Los caballos privados solo pueden asignarse a clases de su propietario.", severity: "error" },
+        { rule: "Disponibilidad", description: "Los caballos no disponibles no aparecen al programar.", severity: "warning" },
+      ],
+    },
+    INSTRUCTOR: {
+      title: "Caballos — Consulta",
+      description: "Información de los caballos disponibles",
+      workflows: [{
+        title: "Ver disponibilidad",
         icon: "🔍",
         steps: [
-          {
-            title: "Filtro por alumno",
-            content:
-              "Selecciona un alumno del filtro para ver solo sus clases.",
-          },
-          {
-            title: "Filtro por instructor",
-            content:
-              "Selecciona un instructor para ver solo las clases que él/ella dicta.",
-          },
-          {
-            title: "Combinar filtros",
-            content:
-              "Puedes combinar ambos filtros para búsquedas más específicas.",
-          },
-          {
-            title: "Limpiar",
-            content:
-              'Haz clic en "Limpiar Filtros" para volver a ver todas las clases.',
-          },
+          { title: "Filtrar disponibles", content: 'Usá el filtro "Disponibilidad: Disponible" para ver los caballos asignables.' },
+          { title: "Ver perfil", content: "Clic en la fila para ver el historial de clases del caballo." },
         ],
-      },
-    ],
-    tips: [
-      "En Vista Mes, se muestran hasta 3 clases por día + indicador de más",
-      "En Vista Día, las clases de 60 minutos ocupan dos celdas consecutivas",
-      "El color de fondo de cada clase corresponde al instructor asignado",
-      "El borde izquierdo indica el estado: Naranja=Programada, Azul=Iniciada, Verde=Completada, Rojo=Cancelada",
-      "Las clases de prueba tienen el emoji 🎓 y borde naranja",
-      'Los días con "Copiar Semana" replican toda la semana completa (lun-dom)',
-    ],
-    validations: [
-      {
-        rule: "Cancelación masiva",
-        description:
-          'La herramienta "Cancelar Día" solo afecta clases PROGRAMADAS. No modifica clases ya completadas o canceladas.',
-        severity: "info",
-      },
-      {
-        rule: "Conflictos visuales",
-        description:
-          "Las celdas con conflicto (mismo caballo o instructor a la misma hora) se marcan con ⚠️.",
-        severity: "warning",
-      },
-    ],
+      }],
+      tips: [
+        "Los caballos PRIVADOS solo pueden usarlos sus propietarios",
+        "Si un caballo no aparece al crear una clase, está marcado como no disponible",
+      ],
+      validations: [
+        { rule: "Caballo privado", description: "Los caballos privados solo son asignables a clases de su propietario.", severity: "warning" },
+      ],
+    },
   },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  "/clases": {
+    ADMIN: {
+      title: "Gestión de Clases — Administrador",
+      description: "Programá, editá y gestioná todas las clases",
+      workflows: [
+        {
+          title: "Crear Clase Regular",
+          icon: "📝",
+          steps: [
+            { title: "Paso 1", content: 'Clic en "Nueva Clase".' },
+            { title: "Especialidad", content: "Equitación, Adiestramiento, Equinoterapia o Monta." },
+            { title: "Alumno", content: "Seleccioná el alumno. MONTA no requiere alumno específico." },
+            { title: "Fecha, hora y duración", content: "30 o 60 minutos. El sistema valida el límite de 18:30." },
+            { title: "Instructor y Caballo", content: "Seleccioná ambos. Si el alumno tiene caballo asignado, se preselecciona." },
+            { title: "Guardar", content: "La clase se crea con estado PROGRAMADA." },
+          ],
+        },
+        {
+          title: "Clase de Prueba — Persona Nueva",
+          icon: "🎓",
+          steps: [
+            { title: "Marcar como prueba", content: 'Activá el checkbox "Es clase de prueba".' },
+            { title: "Tipo", content: 'Seleccioná "Persona nueva".' },
+            { title: "Datos", content: "Solo nombre y apellido. No necesita cuenta de alumno." },
+          ],
+        },
+        {
+          title: "Clase de Prueba — Alumno Existente",
+          icon: "🎯",
+          steps: [
+            { title: "Marcar como prueba", content: 'Activá el checkbox "Es clase de prueba".' },
+            { title: "Tipo", content: 'Seleccioná "Alumno existente". El alumno debe estar INACTIVO.' },
+            { title: "Validaciones", content: "El sistema verifica que no tenga esa especialidad ni prueba previa." },
+          ],
+        },
+        {
+          title: "Cambiar Estado de una Clase",
+          icon: "🔄",
+          steps: [
+            { title: "Desde el detalle", content: "Clic en la fila → selector de estado." },
+            { title: "Estados", content: "PROGRAMADA 🟠, INICIADA 🔵, COMPLETADA 🟢, CANCELADA 🔴, ACA 🟣, ASA 🌸." },
+            { title: "Cancelar con motivo", content: "Al elegir CANCELADA el sistema pide seleccionar un motivo." },
+          ],
+        },
+      ],
+      tips: [
+        "Las clases de prueba NO cuentan para la cuota mensual",
+        "ACA = Ausencia Con Aviso, ASA = Ausencia Sin Aviso",
+        "Las clases COMPLETADAS, INICIADAS y CANCELADAS no se pueden editar ni eliminar",
+        "MONTA asigna automáticamente el alumno comodín (monta libre)",
+      ],
+      validations: [
+        { rule: "Horario límite 18:30", description: "Ninguna clase puede terminar después de las 18:30.", severity: "error" },
+        { rule: "Prueba — alumno inactivo", description: "Las clases de prueba para alumnos existentes requieren que esté INACTIVO.", severity: "error" },
+        { rule: "Prueba — sin especialidad previa", description: "No se puede asignar prueba de una especialidad que el alumno ya tomó.", severity: "error" },
+        { rule: "Prueba — no repetible", description: "No se puede repetir clase de prueba de la misma especialidad.", severity: "error" },
+        { rule: "Restricción de edición", description: "Las clases COMPLETADAS, INICIADAS y CANCELADAS son históricas e inmutables.", severity: "warning" },
+        { rule: "Conflictos de horario", description: "El sistema detecta si el caballo o instructor ya tienen otra clase solapada.", severity: "warning" },
+        { rule: "Clases restantes", description: "Se monitorea el cupo mensual del alumno pero no bloquea la creación.", severity: "info" },
+      ],
+    },
+    INSTRUCTOR: {
+      title: "Clases — Instructor",
+      description: "Creá y gestioná las clases que tenés asignadas",
+      workflows: [
+        {
+          title: "Crear una Clase",
+          icon: "📝",
+          steps: [
+            { title: "Paso 1", content: 'Clic en "Nueva Clase".' },
+            { title: "Completar", content: "Elegí especialidad, alumno, fecha, hora, duración y caballo. Tu nombre se preselecciona." },
+            { title: "Guardar", content: 'Clic en "Crear Clase".' },
+          ],
+        },
+        {
+          title: "Cambiar Estado",
+          icon: "🔄",
+          steps: [
+            { title: "Desde el detalle", content: "Clic en la fila → selector de estado." },
+            { title: "Estados", content: "PROGRAMADA 🟠, INICIADA 🔵, COMPLETADA 🟢, CANCELADA 🔴, ACA 🟣, ASA 🌸." },
+          ],
+        },
+        {
+          title: "Filtrar Tus Clases",
+          icon: "🔍",
+          steps: [
+            { title: "Por alumno", content: "Filtrá por nombre o apellido del alumno." },
+            { title: "Por estado", content: "Filtrá para ver solo las PROGRAMADAS o COMPLETADAS." },
+          ],
+        },
+      ],
+      tips: [
+        "ACA = el alumno avisó que no vendría. ASA = no asistió sin aviso",
+        "Las clases COMPLETADAS no se pueden editar: son registro histórico",
+        "Usá el Calendario para la gestión diaria más cómoda",
+      ],
+      validations: [
+        { rule: "Horario límite 18:30", description: "Las clases no pueden terminar después de las 18:30.", severity: "error" },
+        { rule: "Conflictos de horario", description: "El sistema alerta si el caballo o vos ya tienen clase solapada.", severity: "warning" },
+        { rule: "Restricción de edición", description: "Las clases COMPLETADAS, INICIADAS y CANCELADAS son inmutables.", severity: "warning" },
+      ],
+    },
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  "/calendario": {
+    ADMIN: {
+      title: "Calendario — Administrador",
+      description: "Vista completa con todas las herramientas de gestión",
+      workflows: [
+        {
+          title: "Crear desde el Calendario",
+          icon: "➕",
+          steps: [
+            { title: "Vista Día", content: 'Cambiá a la vista "Día".' },
+            { title: "Doble clic en celda", content: "Doble clic en cualquier celda vacía (hora + caballo). El formulario se pre-rellena." },
+            { title: "Completar y guardar", content: "Solo necesitás elegir alumno, especialidad e instructor." },
+          ],
+        },
+        {
+          title: "Copiar Semana Completa",
+          icon: "📋",
+          steps: [
+            { title: "Abrir herramienta", content: 'Clic en "Copiar Clases".' },
+            { title: "Semana origen y destino", content: "Elegí un día de cada semana." },
+            { title: "Confirmar", content: "Se copian TODAS las clases de lunes a domingo." },
+          ],
+        },
+        {
+          title: "Eliminar Clases en Rango",
+          icon: "🗑️",
+          steps: [
+            { title: "Abrir herramienta", content: 'Clic en "Eliminar Clases".' },
+            { title: "Seleccionar rango", content: "Elegí fecha de inicio y fin." },
+            { title: "Confirmar", content: "⚠️ Elimina TODAS las clases del rango. No se puede deshacer." },
+          ],
+        },
+        {
+          title: "Cancelar Todas las Clases del Día",
+          icon: "❌",
+          steps: [
+            { title: "Vista Día", content: "Solo disponible en vista Día." },
+            { title: "Abrir herramienta", content: 'Clic en "Cancelar Día (N)".' },
+            { title: "Motivo y confirmar", content: "Lluvia, Feriado, Mantenimiento, Emergencia u Otro. Solo cancela las PROGRAMADAS." },
+          ],
+        },
+        {
+          title: "Exportar a Excel",
+          icon: "📊",
+          steps: [
+            { title: "Vista Día", content: '"Exportar Excel" descarga el día con colores y leyenda.' },
+            { title: "Vista Semana", content: '"Exportar Semana" descarga la semana completa.' },
+            { title: "Vista Mes", content: '"Exportar Mes" descarga el mes completo.' },
+          ],
+        },
+        {
+          title: "Gestionar Reservas Pendientes",
+          icon: "⏳",
+          steps: [
+            { title: "Panel inferior", content: "Las reservas de alumnos aparecen al pie del calendario." },
+            { title: "Confirmar o Rechazar", content: '"Confirmar" → PROGRAMADA. X → CANCELADA.' },
+          ],
+        },
+      ],
+      tips: [
+        "Vista Día es la más cómoda para la gestión diaria",
+        "Doble clic en celda vacía pre-rellena el formulario con caballo y hora",
+        "Borde de la clase: Naranja=Programada, Azul=Iniciada, Verde=Completada, Rojo=Cancelada, Púrpura=ACA, Rosado=ASA",
+        "Presioná Escape para cerrar el modo pantalla completa",
+      ],
+      validations: [
+        { rule: "Cancelar Día", description: "Solo afecta clases PROGRAMADAS. Las completadas y ya canceladas no se modifican.", severity: "info" },
+        { rule: "Conflictos", description: "Las celdas con ⚠️ indican que el caballo o instructor ya tienen clase solapada.", severity: "warning" },
+        { rule: "Reservas pendientes", description: "Las clases RESERVADAS deben confirmarse o rechazarse.", severity: "info" },
+      ],
+    },
+    INSTRUCTOR: {
+      title: "Calendario — Instructor",
+      description: "Tu vista de clases y gestión diaria",
+      workflows: [
+        {
+          title: "Crear desde el Calendario",
+          icon: "➕",
+          steps: [
+            { title: "Vista Día", content: 'Cambiá a la vista "Día".' },
+            { title: "Doble clic", content: "Doble clic en una celda vacía. Tu nombre se preselecciona como instructor." },
+            { title: "Completar y guardar", content: "Elegí alumno, especialidad y caballo." },
+          ],
+        },
+        {
+          title: "Filtrar Tus Clases",
+          icon: "🔍",
+          steps: [
+            { title: "Filtrar por instructor", content: "Seleccioná tu nombre para ver solo tus clases." },
+            { title: "Combinar filtros", content: "También podés filtrar por alumno." },
+          ],
+        },
+        {
+          title: "Cambiar Estado Rápido",
+          icon: "⚡",
+          steps: [
+            { title: "Clic en la clase", content: "Se abre el popover con los detalles." },
+            { title: "Nuevo estado", content: "Seleccioná el estado desde el popover." },
+          ],
+        },
+        {
+          title: "Gestionar Reservas Pendientes",
+          icon: "⏳",
+          steps: [
+            { title: "Panel inferior", content: "Las reservas de tus alumnos aparecen al pie del calendario." },
+            { title: "Confirmar o Rechazar", content: '"Confirmar" → PROGRAMADA. X → CANCELADA.' },
+          ],
+        },
+      ],
+      tips: [
+        "Filtrá por tu nombre para ver solo tus clases del día",
+        "El color de fondo de cada clase es tu color de instructor",
+        "Podés expandir el calendario a pantalla completa con el ícono ↔",
+        "Las reservas de tus alumnos aparecen en el panel inferior",
+      ],
+      validations: [
+        { rule: "Conflictos", description: "Las celdas con ⚠️ indican solapamiento de horarios.", severity: "warning" },
+        { rule: "Reservas pendientes", description: "Las clases RESERVADAS deben ser confirmadas o rechazadas.", severity: "info" },
+      ],
+    },
+    ALUMNO: {
+      title: "Calendario — Tu Vista",
+      description: "Consultá el calendario y reservá tus clases",
+      workflows: [
+        {
+          title: "Reservar una Clase",
+          icon: "📅",
+          steps: [
+            { title: "Elegir el día", content: "Clic en el número del día en Vista Mes/Semana, o en una celda en Vista Día." },
+            { title: "Completar", content: "Elegí especialidad, caballo y hora. Tu nombre se preselecciona." },
+            { title: "Reservar", content: 'Clic en "Reservar Clase". El estado quedará RESERVADA hasta que el instructor confirme.' },
+          ],
+        },
+        {
+          title: "Ver el Estado de tus Clases",
+          icon: "👁️",
+          steps: [
+            { title: "Filtrar", content: "Seleccioná tu nombre en el filtro para ver solo tus clases." },
+            { title: "Estados", content: "⏳ RESERVADA = pendiente. 🟠 PROGRAMADA = confirmada. 🟢 COMPLETADA = realizada." },
+            { title: "Avisar ausencia", content: "Si no podés asistir, marcá ACA en el popover de la clase." },
+          ],
+        },
+      ],
+      tips: [
+        "Tus reservas quedan pendientes hasta que el instructor o admin las confirme",
+        "Si no podés asistir, marcá ACA (Ausente Con Aviso) antes de la clase",
+        "En 'Mis Clases' podés ver cuántas clases te quedan en el mes",
+      ],
+      validations: [
+        { rule: "Horario límite", description: "Las clases no pueden terminar después de las 18:30.", severity: "error" },
+        { rule: "Estado RESERVADA", description: "Tu clase queda RESERVADA hasta que el instructor o admin la confirme.", severity: "info" },
+      ],
+    },
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  "/mis-clases": {
+    ALUMNO: {
+      title: "Mis Clases",
+      description: "Tu historial de clases y estadísticas personales",
+      workflows: [
+        {
+          title: "Leer tu historial",
+          icon: "📋",
+          steps: [
+            { title: "Estadísticas", content: "Las tarjetas superiores muestran: total, completadas, próximas y canceladas." },
+            { title: "Tu plan", content: "'Mi Plan' muestra clases contratadas por mes y tu tipo de pensión." },
+            { title: "Historial", content: "La tabla lista todas tus clases con estado y observaciones." },
+          ],
+        },
+        {
+          title: "Entender los Estados",
+          icon: "🔄",
+          steps: [
+            { title: "⏳ RESERVADA", content: "Solicitud enviada, pendiente de confirmación." },
+            { title: "🟠 PROGRAMADA", content: "Confirmada y próxima a realizarse." },
+            { title: "🟢 COMPLETADA", content: "Clase realizada exitosamente." },
+            { title: "🔴 CANCELADA", content: "Clase cancelada." },
+            { title: "🟣 ACA", content: "Avisaste que no ibas a asistir." },
+            { title: "🌸 ASA", content: "No asististe sin haber avisado." },
+          ],
+        },
+      ],
+      tips: [
+        "Las clases COMPLETADAS y ASA se cuentan como clases usadas del mes",
+        "Tu plan mensual no es acumulable: los cupos se renuevan cada mes",
+        "Podés reservar nuevas clases desde el Calendario",
+        "Si tenés muchas ASA, coordiná con tu instructor para reorganizar tu agenda",
+      ],
+      validations: [
+        { rule: "Cupo mensual", description: "Tu plan tiene un límite de clases por mes. Los cupos del mes anterior no se acumulan.", severity: "info" },
+      ],
+    },
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
   "/reportes": {
-    title: "Reportes y Estadísticas",
-    description: "Análisis detallado de la actividad de la escuela",
-    workflows: [
-      {
-        title: "Generar Reporte por Período",
-        icon: "📅",
-        steps: [
-          {
-            title: "Seleccionar fechas",
-            content:
-              "En la parte superior, elige Fecha Inicio y Fecha Fin del período a analizar.",
-          },
-          {
-            title: "Ver KPIs",
-            content:
-              "Las tarjetas superiores muestran: Alumnos Activos, Total Clases, Instructores, Ingresos Estimados.",
-          },
-          {
-            title: "Navegar por tabs",
-            content:
-              "Usa las pestañas: General, Alumnos, Clases, Instructores, Caballos para ver reportes específicos.",
-          },
-        ],
-      },
-      {
-        title: "Exportar Reporte a Excel",
+    ADMIN: {
+      title: "Reportes — Administrador",
+      description: "Análisis completo de la operación del club",
+      workflows: [
+        {
+          title: "Generar Reporte",
+          icon: "📅",
+          steps: [
+            { title: "Período", content: "Elegí fechas de inicio y fin." },
+            { title: "Filtrar", content: "Opcionalmente filtrá por instructor o alumno." },
+            { title: "Navegar tabs", content: "General, Alumnos, Clases, Instructores, Caballos, Clases de Prueba." },
+          ],
+        },
+        {
+          title: "Exportar a Excel",
+          icon: "📊",
+          steps: [
+            { title: "Tab deseado", content: "Elegí la sección a exportar." },
+            { title: "Exportar", content: 'Clic en "Exportar" en la esquina superior derecha de la tabla.' },
+          ],
+        },
+      ],
+      tips: [
+        "El tab 'Clases de Prueba' muestra la tasa de conversión (prueba → alumno activo)",
+        "La eficiencia del instructor = clases completadas / total asignadas",
+        "Los reportes se actualizan en tiempo real al cambiar fechas o filtros",
+      ],
+      validations: [],
+    },
+    INSTRUCTOR: {
+      title: "Reportes — Tu Actividad",
+      description: "Estadísticas de tus clases y alumnos",
+      workflows: [{
+        title: "Ver tus Estadísticas",
         icon: "📊",
         steps: [
-          {
-            title: "Ir a la pestaña deseada",
-            content:
-              "Elige la sección que quieres exportar: Alumnos, Clases, Instructores, o Caballos.",
-          },
-          {
-            title: "Hacer clic en Exportar",
-            content:
-              'Busca el botón "Exportar" en la esquina superior derecha de la tabla.',
-          },
-          {
-            title: "Descarga automática",
-            content:
-              "Se descarga un archivo Excel con formato profesional, cabeceras, totales y listo para imprimir.",
-          },
+          { title: "Período", content: "Elegí las fechas del análisis." },
+          { title: "Tab Instructores", content: "Mostrará tu carga de trabajo, completadas y eficiencia." },
+          { title: "Tab Alumnos", content: "Mostrará la asistencia de tus alumnos en el período." },
         ],
-      },
-      {
-        title: "Interpretar Reportes de Clases",
-        icon: "📈",
-        steps: [
-          {
-            title: "Distribución por estado",
-            content:
-              "Muestra cuántas clases están en cada estado (Programadas, Completadas, Canceladas, etc.).",
-          },
-          {
-            title: "Distribución por día",
-            content:
-              "Indica qué días de la semana tienen más clases programadas.",
-          },
-          {
-            title: "Asistencia por alumno",
-            content:
-              "Tabla detallada con % de asistencia de cada alumno en el período.",
-          },
-        ],
-      },
-    ],
-    tips: [
-      "El período por defecto es el mes actual",
-      "Los ingresos estimados se calculan multiplicando clases contratadas por $5000",
-      "La eficiencia de instructores es el % de clases completadas vs. total asignadas",
-      "Los reportes se actualizan en tiempo real al cambiar las fechas",
-    ],
-    validations: [],
+      }],
+      tips: [
+        "Los datos se filtran automáticamente a tus clases",
+        "Eficiencia = clases completadas / total de clases asignadas",
+      ],
+      validations: [],
+    },
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  "/finanzas": {
+    ADMIN: {
+      title: "Finanzas — Administrador",
+      description: "Ingresos proyectados, pensiones, honorarios y configuración",
+      workflows: [
+        {
+          title: "Ver Resumen Financiero",
+          icon: "💰",
+          steps: [
+            { title: "Período", content: "Elegí las fechas del análisis." },
+            { title: "Filtrar por instructor", content: "Opcionalmente filtrá los honorarios por instructor." },
+            { title: "Tarjetas resumen", content: "Cuotas Proyectadas, Pensiones, Honorarios y Balance Proyectado." },
+          ],
+        },
+        {
+          title: "Configurar Precios",
+          icon: "⚙️",
+          steps: [
+            { title: "Tab Precios", content: 'Clic en la pestaña "Precios".' },
+            { title: "Editar y guardar", content: 'Clic en "Editar precios" → modificar → "Guardar".' },
+          ],
+        },
+      ],
+      tips: [
+        "Balance = (Cuotas + Pensiones) - Honorarios",
+        "Las pensiones son fijas mensuales, independientemente del período",
+        "Honorario = base mensual + (clases completadas × honorario por clase)",
+      ],
+      validations: [],
+    },
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  "/usuarios": {
+    ADMIN: {
+      title: "Gestión de Usuarios — Administrador",
+      description: "Administrá cuentas, roles y accesos al sistema",
+      workflows: [
+        {
+          title: "Cambiar Rol",
+          icon: "🔑",
+          steps: [
+            { title: "Menú de acciones", content: "Clic en menú (⋮) de la fila del usuario." },
+            { title: "Elegir rol", content: "Administrador, Instructor o Alumno." },
+          ],
+        },
+        {
+          title: "Suspender o Activar",
+          icon: "🔒",
+          steps: [
+            { title: "Menú de acciones", content: "Clic en menú (⋮)." },
+            { title: "Cambiar estado", content: '"Bloquear Acceso" o "Desbloquear".' },
+          ],
+        },
+        {
+          title: "Eliminar Usuario",
+          icon: "🗑️",
+          steps: [
+            { title: "Menú de acciones", content: "Clic en menú (⋮)." },
+            { title: "Confirmar", content: '"Eliminar Usuario" → Confirmar. Acción irreversible.' },
+          ],
+        },
+      ],
+      tips: [
+        "No podés modificar tu propia cuenta desde este módulo",
+        "Suspender un usuario no elimina sus datos ni historial de clases",
+        "ADMIN: acceso total. INSTRUCTOR: gestión de clases y alumnos. ALUMNO: solo sus clases",
+      ],
+      validations: [
+        { rule: "Auto-modificación bloqueada", description: "No podés cambiar tu propio rol ni suspenderte.", severity: "warning" },
+        { rule: "Eliminación irreversible", description: "Eliminar un usuario es permanente.", severity: "error" },
+      ],
+    },
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  "/profile": {
+    ADMIN: {
+      title: "Mi Perfil — Administrador",
+      description: "Gestioná tu cuenta y contraseña",
+      workflows: [
+        {
+          title: "Editar Datos de Cuenta",
+          icon: "✏️",
+          steps: [
+            { title: "Editar", content: 'Clic en "Editar" en la sección Cuenta del Sistema.' },
+            { title: "Modificar", content: "Podés cambiar nombre de usuario y email de acceso." },
+            { title: "Guardar", content: 'Clic en "Guardar".' },
+          ],
+        },
+        {
+          title: "Cambiar Contraseña",
+          icon: "🔐",
+          steps: [
+            { title: "Sección Seguridad", content: 'Clic en "Cambiar Contraseña".' },
+            { title: "Completar y guardar", content: "Ingresá contraseña actual, nueva contraseña (mín. 8 caracteres) y confirmación." },
+          ],
+        },
+      ],
+      tips: [
+        "El rol solo puede cambiarlo otro administrador desde el módulo Usuarios",
+        "Cambiá el avatar pasando el mouse sobre tu foto y haciendo clic",
+      ],
+      validations: [],
+    },
+    INSTRUCTOR: {
+      title: "Mi Perfil — Instructor",
+      description: "Actualizá tus datos de contacto y contraseña",
+      workflows: [
+        {
+          title: "Editar Datos de Instructor",
+          icon: "✏️",
+          steps: [
+            { title: "Sección Instructor", content: 'Clic en "Editar" en la sección Perfil de Instructor.' },
+            { title: "Modificar", content: "Podés cambiar teléfono, código de área y email de contacto." },
+            { title: "Guardar", content: 'Clic en "Guardar".' },
+          ],
+        },
+        {
+          title: "Cambiar Contraseña",
+          icon: "🔐",
+          steps: [
+            { title: "Sección Seguridad", content: 'Clic en "Cambiar Contraseña".' },
+            { title: "Completar", content: "Contraseña actual, nueva (mín. 8 caracteres) y confirmación." },
+          ],
+        },
+      ],
+      tips: [
+        "El color de agenda solo lo puede cambiar el administrador",
+        "Tus datos de contacto son visibles para el admin y los alumnos",
+      ],
+      validations: [],
+    },
+    ALUMNO: {
+      title: "Mi Perfil — Alumno",
+      description: "Actualizá tus datos de contacto y contraseña",
+      workflows: [
+        {
+          title: "Editar Datos de Contacto",
+          icon: "✏️",
+          steps: [
+            { title: "Sección Alumno", content: 'Clic en "Editar" en la sección Perfil de Alumno.' },
+            { title: "Modificar", content: "Podés cambiar teléfono, código de área y email." },
+            { title: "Guardar", content: 'Clic en "Guardar".' },
+          ],
+        },
+        {
+          title: "Cambiar Contraseña",
+          icon: "🔐",
+          steps: [
+            { title: "Sección Seguridad", content: 'Clic en "Cambiar Contraseña".' },
+            { title: "Completar", content: "Contraseña actual, nueva (mín. 8 caracteres) y confirmación." },
+          ],
+        },
+      ],
+      tips: [
+        "El plan de clases y el caballo asignado solo los puede modificar el administrador",
+        "Tu email es visible para el instructor y el admin",
+      ],
+      validations: [],
+    },
   },
 };
 
-// 🎯 COMPONENTE PRINCIPAL
+// ─── Fallback genérico ────────────────────────────────────────────────────────
+const defaultHelp: HelpContent = {
+  title: "Ayuda del Sistema",
+  description: "Guías de uso del sistema de gestión",
+  workflows: [{
+    title: "Navegación General",
+    icon: "🧭",
+    steps: [
+      { title: "Menú lateral", content: "Usá el menú lateral para moverte entre las secciones disponibles para tu rol." },
+      { title: "Botón de ayuda", content: "Este botón (?) abre la ayuda contextual específica de cada página." },
+      { title: "Sesión", content: "La sesión cierra automáticamente tras 15 minutos de inactividad." },
+    ],
+  }],
+  tips: ["Cada sección tiene su propia ayuda con guías adaptadas a tu rol."],
+  validations: [],
+};
+
+// ─── Labels de rol ────────────────────────────────────────────────────────────
+const ROLE_LABELS: Record<Role, { label: string; className: string }> = {
+  ADMIN:      { label: "Administrador", className: "bg-red-100 text-red-800 border border-red-200 dark:bg-red-950/30 dark:text-red-400" },
+  INSTRUCTOR: { label: "Instructor",    className: "bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-950/30 dark:text-blue-400" },
+  ALUMNO:     { label: "Alumno",        className: "bg-green-100 text-green-800 border border-green-200 dark:bg-green-950/30 dark:text-green-400" },
+};
+
+// ─── Componente Principal ─────────────────────────────────────────────────────
 export function HelpSystem() {
   const location = useLocation();
+  const { user } = useAuth();
+  const role = normalizeRole(user?.rol);
+
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<
-    "workflows" | "validations" | "tips"
-  >("workflows");
+  const [activeTab, setActiveTab] = useState<"workflows" | "validations" | "tips">("workflows");
 
-  // Obtener contenido según la ruta actual
-  const currentHelp =
-    helpContent[location.pathname as keyof typeof helpContent] ||
-    helpContent["/"];
+  // Ruta base sin parámetros dinámicos
+  const basePath = "/" + location.pathname.split("/")[1];
 
-  // Filtrar workflows según búsqueda
+  const getContent = (): HelpContent => {
+    const pageContent = helpContent[basePath] ?? helpContent[location.pathname];
+    if (!pageContent) return defaultHelp;
+    // Intenta el rol actual, luego ADMIN como fallback, luego genérico
+    return pageContent[role] ?? pageContent["ADMIN"] ?? defaultHelp;
+  };
+
+  const currentHelp = getContent();
+
   const filteredWorkflows = searchTerm
     ? currentHelp.workflows.filter(
-        (workflow) =>
-          workflow.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          workflow.steps.some(
-            (step) =>
-              step.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              step.content.toLowerCase().includes(searchTerm.toLowerCase()),
+        (w) =>
+          w.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          w.steps.some(
+            (s) =>
+              s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              s.content.toLowerCase().includes(searchTerm.toLowerCase()),
           ),
       )
     : currentHelp.workflows;
 
-  // Resetear búsqueda al cambiar de página
   useEffect(() => {
     setSearchTerm("");
     setActiveTab("workflows");
   }, [location.pathname]);
 
+  const roleInfo = ROLE_LABELS[role];
+
   return (
     <>
-      {/* BOTÓN FLOTANTE */}
+      {/* Botón flotante */}
       <Button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50 hover:scale-110 transition-transform"
-        aria-label="Abrir sistema de ayuda"
+        aria-label="Abrir ayuda"
       >
         <HelpCircle className="h-6 w-6" />
       </Button>
 
-      {/* MODAL DE AYUDA */}
+      {/* Modal */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
                 <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-                  <BookOpen className="h-6 w-6 text-primary" />
+                  <BookOpen className="h-6 w-6 text-primary shrink-0" />
                   {currentHelp.title}
                 </DialogTitle>
                 <DialogDescription className="text-base mt-1">
                   {currentHelp.description}
                 </DialogDescription>
               </div>
-              <Badge variant="outline" className="text-xs">
-                {location.pathname}
-              </Badge>
+              {/* Badge de rol */}
+              <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${roleInfo.className}`}>
+                {roleInfo.label}
+              </span>
             </div>
           </DialogHeader>
 
-          {/* BUSCADOR */}
+          {/* Buscador */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -1065,51 +957,30 @@ export function HelpSystem() {
             />
           </div>
 
-          {/* TABS */}
-          <div className="flex gap-2 border-b">
-            <button
-              onClick={() => setActiveTab("workflows")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "workflows"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
+          {/* Tabs */}
+          <div className="flex gap-0 border-b overflow-x-auto">
+            <TabBtn active={activeTab === "workflows"} onClick={() => setActiveTab("workflows")}>
               📖 Guías Paso a Paso
-            </button>
-            {currentHelp.validations && currentHelp.validations.length > 0 && (
-              <button
-                onClick={() => setActiveTab("validations")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "validations"
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-              >
+            </TabBtn>
+            {currentHelp.validations.length > 0 && (
+              <TabBtn active={activeTab === "validations"} onClick={() => setActiveTab("validations")}>
                 ⚠️ Validaciones
-              </button>
+              </TabBtn>
             )}
-            <button
-              onClick={() => setActiveTab("tips")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "tips"
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              💡 Consejos
-            </button>
+            {currentHelp.tips.length > 0 && (
+              <TabBtn active={activeTab === "tips"} onClick={() => setActiveTab("tips")}>
+                💡 Consejos
+              </TabBtn>
+            )}
           </div>
 
-          {/* CONTENIDO */}
+          {/* Contenido */}
           <div className="flex-1 overflow-y-auto">
-            {/* TAB: WORKFLOWS */}
+
             {activeTab === "workflows" && (
               <div className="space-y-3 py-4">
                 {filteredWorkflows.length > 0 ? (
-                  filteredWorkflows.map((workflow, idx) => (
-                    <WorkflowCard key={idx} workflow={workflow} />
-                  ))
+                  filteredWorkflows.map((w, i) => <WorkflowCard key={i} workflow={w} />)
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">
                     <Search className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -1119,65 +990,43 @@ export function HelpSystem() {
               </div>
             )}
 
-            {/* TAB: VALIDATIONS */}
             {activeTab === "validations" && (
               <div className="space-y-3 py-4">
-                {currentHelp.validations &&
-                currentHelp.validations.length > 0 ? (
-                  currentHelp.validations.map((validation, idx) => (
-                    <div
-                      key={idx}
-                      className={`flex gap-3 rounded-lg border p-4 ${
-                        validation.severity === "error"
-                          ? "bg-red-50 dark:bg-red-950/20 border-red-200"
-                          : validation.severity === "warning"
-                            ? "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200"
-                            : "bg-blue-50 dark:bg-blue-950/20 border-blue-200"
-                      }`}
-                    >
-                      {validation.severity === "error" ? (
-                        <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-500 shrink-0 mt-0.5" />
-                      ) : validation.severity === "warning" ? (
-                        <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 shrink-0 mt-0.5" />
-                      ) : (
-                        <Info className="h-5 w-5 text-blue-600 dark:text-blue-500 shrink-0 mt-0.5" />
-                      )}
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-sm mb-1">
-                          {validation.rule}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {validation.description}
-                        </p>
-                      </div>
+                {currentHelp.validations.map((v, i) => (
+                  <div
+                    key={i}
+                    className={`flex gap-3 rounded-lg border p-4 ${
+                      v.severity === "error"
+                        ? "bg-red-50 dark:bg-red-950/20 border-red-200"
+                        : v.severity === "warning"
+                          ? "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200"
+                          : "bg-blue-50 dark:bg-blue-950/20 border-blue-200"
+                    }`}
+                  >
+                    {v.severity === "error" ? (
+                      <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                    ) : v.severity === "warning" ? (
+                      <AlertTriangle className="h-5 w-5 text-yellow-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                    )}
+                    <div>
+                      <h4 className="font-semibold text-sm mb-1">{v.rule}</h4>
+                      <p className="text-sm text-muted-foreground">{v.description}</p>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-center py-8 text-muted-foreground">
-                    No hay validaciones específicas para esta página
-                  </p>
-                )}
+                  </div>
+                ))}
               </div>
             )}
 
-            {/* TAB: TIPS */}
             {activeTab === "tips" && (
               <div className="space-y-3 py-4">
-                {currentHelp.tips && currentHelp.tips.length > 0 ? (
-                  currentHelp.tips.map((tip, idx) => (
-                    <div
-                      key={idx}
-                      className="flex gap-3 rounded-lg border bg-amber-50 dark:bg-amber-950/20 p-4"
-                    >
-                      <Lightbulb className="h-5 w-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
-                      <p className="text-sm">{tip}</p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-center py-8 text-muted-foreground">
-                    No hay consejos disponibles para esta página
-                  </p>
-                )}
+                {currentHelp.tips.map((tip, i) => (
+                  <div key={i} className="flex gap-3 rounded-lg border bg-amber-50 dark:bg-amber-950/20 p-4">
+                    <Lightbulb className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-sm">{tip}</p>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -1187,33 +1036,49 @@ export function HelpSystem() {
   );
 }
 
-// 🎯 COMPONENTE DE WORKFLOW CARD
-function WorkflowCard({ workflow }: { workflow: Workflow }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+// ─── Sub-componentes ──────────────────────────────────────────────────────────
 
+function TabBtn({ active, onClick, children }: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
+        active
+          ? "border-primary text-primary"
+          : "border-transparent text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function WorkflowCard({ workflow }: { workflow: Workflow }) {
+  const [open, setOpen] = useState(false);
   return (
     <div className="rounded-lg border bg-card">
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-4 text-left hover:bg-accent/50 transition-colors"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between p-4 text-left hover:bg-accent/50 transition-colors rounded-lg"
       >
         <div className="flex items-center gap-3">
           <span className="text-2xl">{workflow.icon}</span>
           <h3 className="font-semibold text-lg">{workflow.title}</h3>
         </div>
-        <ChevronRight
-          className={`h-5 w-5 transition-transform ${isExpanded ? "rotate-90" : ""}`}
-        />
+        <ChevronRight className={`h-5 w-5 shrink-0 transition-transform ${open ? "rotate-90" : ""}`} />
       </button>
-
-      {isExpanded && (
+      {open && (
         <div className="px-4 pb-4 space-y-3">
-          {workflow.steps.map((step: WorkflowStep, idx: number) => (
+          {workflow.steps.map((step, idx) => (
             <div key={idx} className="flex gap-3">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
                 {idx + 1}
               </div>
-              <div className="flex-1 space-y-1">
+              <div className="flex-1">
                 <h4 className="font-medium text-sm">{step.title}</h4>
                 <p className="text-sm text-muted-foreground">{step.content}</p>
               </div>

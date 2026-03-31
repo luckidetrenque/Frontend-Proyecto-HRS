@@ -1,22 +1,28 @@
 /**
- * HelpTooltip.tsx - VERSIÓN ACTUALIZADA Y COMPLETA
- * Componente de tooltip inline para ayuda contextual en formularios
- * 
- * ACTUALIZACIONES:
- * ✅ Tooltips para tipos de pensión
- * ✅ Tooltips para cuota de pensión
- * ✅ Tooltips para duración de clases
- * ✅ Tooltips para clases de prueba
- * ✅ Tooltips para validaciones
- * ✅ Tooltips para estados extendidos (ACA/ASA)
- * 
- * USO:
+ * HelpTooltip.tsx - VERSIÓN 3.0
+ * Tooltip contextual inline para formularios.
+ *
+ * El componente HelpTooltip es siempre el mismo — lo que varía es el contenido
+ * que se le pasa desde CommonTooltips, que ahora está organizado por sección
+ * con variantes donde el texto difiere según el rol.
+ *
+ * USO BÁSICO:
  * import { HelpTooltip, CommonTooltips } from '@/components/HelpTooltip';
- * 
+ *
  * <Label htmlFor="dni">
  *   DNI
  *   <HelpTooltip content={CommonTooltips.alumno.dni} />
  * </Label>
+ *
+ * USO CON ROL:
+ * const { user } = useAuth();
+ * const esAlumno = user?.rol === 'ALUMNO';
+ *
+ * <HelpTooltip content={
+ *   esAlumno
+ *     ? CommonTooltips.clase.estadoParaAlumno
+ *     : CommonTooltips.clase.estado
+ * } />
  */
 
 import { HelpCircle } from 'lucide-react';
@@ -53,270 +59,244 @@ export function HelpTooltip({ content, side = 'top' }: HelpTooltipProps) {
   );
 }
 
-// 📚 TOOLTIPS PREDEFINIDOS PARA CAMPOS COMUNES
+// ─── Tooltips organizados por sección ────────────────────────────────────────
 export const CommonTooltips = {
-  // ========================================
-  // ALUMNOS
-  // ========================================
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ALUMNOS — usados principalmente por ADMIN e INSTRUCTOR
+  // ══════════════════════════════════════════════════════════════════════════
   alumno: {
-    dni: 'Ingresa solo números sin puntos. Ejemplo: 12345678. El sistema valida automáticamente duplicados.',
-    telefono: 'Sin 0 ni 15. Ejemplo: 221234567. El sistema agrega automáticamente +549.',
-    email: 'Email opcional pero recomendado para comunicaciones y notificaciones.',
-    cantidadClases: 'Plan mensual: 4, 8, 12 o 16 clases según lo contratado.',
-    fechaInscripcion: 'Fecha en que el alumno se inscribió en la escuela. Por defecto: hoy.',
-    fechaNacimiento: 'Necesaria para cálculo de edad, seguro y registro legal.',
-    activo: 'Los alumnos inactivos NO aparecen al programar clases (excepto clases de prueba).',
-    
-    // NUEVOS - TIPOS DE PENSIÓN
-    tipoPension: 'Sin caballo: se asigna por clase. Reserva escuela: reserva un caballo específico. Caballo propio: el alumno tiene su caballo.',
-    cuotaPension: 'Entera: pensión completa. Media: media pensión. Tercio: un tercio de pensión.',
-    caballoPropio: 'Selecciona el caballo asignado al alumno (escuela o privado según el tipo de pensión).',
-    
-    // VALIDACIONES
-    dniDuplicado: '⚠️ Ya existe un alumno con este DNI. El DNI debe ser único.',
-    clasesRestantes: 'Clases restantes del mes según el plan contratado. Se calcula automáticamente.',
+    dni:             'Solo números sin puntos. El sistema valida duplicados en tiempo real.',
+    telefono:        'Sin 0 ni 15. Ejemplo: 221234567. El sistema agrega +549 automáticamente.',
+    codigoArea:      'Código de área sin el 0 inicial. Ejemplo: 221 para La Plata.',
+    email:           'Email opcional pero recomendado para comunicaciones.',
+    cantidadClases:  'Plan mensual contratado: 4, 8, 12 o 16 clases.',
+    fechaInscripcion:'Fecha de inscripción en la escuela. Por defecto: hoy.',
+    fechaNacimiento: 'Necesaria para registros legales y de seguro.',
+    activo:          'Los alumnos inactivos no aparecen al programar clases regulares. Sí pueden tener clases de prueba.',
+
+    // Pensión — solo relevante para ADMIN
+    tipoPension:    'Sin caballo: se asigna uno disponible por clase. Reserva escuela: siempre el mismo caballo de escuela. Caballo propio: el alumno tiene su caballo en pensión.',
+    cuotaPension:   'Solo para Caballo Propio. Entera = pensión completa. Media = 50%. Tercio ≈ 33%.',
+    caballoPropio:  'Seleccioná el caballo asignado. Para "Reserva escuela" elegí tipo ESCUELA; para "Caballo propio" elegí tipo PRIVADO.',
+
+    // Validaciones
+    dniDuplicado:    '⚠️ Ya existe un alumno con este DNI. El DNI debe ser único.',
+    clasesRestantes: 'Clases disponibles este mes. Se descuentan las COMPLETADAS y las ASA.',
   },
-  
-  // ========================================
-  // INSTRUCTORES
-  // ========================================
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // INSTRUCTORES — usados principalmente por ADMIN
+  // ══════════════════════════════════════════════════════════════════════════
   instructor: {
-    dni: 'Solo números sin puntos. El sistema valida duplicados automáticamente.',
-    color: 'Color único para identificar visualmente al instructor en el calendario. Hay 7 colores disponibles.',
-    activo: 'Los instructores inactivos NO aparecen al programar clases.',
-    telefono: 'Sin 0 ni 15. El sistema agrega automáticamente +549.',
-    fechaNacimiento: 'Fecha de nacimiento del instructor para registros.',
+    dni:            'Solo números sin puntos. Se valida duplicados automáticamente.',
+    color:          'Color único para identificar al instructor en el calendario. Solo el admin puede cambiarlo.',
+    activo:         'Los instructores inactivos no aparecen al programar clases.',
+    telefono:       'Sin 0 ni 15. El sistema agrega +549.',
+    fechaNacimiento:'Fecha de nacimiento para registros.',
+    email:          'Email de contacto visible para el admin y los alumnos.',
   },
-  
-  // ========================================
+
+  // ══════════════════════════════════════════════════════════════════════════
   // CABALLOS
-  // ========================================
+  // ══════════════════════════════════════════════════════════════════════════
   caballo: {
-    nombre: 'Nombre del caballo. Debe ser único para evitar confusiones.',
-    tipo: 'ESCUELA: propiedad de la escuela, disponible para todos. PRIVADO: pertenece a un alumno específico y solo puede usarlo su propietario.',
-    disponible: 'Desmarca si el caballo está enfermo, lesionado, en descanso o no disponible temporalmente.',
+    nombre:     'Nombre del caballo. Debe ser identificable para evitar confusiones.',
+    tipo:       'ESCUELA: disponible para todos. PRIVADO: solo para su propietario registrado.',
+    disponible: 'Desmarcá si el caballo está enfermo, en descanso o fuera de servicio temporalmente.',
   },
-  
-  // ========================================
-  // CLASES
-  // ========================================
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // CLASES — con variantes por rol
+  // ══════════════════════════════════════════════════════════════════════════
   clase: {
-    dia: 'Fecha en que se realizará la clase. Formato: dd/mm/yyyy',
-    hora: 'Hora de inicio. IMPORTANTE: Las clases NO pueden terminar después de las 18:30.',
-    duracion: '30 minutos (una franja) o 60 minutos (dos franjas consecutivas en el calendario).',
-    
-    // ALUMNOS Y PARTICIPANTES
-    alumno: 'Alumno que tomará la clase. Si tiene caballo asignado, aparecerá preseleccionado.',
-    instructor: 'Instructor que dictará la clase. Se identifica por color en el calendario.',
-    caballo: 'Caballo para la clase. Los privados solo pueden usarlos sus propietarios.',
-    
-    // ESPECIALIDADES
-    especialidad: 'EQUITACIÓN: clase regular. ADIESTRAMIENTO: entrenamiento del caballo. EQUINOTERAPIA: terapia asistida. MONTA: monta libre (asigna automáticamente alumno comodín).',
-    
-    // ESTADOS
-    estado: 'PROGRAMADA: pendiente de realizar. INICIADA: en progreso. COMPLETADA: finalizada exitosamente. CANCELADA: clase cancelada. ACA: Ausencia Con Aviso. ASA: Ausencia Sin Aviso.',
-    estadoProgramada: '🟠 Clase agendada, pendiente de realizarse.',
-    estadoIniciada: '🔵 Clase en progreso actualmente.',
-    estadoCompletada: '🟢 Clase finalizada exitosamente. No se puede editar.',
-    estadoCancelada: '🔴 Clase cancelada. No se puede editar.',
-    estadoACA: '🟣 Ausencia Con Aviso: el alumno avisó que no asistiría.',
-    estadoASA: '🌸 Ausencia Sin Aviso: el alumno no asistió sin previo aviso.',
-    
-    // CLASES DE PRUEBA
-    esPrueba: '🎓 Clase de prueba para evaluar a un nuevo alumno o especialidad nueva. NO cuenta para la cuota mensual.',
-    pruebaPersonaNueva: 'Persona sin cuenta de alumno. Solo necesitas nombre y apellido.',
-    pruebaAlumnoExistente: 'Alumno registrado que quiere probar una especialidad nueva. Debe estar INACTIVO.',
-    
-    // VALIDACIONES
-    horarioLimite: '⚠️ Las clases NO pueden terminar después de las 18:30. El sistema calcula automáticamente.',
-    conflictoHorario: '⚠️ El caballo o instructor ya tiene otra clase a esta hora.',
-    restriccionEdicion: '⚠️ No se pueden editar clases COMPLETADAS, INICIADAS o CANCELADAS (son registro histórico).',
-    
-    // OBSERVACIONES
-    observaciones: 'Notas adicionales sobre la clase. Ej: Motivo de cancelación, condiciones especiales, etc.',
+    dia:         'Fecha en que se realizará la clase.',
+    hora:        'Hora de inicio. Las clases no pueden terminar después de las 18:30.',
+    duracion:    '30 minutos: una franja en el calendario. 60 minutos: dos franjas consecutivas.',
+
+    alumno:      'Alumno que tomará la clase. Si tiene caballo asignado, se preselecciona. No aplica para MONTA.',
+    instructor:  'Instructor que dictará la clase. Se identifica por color en el calendario.',
+    caballo:     'Caballo para la clase. Los privados solo pueden usarlos sus propietarios.',
+
+    especialidad:
+      'EQUITACIÓN: clase regular. ADIESTRAMIENTO: entrenamiento del caballo. EQUINOTERAPIA: terapia asistida. MONTA: monta libre (sin alumno específico).',
+
+    // Estados — versión general (ADMIN/INSTRUCTOR)
+    estado:
+      'PROGRAMADA: pendiente. INICIADA: en progreso. COMPLETADA: finalizada. CANCELADA: cancelada. ACA: Ausente Con Aviso. ASA: Ausente Sin Aviso. RESERVADA: solicitud del alumno pendiente.',
+
+    // Estados — versión simplificada para ALUMNO
+    estadoParaAlumno:
+      '⏳ RESERVADA: pendiente de confirmación. 🟠 PROGRAMADA: confirmada. 🟢 COMPLETADA: realizada. 🟣 ACA: avisaste tu ausencia. 🌸 ASA: no asististe sin aviso.',
+
+    // Detalle de cada estado
+    estadoProgramada: '🟠 Clase confirmada, pendiente de realizarse.',
+    estadoIniciada:   '🔵 Clase en progreso actualmente.',
+    estadoCompletada: '🟢 Clase finalizada. No se puede editar ni eliminar.',
+    estadoCancelada:  '🔴 Clase cancelada. No se puede editar ni eliminar.',
+    estadoACA:        '🟣 Ausencia Con Aviso: el alumno avisó que no vendría.',
+    estadoASA:        '🌸 Ausencia Sin Aviso: el alumno no asistió sin previo aviso.',
+    estadoReservada:  '⏳ Solicitud enviada por el alumno. Pendiente de confirmación por el instructor o admin.',
+
+    // Clases de prueba — relevantes para ADMIN/INSTRUCTOR
+    esPrueba:
+      '🎓 Clase de prueba. No cuenta para la cuota mensual del alumno. Tiene identificación visual especial.',
+    pruebaPersonaNueva:
+      'Persona sin cuenta de alumno. Solo necesitás nombre y apellido. Se registra temporalmente.',
+    pruebaAlumnoExistente:
+      'Alumno ya registrado que quiere probar una especialidad nueva. Debe estar INACTIVO en el sistema.',
+
+    // Validaciones
+    horarioLimite:
+      '⚠️ Las clases no pueden terminar después de las 18:30. El sistema calcula la hora de fin automáticamente.',
+    conflictoHorario:
+      '⚠️ El caballo o instructor ya tienen otra clase que se solapa con este horario.',
+    restriccionEdicion:
+      '⚠️ Las clases COMPLETADAS, INICIADAS y CANCELADAS son históricas. No se pueden editar ni eliminar.',
+
+    observaciones: 'Notas adicionales: motivo de cancelación, condiciones especiales, novedades, etc.',
   },
-  
-  // ========================================
+
+  // ══════════════════════════════════════════════════════════════════════════
   // CALENDARIO
-  // ========================================
+  // ══════════════════════════════════════════════════════════════════════════
   calendario: {
-    vistasModo: 'Mes: vista mensual. Semana: 7 días. Día: tipo Excel con columnas por caballo.',
-    filtroAlumno: 'Mostrar solo clases de un alumno específico.',
-    filtroInstructor: 'Mostrar solo clases de un instructor específico.',
-    copiarSemana: 'Copia TODAS las clases de una semana completa (lun-dom) a otra semana.',
-    eliminarRango: 'Elimina TODAS las clases entre dos fechas. ⚠️ No se puede deshacer.',
-    cancelarDia: 'Cancela TODAS las clases PROGRAMADAS del día (no afecta completadas ni canceladas).',
-    exportarExcel: 'Descarga el calendario del día en formato Excel profesional con colores y leyenda.',
+    vistas:         'Mes: resumen mensual. Semana: 7 días con detalle. Día: grilla tipo Excel por caballo.',
+    filtroAlumno:   'Mostrá solo las clases del alumno seleccionado.',
+    filtroInstructor:'Mostrá solo las clases del instructor seleccionado.',
+
+    // Solo relevantes para ADMIN
+    copiarSemana:   'Copia TODAS las clases de lunes a domingo a otra semana. Útil para programaciones recurrentes.',
+    eliminarRango:  '⚠️ Elimina TODAS las clases entre dos fechas. No se puede deshacer.',
+    cancelarDia:    'Cancela todas las clases PROGRAMADAS del día. No afecta las completadas o ya canceladas.',
+    exportarExcel:  'Descarga el calendario en Excel con colores de instructores y leyenda.',
+    exportarSemana: 'Descarga la semana completa en Excel.',
+    exportarMes:    'Descarga el mes completo en Excel.',
+    expandir:       'Expandí el calendario a pantalla completa. Presioná Escape para cerrar.',
+
+    // Para ALUMNO
+    reservarClase:
+      'Hacé clic en el número del día para solicitar una clase. Quedará en estado RESERVADA hasta que el instructor la confirme.',
   },
-  
-  // ========================================
+
+  // ══════════════════════════════════════════════════════════════════════════
   // REPORTES
-  // ========================================
+  // ══════════════════════════════════════════════════════════════════════════
   reportes: {
-    periodo: 'Rango de fechas para el análisis. Por defecto: mes actual.',
-    tipoReporte: 'General: resumen completo. Alumnos: estadísticas de alumnos. Clases: análisis de clases. Instructores: carga de trabajo. Caballos: uso de caballos.',
-    exportar: 'Descarga el reporte en formato Excel con formato profesional.',
+    periodo:
+      'Rango de fechas para el análisis. Por defecto: mes actual. Cambiar las fechas actualiza todos los datos.',
+    filtroInstructor: 'Filtrá todos los reportes por instructor específico.',
+    filtroAlumno:     'Filtrá todos los reportes por alumno específico.',
+    exportar:
+      'Descarga el reporte en Excel con formato profesional, cabeceras y totales.',
+    tasaConversion:
+      'Porcentaje de personas que tomaron una clase de prueba y luego se inscribieron como alumnos activos.',
+    eficiencia:
+      '% de clases completadas sobre el total de clases asignadas al instructor.',
   },
-  
-  // ========================================
-  // VALIDACIONES GLOBALES
-  // ========================================
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // FINANZAS — solo ADMIN
+  // ══════════════════════════════════════════════════════════════════════════
+  finanzas: {
+    cuotasProyectadas: 'Total de cuotas de todos los alumnos activos según sus planes contratados.',
+    pensiones:         'Total mensual de pensiones (Reserva de Escuela o Caballo Propio).',
+    honorarios:        'Total a pagar a instructores = base mensual + (clases completadas × honorario por clase).',
+    balanceProyectado: 'Ingresos (cuotas + pensiones) − Egresos (honorarios).',
+    configuracion:     'Valores base para los cálculos. Solo el administrador puede modificarlos.',
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // USUARIOS — solo ADMIN
+  // ══════════════════════════════════════════════════════════════════════════
+  usuarios: {
+    rol:     'ADMIN: acceso total. INSTRUCTOR: gestión de clases y alumnos. ALUMNO: solo sus propias clases.',
+    activo:  'Suspender bloquea el acceso sin eliminar los datos ni el historial.',
+    eliminar:'Eliminar un usuario es permanente y no se puede deshacer.',
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // VALIDACIONES GENÉRICAS
+  // ══════════════════════════════════════════════════════════════════════════
   validaciones: {
-    campoRequerido: '* Campo obligatorio',
-    formatoInvalido: 'El formato ingresado no es válido',
-    valorMinimo: 'El valor debe ser mayor al mínimo permitido',
-    valorMaximo: 'El valor debe ser menor al máximo permitido',
+    campoRequerido: '* Campo obligatorio.',
+    formatoInvalido:'El formato ingresado no es válido.',
   },
 };
 
 /**
- * ========================================
- * EJEMPLOS DE USO COMPLETOS
- * ========================================
- */
-
-/**
- * EJEMPLO 1: Formulario de Alumno con tooltips
- * 
- * <div className="grid grid-cols-2 gap-4">
- *   <div className="space-y-2">
- *     <Label htmlFor="dni">
- *       DNI *
- *       <HelpTooltip content={CommonTooltips.alumno.dni} />
- *     </Label>
- *     <Input id="dni" name="dni" type="text" required />
- *   </div>
- * 
- *   <div className="space-y-2">
- *     <Label htmlFor="telefono">
- *       Teléfono *
- *       <HelpTooltip content={CommonTooltips.alumno.telefono} />
- *     </Label>
- *     <Input id="telefono" name="telefono" type="tel" required />
- *   </div>
- * </div>
- * 
- * <div className="space-y-2">
- *   <Label htmlFor="tipoPension">
- *     Tipo de Pensión
- *     <HelpTooltip content={CommonTooltips.alumno.tipoPension} />
- *   </Label>
- *   <Select name="tipoPension">
- *     <SelectTrigger><SelectValue /></SelectTrigger>
- *     <SelectContent>
- *       <SelectItem value="SIN_CABALLO">Sin caballo asignado</SelectItem>
- *       <SelectItem value="RESERVA_ESCUELA">Reserva caballo de escuela</SelectItem>
- *       <SelectItem value="CABALLO_PROPIO">Caballo propio</SelectItem>
- *     </SelectContent>
- *   </Select>
- * </div>
- * 
- * {tipoPension !== "SIN_CABALLO" && (
- *   <div className="space-y-2">
- *     <Label htmlFor="cuotaPension">
- *       Cuota de Pensión
- *       <HelpTooltip content={CommonTooltips.alumno.cuotaPension} />
- *     </Label>
- *     <Select name="cuotaPension">
- *       <SelectTrigger><SelectValue /></SelectTrigger>
- *       <SelectContent>
- *         <SelectItem value="ENTERA">Entera</SelectItem>
- *         <SelectItem value="MEDIA">Media</SelectItem>
- *         <SelectItem value="TERCIO">Tercio</SelectItem>
- *       </SelectContent>
- *     </Select>
- *   </div>
- * )}
- */
-
-/**
- * EJEMPLO 2: Formulario de Clase con tooltips
- * 
- * <div className="grid grid-cols-2 gap-4">
- *   <div className="space-y-2">
- *     <Label htmlFor="hora">
- *       Hora de Inicio *
- *       <HelpTooltip content={CommonTooltips.clase.horarioLimite} />
- *     </Label>
- *     <Input id="hora" name="hora" type="time" required />
- *   </div>
- * 
- *   <div className="space-y-2">
- *     <Label htmlFor="duracion">
- *       Duración
- *       <HelpTooltip content={CommonTooltips.clase.duracion} />
- *     </Label>
- *     <Select name="duracion">
- *       <SelectTrigger><SelectValue /></SelectTrigger>
- *       <SelectContent>
- *         <SelectItem value="30">30 minutos</SelectItem>
- *         <SelectItem value="60">60 minutos</SelectItem>
- *       </SelectContent>
- *     </Select>
- *   </div>
- * </div>
- * 
- * <div className="space-y-2">
- *   <Label>
- *     Tipo de Clase
- *     <HelpTooltip content={CommonTooltips.clase.esPrueba} />
- *   </Label>
- *   <div className="flex items-center gap-3 rounded-md border border-orange-300 bg-orange-50 p-2.5">
- *     <input type="checkbox" id="esPrueba" name="esPrueba" />
- *     <Label htmlFor="esPrueba">Clase de Prueba 🎓</Label>
- *   </div>
- * </div>
- * 
- * {esPrueba && (
- *   <div className="rounded-md border border-orange-200 bg-orange-50 p-4 space-y-3">
- *     <div className="flex gap-6">
- *       <label className="flex items-center gap-2">
- *         <input type="radio" name="tipoPrueba" value="persona_nueva" />
- *         <span className="text-sm">
- *           Persona nueva
- *           <HelpTooltip content={CommonTooltips.clase.pruebaPersonaNueva} side="right" />
- *         </span>
- *       </label>
- *       <label className="flex items-center gap-2">
- *         <input type="radio" name="tipoPrueba" value="alumno_existente" />
- *         <span className="text-sm">
- *           Alumno existente
- *           <HelpTooltip content={CommonTooltips.clase.pruebaAlumnoExistente} side="right" />
- *         </span>
- *       </label>
- *     </div>
- *   </div>
- * )}
- */
-
-/**
- * EJEMPLO 3: Tooltip personalizado
- * 
- * <Label htmlFor="custom">
- *   Campo Personalizado
- *   <HelpTooltip 
- *     content="Este es un tooltip específico para este campo único" 
- *     side="right" 
- *   />
+ * ═══════════════════════════════════════════════════════════════
+ * EJEMPLOS DE USO POR ROL
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * ── ADMIN / INSTRUCTOR: formulario de alumno ──────────────────
+ *
+ * import { HelpTooltip, CommonTooltips } from '@/components/HelpTooltip';
+ *
+ * <Label htmlFor="tipoPension">
+ *   Tipo de Pensión
+ *   <HelpTooltip content={CommonTooltips.alumno.tipoPension} />
  * </Label>
- */
-
-/**
- * EJEMPLO 4: Tooltip con validación dinámica
- * 
- * <div className="space-y-2">
- *   <Label htmlFor="dni">
- *     DNI *
- *     <HelpTooltip content={
- *       validacionDni?.duplicado 
- *         ? CommonTooltips.alumno.dniDuplicado 
- *         : CommonTooltips.alumno.dni
- *     } />
+ *
+ * <Label htmlFor="cuotaPension">
+ *   Cuota de Pensión
+ *   <HelpTooltip content={CommonTooltips.alumno.cuotaPension} />
+ * </Label>
+ *
+ * ── Con validación dinámica de DNI ────────────────────────────
+ *
+ * <Label htmlFor="dni">
+ *   DNI *
+ *   <HelpTooltip content={
+ *     validacionDni?.duplicado
+ *       ? CommonTooltips.alumno.dniDuplicado
+ *       : CommonTooltips.alumno.dni
+ *   } />
+ * </Label>
+ *
+ * ── Formulario de clase con variante de rol ───────────────────
+ *
+ * const { user } = useAuth();
+ * const esAlumno = user?.rol === 'ALUMNO' || user?.rol === 'ROLE_ALUMNO';
+ *
+ * <Label>Estado
+ *   <HelpTooltip content={
+ *     esAlumno
+ *       ? CommonTooltips.clase.estadoParaAlumno
+ *       : CommonTooltips.clase.estado
+ *   } />
+ * </Label>
+ *
+ * ── Clase de prueba ───────────────────────────────────────────
+ *
+ * <Label>
+ *   Clase de Prueba
+ *   <HelpTooltip content={CommonTooltips.clase.esPrueba} />
+ * </Label>
+ *
+ * {esPrueba && tipoPrueba === 'persona_nueva' && (
+ *   <Label>
+ *     Nombre
+ *     <HelpTooltip
+ *       content={CommonTooltips.clase.pruebaPersonaNueva}
+ *       side="right"
+ *     />
  *   </Label>
- *   <Input 
- *     id="dni" 
- *     name="dni" 
- *     className={validacionDni?.duplicado ? "border-red-500" : ""}
- *   />
- * </div>
+ * )}
+ *
+ * {esPrueba && tipoPrueba === 'alumno_existente' && (
+ *   <Label>
+ *     Alumno
+ *     <HelpTooltip
+ *       content={CommonTooltips.clase.pruebaAlumnoExistente}
+ *       side="right"
+ *     />
+ *   </Label>
+ * )}
+ *
+ * ── ALUMNO: reservar clase ────────────────────────────────────
+ *
+ * <Label>Reservar una clase
+ *   <HelpTooltip content={CommonTooltips.calendario.reservarClase} />
+ * </Label>
  */
