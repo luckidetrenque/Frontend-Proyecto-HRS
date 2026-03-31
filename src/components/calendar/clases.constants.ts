@@ -56,8 +56,9 @@ export const ESTADO_COLORS: Record<
   INICIADA: "info",
   COMPLETADA: "success",
   CANCELADA: "error",
-  ACA: "info",
-  ASA: "info",
+  ACA: "default",
+  ASA: "error",
+  RESERVADA: "info",
 };
 
 // Estilos Tailwind por estado (para celdas y badges)
@@ -67,8 +68,9 @@ export const ESTADO_STYLES: Record<string, string> = {
   COMPLETADA:
     "bg-emerald-50 text-emerald-700 border-emerald hover:bg-emerald-100",
   CANCELADA: "bg-red-50 text-red-700 border-red-300 hover:bg-red-100",
-  ACA: "bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100",
+  ACA: "bg-violet-50 text-violet-700 border-violet-300 hover:bg-violet-100",
   ASA: "bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100",
+  RESERVADA: "bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100",
 };
 
 // Estilos específicos para clases de prueba
@@ -85,6 +87,7 @@ export const ESTADOS: Clase["estado"][] = [
   "CANCELADA",
   "ACA",
   "ASA",
+  "RESERVADA",
 ];
 
 export const COLOR = "#FFFFFF";
@@ -95,8 +98,9 @@ export const ESTADO_ICONS: Record<string, string> = {
   INICIADA: "Play",
   COMPLETADA: "Check",
   CANCELADA: "X",
-  ACA: "AlertTriangle", // Ausencia con aviso
-  ASA: "AlertTriangle", // Ausencia sin aviso
+  ACA: "AlertTriangle",
+  ASA: "AlertOctagon",
+  RESERVADA: "Clock",
 };
 
 // Tipos de vista
@@ -162,6 +166,7 @@ export const ESTADO_LABELS: Record<string, string> = {
   CANCELADA: "Cancelada",
   ACA: "Ausente con Aviso",
   ASA: "Ausente sin Aviso",
+  RESERVADA: "Reservada",
 };
 
 /**

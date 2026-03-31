@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Bell, CalendarCheck, Maximize2, Minimize2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { CalendarControls } from "@/components/calendar/CalendarControls";
@@ -23,7 +23,7 @@ import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { useCalendar } from "@/hooks/useCalendar";
 import { useClasesRestantes } from "@/hooks/useClasesRestantes";
-import { Alumno, Instructor } from "@/lib/api";
+import { Alumno, Instructor, Clase } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { puedeEditarClase } from "@/utils/validacionesClases";
 
@@ -51,6 +51,7 @@ export default function CalendarioPage() {
     clasesByDate,
     createMutation,
     updateMutation,
+    reservarMutation,
     copyWeekMutation,
     deleteWeekMutation,
     navigate,
@@ -82,12 +83,17 @@ export default function CalendarioPage() {
     conflictSet,
   } = useCalendar();
 
-  const [alumnoId, setAlumnoId] = useState<string>("");
+  const [alumnoIdState, setAlumnoIdState] = useState<string>("");
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const userStr = sessionStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isInstructor = user?.rol === "INSTRUCTOR" || user?.rol === "ROLE_INSTRUCTOR";
+  const isAlumno = user?.rol === "ALUMNO" || user?.rol === "ROLE_ALUMNO";
 
   // Verificar clases restantes del alumno
   const { estaAgotado } = useClasesRestantes(
-    alumnoId ? Number(alumnoId) : 0,
+    alumnoIdState ? Number(alumnoIdState) : 0,
     currentDate,
   );
 
@@ -102,6 +108,18 @@ export default function CalendarioPage() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isExpanded]);
 
+  // Configuración de vista según el rol
+  const puedeEditarClaseModificado = (clase: Clase) => {
+    const estadoEditable = puedeEditarClase(clase);
+    if (isAlumno) {
+      return clase.alumnoId === Number(user?.alumnoId) && estadoEditable;
+    }
+    if (isInstructor) {
+      return clase.instructorId === Number(user?.instructorId) && estadoEditable;
+    }
+    return estadoEditable;
+  };
+
   // Bloquear scroll del body cuando está expandido
   useEffect(() => {
     if (isExpanded) {
@@ -114,28 +132,38 @@ export default function CalendarioPage() {
     };
   }, [isExpanded]);
 
-  // Configuración de filtros
   const filterConfig = [
     {
       name: "alumnoId",
-      label: "Alumno",
+      label: isAlumno ? "Filtro de Clases" : "Alumno",
       type: "select" as const,
-      options: alumnos.map((a: Alumno) => ({
-        label: `${a.nombre} ${a.apellido}`,
-        value: String(a.id),
-      })),
-      placeholder: "Todos los alumnos",
+      options: isAlumno
+        ? [
+            {
+              label: "Ver solo mis clases",
+              value: String(user?.alumnoId),
+            },
+          ]
+        : alumnos.map((a: Alumno) => ({
+            label: `${a.nombre} ${a.apellido}`,
+            value: String(a.id),
+          })),
+      placeholder: isAlumno ? "Ver todas las clases" : "Todos los alumnos",
     },
-    {
-      name: "instructorId",
-      label: "Instructor",
-      type: "select" as const,
-      options: instructores.map((i: Instructor) => ({
-        label: `${i.nombre} ${i.apellido}`,
-        value: String(i.id),
-      })),
-      placeholder: "Todos los instructores",
-    },
+    ...(isAlumno
+      ? []
+      : [
+          {
+            name: "instructorId",
+            label: "Instructor",
+            type: "select" as const,
+            options: instructores.map((i: Instructor) => ({
+              label: `${i.nombre} ${i.apellido}`,
+              value: String(i.id),
+            })),
+            placeholder: "Todos los instructores",
+          },
+        ]),
   ];
 
   // Título del Card según vista
@@ -189,9 +217,7 @@ export default function CalendarioPage() {
           "p-0",
           isExpanded && "flex-1 overflow-hidden",
         )}
-        // Doble click en el contenido para togglear
         onDoubleClick={(e) => {
-          // Evitar que dispare si el doble click es sobre un botón, input, select, etc.
           const target = e.target as HTMLElement;
           const interactive = target.closest(
             "button, a, input, select, textarea, [role='button'], [data-radix-popper-content-wrapper]",
@@ -210,7 +236,7 @@ export default function CalendarioPage() {
             onCellClick={handleCellClick}
             onEditClase={handleEditClase}
             onDeleteClase={handleDeleteClase}
-            puedeEditarClase={puedeEditarClase}
+            puedeEditarClase={puedeEditarClaseModificado}
             getAlumnoNombre={getAlumnoNombre}
             getAlumnoNombreCompleto={getAlumnoNombreCompleto}
             getNombreParaClase={getNombreParaClase}
@@ -231,7 +257,7 @@ export default function CalendarioPage() {
             onStatusChange={handleStatusChange}
             onEditClase={handleEditClase}
             onDeleteClase={handleDeleteClase}
-            puedeEditarClase={puedeEditarClase}
+            puedeEditarClase={puedeEditarClaseModificado}
             getAlumnoNombre={getAlumnoNombre}
             getAlumnoApellido={getAlumnoApellido}
             getAlumnoNombreCompleto={getAlumnoNombreCompleto}
@@ -250,7 +276,7 @@ export default function CalendarioPage() {
             onStatusChange={handleStatusChange}
             onEditClase={handleEditClase}
             onDeleteClase={handleDeleteClase}
-            puedeEditarClase={puedeEditarClase}
+            puedeEditarClase={puedeEditarClaseModificado}
             getAlumnoNombre={getAlumnoNombre}
             getAlumnoApellido={getAlumnoApellido}
             getAlumnoNombreCompleto={getAlumnoNombreCompleto}
@@ -282,7 +308,6 @@ export default function CalendarioPage() {
       />
 
       <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 mb-6">
-        {/* Filtros */}
         <FilterBar
           filters={filterConfig}
           values={filters}
@@ -290,30 +315,30 @@ export default function CalendarioPage() {
           onReset={handleResetFilters}
           isLoading={isLoading}
         />
-        {/* Barra de herramientas */}
-        <CalendarToolbar
-          isCopyOpen={isCopyOpen}
-          onCopyOpenChange={setIsCopyOpen}
-          onCopySubmit={handleCopySubmit}
-          copyPending={copyWeekMutation.isPending}
-          isDeleteOpen={isDeleteOpen}
-          onDeleteOpenChange={setIsDeleteOpen}
-          onDeleteSubmit={handleDeleteSubmit}
-          deletePending={deleteWeekMutation.isPending}
-          showExport={viewMode === "day"}
-          onExportExcel={handleExportExcel}
-          showExportWeek={viewMode === "week"}
-          onExportWeekExcel={handleExportWeekExcel}
-          showExportMonth={viewMode === "month"}
-          onExportMonthExcel={handleExportMonthExcel}
-          showCancelDay={viewMode === "day"}
-          onCancelDay={handleCancelDayClases}
-          cancelDayCount={getCancelableDayClases().length}
-          cancelDayDate={format(currentDate, "yyyy-MM-dd")}
-        />
+        {!isAlumno && (
+          <CalendarToolbar
+            isCopyOpen={isCopyOpen}
+            onCopyOpenChange={setIsCopyOpen}
+            onCopySubmit={handleCopySubmit}
+            copyPending={copyWeekMutation.isPending}
+            isDeleteOpen={isDeleteOpen}
+            onDeleteOpenChange={setIsDeleteOpen}
+            onDeleteSubmit={handleDeleteSubmit}
+            deletePending={deleteWeekMutation.isPending}
+            showExport={viewMode === "day"}
+            onExportExcel={handleExportExcel}
+            showExportWeek={viewMode === "week"}
+            onExportWeekExcel={handleExportWeekExcel}
+            showExportMonth={viewMode === "month"}
+            onExportMonthExcel={handleExportMonthExcel}
+            showCancelDay={viewMode === "day"}
+            onCancelDay={handleCancelDayClases}
+            cancelDayCount={getCancelableDayClases().length}
+            cancelDayDate={format(currentDate, "yyyy-MM-dd")}
+          />
+        )}
       </div>
 
-      {/* Overlay oscuro cuando está expandido */}
       {isExpanded && (
         <div
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
@@ -321,10 +346,8 @@ export default function CalendarioPage() {
         />
       )}
 
-      {/* Vista del Calendario (unificada) */}
       {calendarCard}
 
-      {/* Leyenda de instructores */}
       {!isExpanded && (
         <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
           {instructores.map((instructor) => (
@@ -341,7 +364,68 @@ export default function CalendarioPage() {
         </div>
       )}
 
-      {/* Diálogo Crear/Editar Clase */}
+      {/* Panel de Reservas Pendientes — visible solo para admin/instructor */}
+      {!isAlumno && (() => {
+        const reservasPendientes = filteredClases.filter(
+          (c) => c.estado === "RESERVADA"
+        );
+        if (reservasPendientes.length === 0) return null;
+
+        return (
+          <div className="mt-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Bell className="h-4 w-4 text-purple-600" />
+              <h3 className="font-semibold text-sm">
+                Reservas pendientes de confirmación
+              </h3>
+              <span className="inline-flex items-center justify-center rounded-full bg-purple-600 text-white text-xs font-bold h-5 min-w-5 px-1.5">
+                {reservasPendientes.length}
+              </span>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {reservasPendientes.map((clase) => (
+                <div
+                  key={clase.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-purple-200 bg-purple-50 px-3 py-2.5"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {getNombreCompletoParaClase(clase)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(clase.dia + "T12:00:00"), "d MMM", { locale: es })}
+                      {" · "}{clase.hora.slice(0, 5)}
+                      {" · "}{getCaballoNombre(clase.caballoId)}
+                    </p>
+                    <p className="text-xs text-purple-600">
+                      {getInstructorNombre(clase.instructorId)}
+                    </p>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    <button
+                      onClick={() => handleStatusChange(clase.id, "PROGRAMADA", "")}
+                      className="inline-flex items-center gap-1 rounded-md bg-purple-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-purple-700 transition-colors"
+                      title="Confirmar reserva"
+                    >
+                      <CalendarCheck className="h-3.5 w-3.5" />
+                      Confirmar
+                    </button>
+                    <button
+                      onClick={() => handleStatusChange(clase.id, "CANCELADA", "Reserva rechazada")}
+                      className="inline-flex items-center gap-1 rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      title="Rechazar reserva"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
@@ -368,11 +452,17 @@ export default function CalendarioPage() {
             onSubmit={(data) => {
               if (claseToEdit) {
                 updateMutation.mutate({ id: claseToEdit.id, data });
+              } else if (isAlumno) {
+                reservarMutation.mutate(data);
               } else {
                 createMutation.mutate(data);
               }
             }}
-            isPending={createMutation.isPending || updateMutation.isPending}
+            isPending={
+              createMutation.isPending ||
+              updateMutation.isPending ||
+              reservarMutation.isPending
+            }
             onCancel={handleCloseDialog}
           />
         </DialogContent>

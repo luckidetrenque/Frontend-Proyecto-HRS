@@ -1,6 +1,8 @@
 import { Alumno, Caballo, Clase } from "@/lib/api";
 
 export const puedeEditarClase = (clase: Clase): boolean => {
+  // COMPLETADA, INICIADA y CANCELADA son estados finales no editables.
+  // ACA, ASA y RESERVADA siguen siendo editables.
   return !["COMPLETADA", "INICIADA", "CANCELADA"].includes(clase.estado);
 };
 

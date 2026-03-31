@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  CalendarCheck,
   ChessKnight,
   Clock,
   GraduationCap,
@@ -36,6 +37,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Clase } from "@/lib/api";
 
 import {
+  ESTADO_LABELS,
   ESTADO_STYLES,
   ESTADOS,
   MOTIVOS_CANCELACION,
@@ -77,6 +79,10 @@ export function ClasePopover({
   const [motivoSeleccionado, setMotivoSeleccionado] = useState<string>("");
   const [observacionesPersonalizadas, setObservacionesPersonalizadas] =
     useState<string>("");
+
+  const userStr = sessionStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isAlumno = user?.rol === "ALUMNO" || user?.rol === "ROLE_ALUMNO";
 
   const handleDelete = () => {
     onDelete(clase.id);
@@ -183,72 +189,106 @@ export function ClasePopover({
                 </div>
 
                 {/* Botones de Acción */}
-                <div className="mt-4 border-t border-border pt-4 space-y-3">
-                  <div className="flex gap-2">
-                    {/* Botón Editar */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleEdit}
-                      disabled={!puedeEditar}
-                      className={
-                        !puedeEditar ? "opacity-50 cursor-not-allowed" : ""
-                      }
-                      title={
-                        !puedeEditar
-                          ? "No se puede editar una clase finalizada"
-                          : "Editar clase"
-                      }
-                    >
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Editar
-                    </Button>
+                {puedeEditar && (
+                  <div className="mt-4 border-t border-border pt-4 space-y-3">
 
-                    {/* Botón Eliminar */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowDeleteDialog(true)}
-                      disabled={!puedeEditar}
-                      className={
-                        !puedeEditar
-                          ? "opacity-50 cursor-not-allowed text-muted"
-                          : "text-destructive"
-                      }
-                      title={
-                        !puedeEditar
-                          ? "No se puede eliminar una clase finalizada"
-                          : "Eliminar clase"
-                      }
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Eliminar
-                    </Button>
-                  </div>
+                    {/* CTA especial para confirmar reservas */}
+                    {clase.estado === "RESERVADA" && (
+                      <div className="rounded-md bg-purple-50 border border-purple-200 p-3">
+                        <p className="text-xs text-purple-700 font-medium mb-2">
+                          ⏳ Reserva pendiente de confirmación
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-xs"
+                            onClick={() => {
+                              onStatusChange(clase.id, "PROGRAMADA", "");
+                              if (onOpenChange) onOpenChange(false);
+                            }}
+                          >
+                            <CalendarCheck className="mr-1.5 h-3.5 w-3.5" />
+                            Confirmar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 border-red-300 text-red-600 hover:bg-red-50 text-xs"
+                            onClick={() => setShowCancelForm(true)}
+                          >
+                            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                            Rechazar
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
-                  <div>
-                    <Label className="mb-2 block text-xs text-muted-foreground">
-                      Cambio Rápido de Estado
-                    </Label>
-                    <div className="flex flex-wrap gap-1">
-                      {ESTADOS.map((estado) => (
-                        <Button
-                          key={estado}
-                          variant="outline"
-                          size="sm"
-                          className={`text-xs transition-colors ${
-                            clase.estado === estado
-                              ? ESTADO_STYLES[estado]
-                              : "text-muted-foreground opacity-50"
-                          }`}
-                          onClick={() => handleStatusClick(estado)}
-                        >
-                          {estado}
-                        </Button>
-                      ))}
+                    <div className="flex gap-2">
+                      {/* Botón Editar */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleEdit}
+                        disabled={!puedeEditar}
+                        className={
+                          !puedeEditar ? "opacity-50 cursor-not-allowed" : ""
+                        }
+                        title={
+                          !puedeEditar
+                            ? "No se puede editar una clase finalizada"
+                            : "Editar clase"
+                        }
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Editar
+                      </Button>
+
+                      {/* Botón Eliminar */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowDeleteDialog(true)}
+                        disabled={!puedeEditar}
+                        className={
+                          !puedeEditar
+                            ? "opacity-50 cursor-not-allowed text-muted"
+                            : "text-destructive"
+                        }
+                        title={
+                          !puedeEditar
+                            ? "No se puede eliminar una clase finalizada"
+                            : "Eliminar clase"
+                        }
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Eliminar
+                      </Button>
+                    </div>
+
+                    <div>
+                      <Label className="mb-2 block text-xs text-muted-foreground">
+                        Cambio Rápido de Estado
+                      </Label>
+                      <div className="flex flex-wrap gap-1">
+                        {(isAlumno ? (["ACA"] as Clase["estado"][]) : ESTADOS).map((estado) => (
+                          <Button
+                            key={estado}
+                            variant="outline"
+                            size="sm"
+                            className={`text-xs transition-colors ${
+                              clase.estado === estado
+                                ? ESTADO_STYLES[estado]
+                                : "text-muted-foreground opacity-50"
+                            }`}
+                            onClick={() => handleStatusClick(estado)}
+                          >
+                            {ESTADO_LABELS[estado] ?? estado}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </>
             ) : (
               // Formulario de cancelación

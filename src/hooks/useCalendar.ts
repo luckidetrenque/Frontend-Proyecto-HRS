@@ -58,6 +58,11 @@ export function useCalendar() {
   const [isCopyOpen, setIsCopyOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
+  const userStr = sessionStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isInstructor = user?.rol === "INSTRUCTOR" || user?.rol === "ROLE_INSTRUCTOR";
+  const isAlumno = user?.rol === "ALUMNO" || user?.rol === "ROLE_ALUMNO";
+
   // Estados de filtros
   const [filters, setFilters] = useState({
     alumnoId: "all",
@@ -67,8 +72,18 @@ export function useCalendar() {
   // ─── Queries ────────────────────────────────────────────────────────────────
 
   const { data: clasesData, isLoading } = useQuery({
-    queryKey: ["clases"],
-    queryFn: () => clasesApi.listar({ page: 0, size: 1000, sort: "dia,desc" }),
+    queryKey: ["clases", filters],
+    queryFn: () =>
+      clasesApi.listar({
+        page: 0,
+        size: 1000,
+        sort: "dia,desc",
+        alumnoId: filters.alumnoId !== "all" ? Number(filters.alumnoId) : undefined,
+        instructorId:
+          filters.instructorId !== "all"
+            ? Number(filters.instructorId)
+            : undefined,
+      }),
   });
   const clases = useMemo(() => clasesData?.content ?? [], [clasesData]);
 
@@ -208,6 +223,17 @@ export function useCalendar() {
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al cambiar el estado"),
+  });
+
+  const reservarMutation = useMutation({
+    mutationFn: clasesApi.reservar,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["clases"] });
+      setIsDialogOpen(false);
+      toast.success(data.__successMessage || "Reserva realizada correctamente");
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al realizar la reserva"),
   });
 
   const copyWeekMutation = useMutation({
@@ -486,6 +512,7 @@ export function useCalendar() {
   };
 
   const getNombreParaClase = (clase: Clase): string => {
+    if (clase.alumnoNombre) return clase.alumnoNombre;
     if (clase.alumnoId) {
       const alumno = alumnos.find((a: Alumno) => a.id === clase.alumnoId);
       return alumno ? alumno.nombre : "-";
@@ -494,6 +521,7 @@ export function useCalendar() {
   };
 
   const getNombreCompletoParaClase = (clase: Clase): string => {
+    if (clase.alumnoNombreCompleto) return clase.alumnoNombreCompleto;
     if (clase.alumnoId) {
       const alumno = alumnos.find((a: Alumno) => a.id === clase.alumnoId);
       return alumno ? `${alumno.nombre} ${alumno.apellido}` : "-";
@@ -553,6 +581,7 @@ export function useCalendar() {
     deleteWeekMutation,
     bulkCancelMutation,
     statusMutation,
+    reservarMutation,
 
     // Handlers
     navigate,

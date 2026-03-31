@@ -52,7 +52,7 @@ export function Layout({ children }: LayoutProps) {
       return ["Clases", "Calendario", "Caballos", "Alumnos", "Reportes"].includes(item.name);
     }
     if (user?.rol === "ALUMNO") {
-      return ["Mis Clases"].includes(item.name);
+      return ["Mis Clases", "Calendario"].includes(item.name);
     }
     return false; // ALUMNO no ve módulos de gestión
   });

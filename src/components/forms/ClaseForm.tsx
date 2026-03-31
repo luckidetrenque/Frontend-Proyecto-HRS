@@ -117,7 +117,7 @@ export function ClaseForm({
   const { data: miPerfilInstructor } = useQuery({
     queryKey: ["instructor-me"],
     queryFn: instructoresApi.obtenerMiPerfil,
-    enabled: user?.rol === "INSTRUCTOR",
+    enabled: user?.rol === "INSTRUCTOR" || user?.rol === "ROLE_INSTRUCTOR",
     staleTime: Infinity,
   });
 
@@ -161,8 +161,12 @@ export function ClaseForm({
 
   // Si es instructor forzamos campo instructor a mi perfil
   useEffect(() => {
-    if (user?.rol === "INSTRUCTOR" && miPerfilInstructor && !clase) {
+    if ((user?.rol === "INSTRUCTOR" || user?.rol === "ROLE_INSTRUCTOR") && miPerfilInstructor && !clase) {
       setValue("instructorId", String(miPerfilInstructor.id));
+    }
+    if ((user?.rol === "ALUMNO" || user?.rol === "ROLE_ALUMNO") && user?.alumnoId && !clase) {
+      setValue("alumnoId", String(user.alumnoId));
+      setValue("especialidad", "EQUITACION"); // Default for students
     }
   }, [user, miPerfilInstructor, clase, setValue]);
 
@@ -257,7 +261,10 @@ export function ClaseForm({
       dia: data.dia,
       hora: parsearHoraParaApi(data.hora),
       duracion: data.duracion,
-      estado: clase?.estado ?? "PROGRAMADA",
+      estado:
+        (user?.rol === "ALUMNO" || user?.rol === "ROLE_ALUMNO")
+          ? "RESERVADA"
+          : (clase?.estado ?? "PROGRAMADA"),
       observaciones: data.observaciones ?? "",
       instructorId: Number(data.instructorId),
       caballoId: caballoIdFinal,
@@ -277,43 +284,45 @@ export function ClaseForm({
       <div className="space-y-4">
         {/* Especialidad */}
         <div className="space-y-2">
-          <Label htmlFor="especialidad">Especialidad</Label>
-          <Controller
-            name="especialidad"
-            control={control}
-            render={({ field }) => (
-              <Select
-                value={field.value}
-                onValueChange={(v) => {
-                  handleEspecialidadChangeEffect(v, field.onChange, (val) =>
-                    setValue("alumnoId", val ?? ""),
-                  );
-                }}
-              >
-                <SelectTrigger
-                  className={errors.especialidad ? "border-red-500" : ""}
+            <Label htmlFor="especialidad">Especialidad</Label>
+            <Controller
+              name="especialidad"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={(v) => {
+                    handleEspecialidadChangeEffect(v, field.onChange, (val) =>
+                      setValue("alumnoId", val ?? ""),
+                    );
+                  }}
                 >
-                  <SelectValue placeholder="Seleccionar especialidad" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ESPECIALIDADES_OPTIONS.map((esp) => (
-                    <SelectItem key={esp.value} value={esp.value}>
-                      {esp.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  <SelectTrigger
+                    className={errors.especialidad ? "border-red-500" : ""}
+                  >
+                    <SelectValue placeholder="Seleccionar especialidad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ESPECIALIDADES_OPTIONS.filter((esp) => 
+                      !((user?.rol === "ALUMNO" || user?.rol === "ROLE_ALUMNO") && esp.value === "MONTA")
+                    ).map((esp) => (
+                      <SelectItem key={esp.value} value={esp.value}>
+                        {esp.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.especialidad && (
+              <p className="text-sm text-red-500">
+                {errors.especialidad.message}
+              </p>
             )}
-          />
-          {errors.especialidad && (
-            <p className="text-sm text-red-500">
-              {errors.especialidad.message}
-            </p>
-          )}
-        </div>
+          </div>
 
         {/* Alumno */}
-        {especialidad !== "MONTA" ? (
+        {especialidad !== "MONTA" && user?.rol !== "ALUMNO" && user?.rol !== "ROLE_ALUMNO" ? (
           <div className="space-y-2">
             <Label htmlFor="alumno">Alumno</Label>
             <Controller
@@ -339,14 +348,14 @@ export function ClaseForm({
               )}
             />
           </div>
-        ) : (
+        ) : (user?.rol === "ALUMNO" || user?.rol === "ROLE_ALUMNO") ? null : (
           <p className="text-xs text-muted-foreground">
             Las clases de MONTA son exclusivamente para instructores
           </p>
         )}
 
         {/* Clase de prueba — solo en creación y no MONTA */}
-        {!clase && especialidad !== "MONTA" && (
+        {!clase && especialidad !== "MONTA" && user?.rol !== "ALUMNO" && user?.rol !== "ROLE_ALUMNO" && (
           <div className="space-y-3 rounded-md border p-3">
             <div className="flex items-center gap-2">
               <Controller
@@ -468,7 +477,11 @@ export function ClaseForm({
               name="instructorId"
               control={control}
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange} disabled={user?.rol === "INSTRUCTOR"}>
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  disabled={user?.rol === "INSTRUCTOR" || user?.rol === "ROLE_INSTRUCTOR"}
+                >
                   <SelectTrigger
                     className={errors.instructorId ? "border-red-500" : ""}
                   >
@@ -533,9 +546,9 @@ export function ClaseForm({
         <Button type="submit" disabled={isPending}>
           {isPending
             ? "Guardando..."
-            : clase
-              ? "Guardar Cambios"
-              : "Crear Clase"}
+            : (user?.rol === "ALUMNO" || user?.rol === "ROLE_ALUMNO")
+              ? "Reservar Clase"
+              : (clase ? "Guardar Cambios" : "Crear Clase")}
         </Button>
       </div>
     </form>

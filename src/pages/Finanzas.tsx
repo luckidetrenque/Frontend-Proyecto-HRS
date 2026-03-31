@@ -43,7 +43,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { finanzasApi } from "@/lib/api";
+import { finanzasApi, instructoresApi, Instructor, PageResponse } from "@/lib/api";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // ─── Paleta de colores ────────────────────────────────────────────────────────
 const COLORS = {
@@ -108,15 +115,36 @@ export default function FinanzasPage() {
   });
 
   // ── Queries ──────────────────────────────────────────────────────────────────
+  const userStr = sessionStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isInstructor = user?.rol === "ROLE_INSTRUCTOR";
+  const isAdmin = user?.rol === "ROLE_ADMIN";
+
+  const [selectedInstructorId, setSelectedInstructorId] = useState<string>(
+    isInstructor ? String(user?.instructorId) : ""
+  );
+
+  const instructorId = selectedInstructorId ? Number(selectedInstructorId) : undefined;
+
+  // Listar instructores para el filtro admin
+  const { data: instructoresData } = useQuery<PageResponse<Instructor>>({
+    queryKey: ["instructores-finanzas"],
+    queryFn: () => instructoresApi.listar({ page: 0, size: 50 }),
+    enabled: isAdmin,
+  });
+  const instructores = instructoresData?.content ?? [];
+
+  // ── Queries ──────────────────────────────────────────────────────────────────
   const { data: resumen, isLoading: loadingResumen } = useQuery({
-    queryKey: ["finanzas-resumen", dateRange],
-    queryFn: () => finanzasApi.getResumen(dateRange.inicio, dateRange.fin),
+    queryKey: ["finanzas-resumen", dateRange, instructorId],
+    queryFn: () =>
+      finanzasApi.getResumen(dateRange.inicio, dateRange.fin, instructorId),
   });
 
   const { data: cuotas, isLoading: loadingCuotas } = useQuery({
-    queryKey: ["finanzas-cuotas", dateRange],
+    queryKey: ["finanzas-cuotas", dateRange, instructorId],
     queryFn: () =>
-      finanzasApi.getCuotasAlumnos(dateRange.inicio, dateRange.fin),
+      finanzasApi.getCuotasAlumnos(dateRange.inicio, dateRange.fin, instructorId),
   });
 
   const { data: pensiones, isLoading: loadingPensiones } = useQuery({
@@ -125,8 +153,9 @@ export default function FinanzasPage() {
   });
 
   const { data: honorarios, isLoading: loadingHonorarios } = useQuery({
-    queryKey: ["finanzas-honorarios", dateRange],
-    queryFn: () => finanzasApi.getHonorarios(dateRange.inicio, dateRange.fin),
+    queryKey: ["finanzas-honorarios", dateRange, instructorId],
+    queryFn: () =>
+      finanzasApi.getHonorarios(dateRange.inicio, dateRange.fin, instructorId),
   });
 
   const { data: configuracion } = useQuery({
@@ -300,6 +329,28 @@ export default function FinanzasPage() {
                   className="w-40"
                 />
               </div>
+
+              {isAdmin && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Instructor</Label>
+                  <Select
+                    value={selectedInstructorId || "ALL"}
+                    onValueChange={(v) => setSelectedInstructorId(v === "ALL" ? "" : v)}
+                  >
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Todos los instructores" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Todos</SelectItem>
+                      {instructores.map((i) => (
+                        <SelectItem key={i.id} value={String(i.id)}>
+                          {i.nombre} {i.apellido}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

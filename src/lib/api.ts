@@ -65,6 +65,9 @@ export interface Clase {
   estado: EstadoClase;
   observaciones?: string;
   alumnoId: number | null;
+  alumnoNombre?: string | null;
+  alumnoApellido?: string | null;
+  alumnoNombreCompleto?: string | null;
   personaPruebaId?: number | null;
   instructorId: number;
   caballoId: number;
@@ -478,6 +481,8 @@ export const clasesApi = {
     if (params.nombreAlumno) query.append("nombreAlumno", params.nombreAlumno);
     if (params.apellidoAlumno)
       query.append("apellidoAlumno", params.apellidoAlumno);
+    if (params.alumnoId) query.append("alumnoId", String(params.alumnoId));
+    if (params.instructorId) query.append("instructorId", String(params.instructorId));
     const response = await apiFetch(`/clases?${query.toString()}`);
     return handleResponse<PageResponse<ClaseDetallada>>(response);
   },
@@ -571,6 +576,16 @@ export const clasesApi = {
     });
     return handleResponse<unknown>(response);
   },
+  reservar: async (
+    clase: Omit<Clase, "id">,
+  ): Promise<Clase & { __successMessage?: string }> => {
+    const response = await apiFetch(`/clases/reservar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(clase),
+    });
+    return handleResponse<Clase>(response);
+  },
 };
 
 // API para Personas de Prueba
@@ -595,29 +610,35 @@ export const finanzasApi = {
   getResumen: async (
     inicio: string,
     fin: string,
+    instructorId?: number,
   ): Promise<ResumenFinanciero> => {
-    const response = await apiFetch(
-      `/finanzas/resumen?inicio=${inicio}&fin=${fin}`,
-    );
+    const query = new URLSearchParams({ inicio, fin });
+    if (instructorId) query.append("instructorId", String(instructorId));
+    const response = await apiFetch(`/finanzas/resumen?${query.toString()}`);
     return handleResponse<ResumenFinanciero>(response);
   },
   getCuotasAlumnos: async (
     inicio: string,
     fin: string,
+    instructorId?: number,
   ): Promise<CuotasAlumnos> => {
-    const response = await apiFetch(
-      `/finanzas/alumnos?inicio=${inicio}&fin=${fin}`,
-    );
+    const query = new URLSearchParams({ inicio, fin });
+    if (instructorId) query.append("instructorId", String(instructorId));
+    const response = await apiFetch(`/finanzas/alumnos?${query.toString()}`);
     return handleResponse<CuotasAlumnos>(response);
   },
   getPensiones: async (): Promise<Pensiones> => {
     const response = await apiFetch(`/finanzas/pensiones`);
     return handleResponse<Pensiones>(response);
   },
-  getHonorarios: async (inicio: string, fin: string): Promise<Honorarios> => {
-    const response = await apiFetch(
-      `/finanzas/honorarios?inicio=${inicio}&fin=${fin}`,
-    );
+  getHonorarios: async (
+    inicio: string,
+    fin: string,
+    instructorId?: number,
+  ): Promise<Honorarios> => {
+    const query = new URLSearchParams({ inicio, fin });
+    if (instructorId) query.append("instructorId", String(instructorId));
+    const response = await apiFetch(`/finanzas/honorarios?${query.toString()}`);
     return handleResponse<Honorarios>(response);
   },
   getConfiguracion: async (): Promise<ConfiguracionPrecios> => {

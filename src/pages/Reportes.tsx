@@ -40,7 +40,14 @@ import {
   ESTADO_COLORS,
   useReportes,
 } from "@/hooks/useReportes";
-import { Caballo } from "@/lib/api";
+import { Alumno, Caballo, Instructor } from "@/lib/api";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { exportarExcel } from "@/utils/exportReportesToExcel";
 
 // ─── CustomTooltip (solo UI, vive en el componente) ───────────────────────────
@@ -76,7 +83,11 @@ export default function ReportesPage() {
   const {
     dateRange,
     setDateRange,
+    filters,
+    setFilters,
+    user,
     alumnos,
+    instructores,
     estadisticasGenerales,
     alumnosPorClases,
     estadosClases,
@@ -89,6 +100,8 @@ export default function ReportesPage() {
     caballosSinUso,
     estadisticasPrueba,
   } = useReportes();
+
+  const isAdmin = user?.rol === "ROLE_ADMIN";
 
   return (
     <Layout>
@@ -110,7 +123,7 @@ export default function ReportesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
                 <Label htmlFor="fecha-inicio">Fecha Inicio</Label>
                 <Input
@@ -133,6 +146,53 @@ export default function ReportesPage() {
                   }
                 />
               </div>
+
+              {isAdmin && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Instructor</Label>
+                    <Select
+                      value={filters.instructorId || "ALL_INSTRUCTORES"}
+                      onValueChange={(v) =>
+                        setFilters({ ...filters, instructorId: v === "ALL_INSTRUCTORES" ? "" : v })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos los instructores" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL_INSTRUCTORES">Todos</SelectItem>
+                        {instructores.map((i: Instructor) => (
+                          <SelectItem key={i.id} value={String(i.id)}>
+                            {i.nombre} {i.apellido}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Alumno</Label>
+                    <Select
+                      value={filters.alumnoId || "ALL_ALUMNOS"}
+                      onValueChange={(v) =>
+                        setFilters({ ...filters, alumnoId: v === "ALL_ALUMNOS" ? "" : v })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos los alumnos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL_ALUMNOS">Todos</SelectItem>
+                        {alumnos.map((a: Alumno) => (
+                          <SelectItem key={a.id} value={String(a.id)}>
+                            {a.nombre} {a.apellido}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -506,18 +566,6 @@ export default function ReportesPage() {
                         <th className="text-center p-3 font-semibold text-sm text-destructive">
                           Canceladas
                         </th>
-                        <th
-                          className="text-center p-3 font-semibold text-sm"
-                          style={{ color: CHART_COLORS.aca }}
-                        >
-                          ACA
-                        </th>
-                        <th
-                          className="text-center p-3 font-semibold text-sm"
-                          style={{ color: CHART_COLORS.asa }}
-                        >
-                          ASA
-                        </th>
                         <th className="text-center p-3 font-semibold text-sm">
                           % Asistencia
                         </th>
@@ -540,18 +588,6 @@ export default function ReportesPage() {
                           </td>
                           <td className="p-3 text-sm text-center text-destructive">
                             {item.canceladas}
-                          </td>
-                          <td
-                            className="p-3 text-sm text-center font-medium"
-                            style={{ color: CHART_COLORS.aca }}
-                          >
-                            {item.aca}
-                          </td>
-                          <td
-                            className="p-3 text-sm text-center font-medium"
-                            style={{ color: CHART_COLORS.asa }}
-                          >
-                            {item.asa}
                           </td>
                           <td className="p-3">
                             <div className="flex items-center gap-2 justify-center">

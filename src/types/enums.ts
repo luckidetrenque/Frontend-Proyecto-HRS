@@ -11,5 +11,6 @@ export type EstadoClase =
   | "COMPLETADA"
   | "CANCELADA"
   | "ACA"
-  | "ASA";
+  | "ASA"
+  | "RESERVADA";
 export type TipoCaballo = "ESCUELA" | "PRIVADO";

@@ -12,9 +12,9 @@ export interface User {
   rol?: string;
   activo: boolean;
   fechaCreacion: string;
-  // personaDni?: string;
-  // personaTipoDni?: string;
   avatarUrl?: string;
+  instructorId?: number;
+  alumnoId?: number;
 }
 
 export type SafeUser = Omit<User, "password">;

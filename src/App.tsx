@@ -90,7 +90,7 @@ const App = () => (
               <Route
                 path="/calendario"
                 element={
-                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
+                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR", "ALUMNO"]}>
                     <CalendarioPage />
                   </ProtectedRoute>
                 }

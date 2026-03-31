@@ -39,8 +39,9 @@ export const CHART_COLORS: Record<string, string> = {
   cancelada: "#EF4444",
   programada: "#F59E0B",
   iniciada: "#3B82F6",
-  aca: "#8B5CF6",
-  asa: "#EC4899",
+  reservada: "#8B5CF6",
+  aca: "#7C3AED",
+  asa: "#F97316",
   escuela: "#6366F1",
   privado: "#F59E0B",
 };
@@ -50,8 +51,9 @@ export const ESTADO_COLORS: Record<string, string> = {
   INICIADA: "#3B82F6",
   COMPLETADA: "#10B981",
   CANCELADA: "#EF4444",
-  ACA: "#8B5CF6",
-  ASA: "#EC4899",
+  ACA: "#7C3AED",
+  ASA: "#F97316",
+  RESERVADA: "#8B5CF6",
 };
 
 export const ESPECIALIDAD_COLORS: Record<string, string> = {
@@ -68,16 +70,33 @@ const NOMBRES_DIA = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 // ─── Hook principal ───────────────────────────────────────────────────────────
 
 export function useReportes() {
+  const userStr = sessionStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isInstructor = user?.rol === "ROLE_INSTRUCTOR";
+  const isAlumno = user?.rol === "ROLE_ALUMNO";
+
   const [dateRange, setDateRange] = useState({
     inicio: format(startOfMonth(new Date()), "yyyy-MM-dd"),
     fin: format(endOfMonth(new Date()), "yyyy-MM-dd"),
   });
 
+  const [filters, setFilters] = useState({
+    instructorId: isInstructor ? String(user.instructorId) : "",
+    alumnoId: isAlumno ? String(user.alumnoId) : "",
+  });
+
   // ── Queries ─────────────────────────────────────────────────────────────────
 
   const { data: clasesData } = useQuery<PageResponse<Clase>, Error>({
-    queryKey: ["clases-reportes"],
-    queryFn: () => clasesApi.listar({ page: 0, size: 2000, sort: "dia,desc" }),
+    queryKey: ["clases-reportes", filters],
+    queryFn: () =>
+      clasesApi.listar({
+        page: 0,
+        size: 2000,
+        sort: "dia,desc",
+        instructorId: filters.instructorId ? Number(filters.instructorId) : undefined,
+        alumnoId: filters.alumnoId ? Number(filters.alumnoId) : undefined,
+      }),
   });
   const todasLasClases: Clase[] = useMemo(
     () => clasesData?.content ?? [],
@@ -249,8 +268,6 @@ export function useReportes() {
         total: number;
         completadas: number;
         canceladas: number;
-        aca: number;
-        asa: number;
       }
     > = {};
 
@@ -261,15 +278,11 @@ export function useReportes() {
           total: 0,
           completadas: 0,
           canceladas: 0,
-          aca: 0,
-          asa: 0,
         };
       }
       mapa[c.alumnoId].total++;
       if (c.estado === "COMPLETADA") mapa[c.alumnoId].completadas++;
       else if (c.estado === "CANCELADA") mapa[c.alumnoId].canceladas++;
-      else if (c.estado === "ACA") mapa[c.alumnoId].aca++;
-      else if (c.estado === "ASA") mapa[c.alumnoId].asa++;
     });
 
     return Object.entries(mapa)
@@ -394,7 +407,11 @@ export function useReportes() {
   return {
     dateRange,
     setDateRange,
+    filters,
+    setFilters,
+    user,
     alumnos,
+    instructores,
     estadisticasGenerales,
     alumnosPorClases,
     estadosClases,
