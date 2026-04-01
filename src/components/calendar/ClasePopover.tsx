@@ -90,6 +90,14 @@ export function ClasePopover({
     if (onOpenChange) onOpenChange(false);
   };
 
+  // Calculate minutes until class
+  const classDateTime = new Date(`${clase.dia}T${clase.hora.slice(0, 5)}:00`);
+  const now = new Date();
+  const minutesToClass = (classDateTime.getTime() - now.getTime()) / (1000 * 60);
+
+  const alumnoAvisoEstado = minutesToClass >= 120 ? "ACA" : "ASA";
+  const alumnoAvisoLabel = minutesToClass >= 120 ? "Avisar Inasistencia (ACA)" : "Aviso sin Anticipación (ASA)";
+
   const handleEdit = () => {
     if (onOpenChange) onOpenChange(false);
     onEdit(clase);
@@ -193,7 +201,7 @@ export function ClasePopover({
                   <div className="mt-4 border-t border-border pt-4 space-y-3">
 
                     {/* CTA especial para confirmar reservas */}
-                    {clase.estado === "RESERVADA" && (
+                    {clase.estado === "RESERVADA" && !isAlumno && (
                       <div className="rounded-md bg-purple-50 border border-purple-200 p-3">
                         <p className="text-xs text-purple-700 font-medium mb-2">
                           ⏳ Reserva pendiente de confirmación
@@ -225,66 +233,82 @@ export function ClasePopover({
 
                     <div className="flex gap-2">
                       {/* Botón Editar */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleEdit}
-                        disabled={!puedeEditar}
-                        className={
-                          !puedeEditar ? "opacity-50 cursor-not-allowed" : ""
-                        }
-                        title={
-                          !puedeEditar
-                            ? "No se puede editar una clase finalizada"
-                            : "Editar clase"
-                        }
-                      >
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Editar
-                      </Button>
+                      {!isAlumno && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleEdit}
+                          disabled={!puedeEditar}
+                          className={
+                            !puedeEditar ? "opacity-50 cursor-not-allowed" : ""
+                          }
+                          title={
+                            !puedeEditar
+                              ? "No se puede editar una clase finalizada"
+                              : "Editar clase"
+                          }
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Editar
+                        </Button>
+                      )}
 
                       {/* Botón Eliminar */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowDeleteDialog(true)}
-                        disabled={!puedeEditar}
-                        className={
-                          !puedeEditar
-                            ? "opacity-50 cursor-not-allowed text-muted"
-                            : "text-destructive"
-                        }
-                        title={
-                          !puedeEditar
-                            ? "No se puede eliminar una clase finalizada"
-                            : "Eliminar clase"
-                        }
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Eliminar
-                      </Button>
+                      {!isAlumno && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowDeleteDialog(true)}
+                          disabled={!puedeEditar}
+                          className={
+                            !puedeEditar
+                              ? "opacity-50 cursor-not-allowed text-muted"
+                              : "text-destructive"
+                          }
+                          title={
+                            !puedeEditar
+                              ? "No se puede eliminar una clase finalizada"
+                              : "Eliminar clase"
+                          }
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Eliminar
+                        </Button>
+                      )}
                     </div>
 
                     <div>
                       <Label className="mb-2 block text-xs text-muted-foreground">
-                        Cambio Rápido de Estado
+                        {isAlumno ? "Notificar Inasistencia" : "Cambio Rápido de Estado"}
                       </Label>
                       <div className="flex flex-wrap gap-1">
-                        {(isAlumno ? (["ACA"] as Clase["estado"][]) : ESTADOS).map((estado) => (
+                        {isAlumno ? (
                           <Button
-                            key={estado}
                             variant="outline"
                             size="sm"
-                            className={`text-xs transition-colors ${
-                              clase.estado === estado
-                                ? ESTADO_STYLES[estado]
-                                : "text-muted-foreground opacity-50"
-                            }`}
-                            onClick={() => handleStatusClick(estado)}
+                            className={`text-xs transition-colors ${ESTADO_STYLES[alumnoAvisoEstado]}`}
+                            onClick={() => handleStatusClick(alumnoAvisoEstado)}
+                            disabled={clase.estado === "ACA" || clase.estado === "ASA" || clase.estado === "CANCELADA"}
                           >
-                            {ESTADO_LABELS[estado] ?? estado}
+                            {alumnoAvisoLabel}
                           </Button>
-                        ))}
+                        ) : (
+                          ESTADOS.map((estado) => (
+                            <Button
+                              key={estado}
+                              variant="outline"
+                              size="sm"
+                              className={`text-xs transition-colors ${
+                                clase.estado === estado
+                                  ? ESTADO_STYLES[estado]
+                                  : "text-muted-foreground opacity-50"
+                              }`}
+                              onClick={() => handleStatusClick(estado)}
+                            >
+                              {ESTADO_LABELS[estado] ?? estado}
+                            </Button>
+                          ))
+                        )}
                       </div>
                     </div>
                   </div>

@@ -159,8 +159,13 @@ export function useReportes() {
       (c) => c.estado === "COMPLETADA",
     ).length;
     const clasesCanceladas = clases.filter(
-      (c) => c.estado === "CANCELADA",
+      (c) => c.estado === "CANCELADA" || c.estado === "ACA" || c.estado === "ASA",
     ).length;
+    const desgloseCanceladas = {
+      cancelada: clases.filter((c) => c.estado === "CANCELADA").length,
+      aca: clases.filter((c) => c.estado === "ACA").length,
+      asa: clases.filter((c) => c.estado === "ASA").length,
+    };
     const tasaCompletado =
       totalClases > 0
         ? Number(((clasesCompletadas / totalClases) * 100).toFixed(1))
@@ -175,6 +180,7 @@ export function useReportes() {
       totalClases,
       clasesCompletadas,
       clasesCanceladas,
+      desgloseCanceladas,
       tasaCompletado,
       totalInstructores,
       totalCaballos,
@@ -282,7 +288,7 @@ export function useReportes() {
       }
       mapa[c.alumnoId].total++;
       if (c.estado === "COMPLETADA") mapa[c.alumnoId].completadas++;
-      else if (c.estado === "CANCELADA") mapa[c.alumnoId].canceladas++;
+      else if (c.estado === "CANCELADA" || c.estado === "ACA" || c.estado === "ASA") mapa[c.alumnoId].canceladas++;
     });
 
     return Object.entries(mapa)
@@ -308,39 +314,6 @@ export function useReportes() {
       .slice(0, 10);
   }, [asistenciaPorAlumno]);
 
-  // ── Carga por instructor ─────────────────────────────────────────────────────
-
-  const cargaInstructores = useMemo(() => {
-    const mapa: Record<
-      number,
-      { total: number; completadas: number; canceladas: number }
-    > = {};
-
-    clases.forEach((c) => {
-      if (!c.instructorId) return;
-      if (!mapa[c.instructorId]) {
-        mapa[c.instructorId] = { total: 0, completadas: 0, canceladas: 0 };
-      }
-      mapa[c.instructorId].total++;
-      if (c.estado === "COMPLETADA") mapa[c.instructorId].completadas++;
-      else if (c.estado === "CANCELADA") mapa[c.instructorId].canceladas++;
-    });
-
-    return Object.entries(mapa)
-      .map(([id, stats]) => {
-        const instructor = instructores.find((i) => i.id === Number(id));
-        const nombre = instructor
-          ? `${instructor.nombre} ${instructor.apellido}`
-          : `Instructor #${id}`;
-        const eficiencia =
-          stats.total > 0
-            ? Number(((stats.completadas / stats.total) * 100).toFixed(1))
-            : 0;
-        return { nombre, ...stats, eficiencia };
-      })
-      .sort((a, b) => b.total - a.total);
-  }, [clases, instructores]);
-
   // ── Uso de caballos ──────────────────────────────────────────────────────────
 
   const usoCaballos = useMemo(() => {
@@ -358,13 +331,6 @@ export function useReportes() {
       }))
       .filter((c) => c.cantidad > 0)
       .sort((a, b) => b.cantidad - a.cantidad);
-  }, [clases, caballos]);
-
-  // ── Caballos sin uso en el período ───────────────────────────────────────────
-
-  const caballosSinUso = useMemo(() => {
-    const usados = new Set(clases.map((c) => c.caballoId));
-    return caballos.filter((cab) => !usados.has(cab.id));
   }, [clases, caballos]);
 
   // ── Estadísticas de clases de prueba ────────────────────────────────────────
@@ -419,9 +385,7 @@ export function useReportes() {
     distribucionDias,
     asistenciaPorAlumno,
     rankingAlumnos,
-    cargaInstructores,
     usoCaballos,
-    caballosSinUso,
     estadisticasPrueba,
   };
 }

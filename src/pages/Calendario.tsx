@@ -155,13 +155,20 @@ export default function CalendarioPage() {
       : [
           {
             name: "instructorId",
-            label: "Instructor",
+            label: isInstructor ? "Filtro de Clases" : "Instructor",
             type: "select" as const,
-            options: instructores.map((i: Instructor) => ({
-              label: `${i.nombre} ${i.apellido}`,
-              value: String(i.id),
-            })),
-            placeholder: "Todos los instructores",
+            options: isInstructor
+              ? [
+                  {
+                    label: "Ver solo mis clases",
+                    value: String(user?.instructorId),
+                  },
+                ]
+              : instructores.map((i: Instructor) => ({
+                  label: `${i.nombre} ${i.apellido}`,
+                  value: String(i.id),
+                })),
+            placeholder: isInstructor ? "Ver todas las clases" : "Todos los instructores",
           },
         ]),
   ];
@@ -307,7 +314,10 @@ export default function CalendarioPage() {
         }
       />
 
-      <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 mb-6">
+      <div className={cn(
+        "flex flex-wrap items-center justify-center sm:justify-end gap-2 mb-6",
+        (isAlumno || isInstructor) && "w-full [&>div]:w-full"
+      )}>
         <FilterBar
           filters={filterConfig}
           values={filters}

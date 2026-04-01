@@ -95,9 +95,7 @@ export default function ReportesPage() {
     distribucionDias,
     asistenciaPorAlumno,
     rankingAlumnos,
-    cargaInstructores,
     usoCaballos,
-    caballosSinUso,
     estadisticasPrueba,
   } = useReportes();
 
@@ -198,7 +196,7 @@ export default function ReportesPage() {
         </Card>
 
         {/* TARJETAS RESUMEN */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -233,20 +231,7 @@ export default function ReportesPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Instructores
-              </CardTitle>
-              <GraduationCap className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {estadisticasGenerales.totalInstructores}
-              </div>
-              <p className="text-xs text-muted-foreground">Activos</p>
-            </CardContent>
-          </Card>
+
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -272,7 +257,6 @@ export default function ReportesPage() {
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="alumnos">Alumnos</TabsTrigger>
             <TabsTrigger value="clases">Clases</TabsTrigger>
-            <TabsTrigger value="instructores">Instructores</TabsTrigger>
             <TabsTrigger value="caballos">Caballos</TabsTrigger>
             <TabsTrigger value="pruebas">Clases de Prueba</TabsTrigger>
           </TabsList>
@@ -460,8 +444,15 @@ export default function ReportesPage() {
                         Alumnos Activos
                       </p>
                     </div>
-                    <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center">
-                      <User className="h-8 w-8 text-success" />
+                    <div className="text-sm text-success font-medium">
+                      {alumnos.length > 0
+                        ? (
+                            (estadisticasGenerales.alumnosActivos /
+                              alumnos.length) *
+                            100
+                          ).toFixed(1)
+                        : "0"}
+                      % Activos
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
@@ -481,7 +472,7 @@ export default function ReportesPage() {
                             100
                           ).toFixed(1)
                         : "0"}
-                      %
+                      % Inactivos
                     </div>
                   </div>
                 </CardContent>
@@ -658,7 +649,7 @@ export default function ReportesPage() {
                   <p className="text-3xl font-bold text-destructive">
                     {estadisticasGenerales.clasesCanceladas}
                   </p>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-sm text-muted-foreground mt-1 mb-2">
                     {estadisticasGenerales.totalClases > 0
                       ? (
                           (estadisticasGenerales.clasesCanceladas /
@@ -668,6 +659,20 @@ export default function ReportesPage() {
                       : "0"}
                     % del total
                   </p>
+                  <div className="flex flex-col gap-1 border-t pt-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Canceladas admin:</span>
+                      <span className="font-medium">{estadisticasGenerales.desgloseCanceladas?.cancelada || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Inasistencia Alumno (ACA):</span>
+                      <span className="font-medium text-purple-600">{estadisticasGenerales.desgloseCanceladas?.aca || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Sin Anticipación (ASA):</span>
+                      <span className="font-medium text-orange-600">{estadisticasGenerales.desgloseCanceladas?.asa || 0}</span>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -742,216 +747,11 @@ export default function ReportesPage() {
             </div>
           </TabsContent>
 
-          {/* ── TAB INSTRUCTORES ─────────────────────────────────────────────── */}
-          <TabsContent value="instructores" className="space-y-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Carga por Instructor</CardTitle>
-                  <CardDescription>
-                    Clases asignadas en el período
-                  </CardDescription>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    exportarExcel(cargaInstructores, "Instructores")
-                  }
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Exportar
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {cargaInstructores.length > 0 ? (
-                  <>
-                    <ResponsiveContainer width="100%" height={220}>
-                      <BarChart
-                        data={cargaInstructores}
-                        margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
-                      >
-                        <CartesianGrid
-                          strokeDasharray="3 3"
-                          stroke="hsl(var(--border))"
-                        />
-                        <XAxis dataKey="nombre" tick={{ fontSize: 11 }} />
-                        <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Legend />
-                        <Bar
-                          dataKey="completadas"
-                          name="Completadas"
-                          fill={CHART_COLORS.completada}
-                          radius={[4, 4, 0, 0]}
-                          stackId="a"
-                        />
-                        <Bar
-                          dataKey="canceladas"
-                          name="Canceladas"
-                          fill={CHART_COLORS.cancelada}
-                          radius={[4, 4, 0, 0]}
-                          stackId="a"
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                    <div className="overflow-x-auto mt-4">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="border-b bg-muted/50">
-                            <th className="text-left p-3 font-semibold text-sm">
-                              Instructor
-                            </th>
-                            <th className="text-center p-3 font-semibold text-sm">
-                              Total
-                            </th>
-                            <th className="text-center p-3 font-semibold text-sm text-success">
-                              Completadas
-                            </th>
-                            <th className="text-center p-3 font-semibold text-sm text-destructive">
-                              Canceladas
-                            </th>
-                            <th className="text-center p-3 font-semibold text-sm">
-                              Eficiencia
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {cargaInstructores.map((inst) => (
-                            <tr
-                              key={inst.nombre}
-                              className="border-b hover:bg-muted/30 transition-colors"
-                            >
-                              <td className="p-3 text-sm font-medium">
-                                {inst.nombre}
-                              </td>
-                              <td className="p-3 text-sm text-center">
-                                {inst.total}
-                              </td>
-                              <td className="p-3 text-sm text-center text-success font-medium">
-                                {inst.completadas}
-                              </td>
-                              <td className="p-3 text-sm text-center text-destructive">
-                                {inst.canceladas}
-                              </td>
-                              <td className="p-3">
-                                <div className="flex items-center gap-2 justify-center">
-                                  <div className="h-2 w-20 overflow-hidden rounded-full bg-muted">
-                                    <div
-                                      className="h-full rounded-full bg-success transition-all"
-                                      style={{ width: `${inst.eficiencia}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-sm text-muted-foreground tabular-nums">
-                                    {inst.eficiencia}%
-                                  </span>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-center text-sm text-muted-foreground py-8">
-                    No hay datos de instructores en este período
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+
 
           {/* ── TAB CABALLOS ─────────────────────────────────────────────────── */}
           <TabsContent value="caballos" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Disponibilidad</CardTitle>
-                  <CardDescription>
-                    Estado actual de los caballos
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <PieChart>
-                      <Pie
-                        data={[
-                          {
-                            name: "Disponibles",
-                            value: estadisticasGenerales.caballosDisponibles,
-                          },
-                          {
-                            name: "No disponibles",
-                            value:
-                              estadisticasGenerales.totalCaballos -
-                              estadisticasGenerales.caballosDisponibles,
-                          },
-                        ]}
-                        dataKey="value"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={75}
-                      >
-                        <Cell fill={CHART_COLORS.completada} />
-                        <Cell fill={CHART_COLORS.cancelada} />
-                      </Pie>
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Sin Actividad en el Período</CardTitle>
-                  <CardDescription>
-                    {caballosSinUso.length === 0
-                      ? "Todos los caballos tuvieron clases"
-                      : `${caballosSinUso.length} caballo${caballosSinUso.length > 1 ? "s" : ""} sin clases`}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {caballosSinUso.length > 0 ? (
-                    <div className="space-y-2">
-                      {caballosSinUso.map((c: Caballo) => (
-                        <div
-                          key={c.id}
-                          className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3"
-                        >
-                          <div className="flex items-center gap-2">
-                            <ChessKnight className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">
-                              {c.nombre}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <StatusBadge
-                              status={c.tipo === "ESCUELA" ? "info" : "warning"}
-                            >
-                              {c.tipo === "ESCUELA" ? "Escuela" : "Privado"}
-                            </StatusBadge>
-                            <StatusBadge
-                              status={c.disponible ? "success" : "error"}
-                            >
-                              {c.disponible ? "Disponible" : "No disp."}
-                            </StatusBadge>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <ChessKnight className="h-10 w-10 text-success mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        Todos activos en el período
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
