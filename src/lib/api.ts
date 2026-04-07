@@ -26,6 +26,8 @@ export interface Alumno {
   cuotaPension?: CuotaPension | null;
   caballoId?: number | null;
   caballoNombre?: string | null;
+  codigoInvitacion?: string | null;
+  codigoUsado?: boolean;
 }
 
 export interface PersonaPrueba {
@@ -143,6 +145,13 @@ export interface ConfiguracionPrecios {
   reservaEscuela: number;
   honorarioPorClase: number;
   honorarioBaseMensual: number;
+}
+
+export interface ConfiguracionOperativa {
+  id: number;
+  horasAnticipacionCancelacion: number;
+  horasAnticipacionReserva: number;
+  diasValidezInvitacion: number;
 }
 
 export interface DesglosePlan {
@@ -342,15 +351,21 @@ export const alumnosApi = {
   const response = await apiFetch(`/alumnos/me`);
   return handleResponse<Alumno>(response);
 },
-buscar: async (filters: AlumnoSearchFilters): Promise<Alumno[]> => {
-  const query = new URLSearchParams();
-  if (filters.dni) query.append("dni", filters.dni);
-  if (filters.nombre) query.append("nombre", filters.nombre);
-  if (filters.apellido) query.append("apellido", filters.apellido);
-  const response = await apiFetch(`/alumnos?${query.toString()}&page=0&size=10`);
-  const page = await handleResponse<PageResponse<Alumno>>(response);
-  return page.content;
-},
+  buscar: async (filters: AlumnoSearchFilters): Promise<Alumno[]> => {
+    const query = new URLSearchParams();
+    if (filters.dni) query.append("dni", filters.dni);
+    if (filters.nombre) query.append("nombre", filters.nombre);
+    if (filters.apellido) query.append("apellido", filters.apellido);
+    const response = await apiFetch(`/alumnos?${query.toString()}&page=0&size=10`);
+    const page = await handleResponse<PageResponse<Alumno>>(response);
+    return page.content;
+  },
+  invitar: async (id: number): Promise<{ codigo: string; email: string; nombre: string }> => {
+    const response = await apiFetch(`/alumnos/${id}/invitar`, {
+      method: "POST",
+    });
+    return handleResponse<{ codigo: string; email: string; nombre: string }>(response);
+  },
 };
 
 // Instructores
@@ -653,5 +668,19 @@ export const finanzasApi = {
       body: JSON.stringify(config),
     });
     return handleResponse<ConfiguracionPrecios>(response);
+  },
+};
+
+export const configuracionOperativaApi = {
+  get: async (): Promise<ConfiguracionOperativa> => {
+    const response = await apiFetch("/operativa");
+    return handleResponse<ConfiguracionOperativa>(response);
+  },
+  update: async (config: Partial<ConfiguracionOperativa>): Promise<ConfiguracionOperativa> => {
+    const response = await apiFetch("/operativa", {
+      method: "PUT",
+      body: JSON.stringify(config),
+    });
+    return handleResponse<ConfiguracionOperativa>(response);
   },
 };

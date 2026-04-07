@@ -1,8 +1,8 @@
-import { Eye, EyeOff, UserPlus } from "lucide-react";
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff, UserPlus, ShieldCheck, AlertCircle } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,19 +20,56 @@ import { useToast } from "@/hooks/use-toast";
 import { API_BASE_URL } from "@/services/authService";
 
 const Register: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const invitationCode = searchParams.get("code");
+
   const [formData, setFormData] = useState({
-    username: "",
     email: "",
     password: "",
     confirmPassword: "",
-    // nombre: '',
-    // apellido: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [error, setError] = useState<string>("");
-  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const [invitationInfo, setInvitationInfo] = useState<{
+    nombre: string;
+    email: string;
+  } | null>(null);
+
+  const { register } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Verificar código de invitación al cargar si existe
+  useEffect(() => {
+    if (invitationCode) {
+      verifyInvitation(invitationCode);
+    }
+  }, [invitationCode]);
+
+  const verifyInvitation = async (code: string) => {
+    setIsVerifyingCode(true);
+    setError("");
+    try {
+      const response = await fetch(`${API_BASE_URL}/verify-code/${code}`);
+      if (response.ok) {
+        const data = await response.json();
+        setInvitationInfo(data);
+        if (data.email) {
+          setFormData((prev) => ({ ...prev, email: data.email }));
+        }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.mensaje || "El código de invitación no es válido o ha expirado");
+      }
+    } catch (err) {
+      setError("Error al verificar el código de invitación");
+    } finally {
+      setIsVerifyingCode(false);
+    }
+  };
 
   const calculatePasswordStrength = (password: string): number => {
     let strength = 0;
@@ -43,22 +80,6 @@ const Register: React.FC = () => {
     if (/[^a-zA-Z0-9]/.test(password)) strength += 20;
     return strength;
   };
-
-  const checkEmailWhitelist = async (email: string): Promise<boolean> => {
-    setIsCheckingEmail(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/check-email/${email}`);
-      return response.ok;
-    } catch {
-      return false;
-    } finally {
-      setIsCheckingEmail(false);
-    }
-  };
-
-  const { register } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -72,28 +93,16 @@ const Register: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { username, email, password, confirmPassword } = formData;
+    const { email, password, confirmPassword } = formData;
 
     setError("");
 
-    if (!username.trim() || !password.trim()) {
-      setError("El usuario y la contraseña son obligatorios");
+    if (!email.trim() || !password.trim()) {
+      setError("El correo y la contraseña son obligatorios");
       return;
     }
 
-    // Validar whitelist
-    const isAllowed = await checkEmailWhitelist(email.trim());
-    if (!isAllowed) {
-      setError("Este correo no está autorizado para registrarse");
-      toast({
-        title: "Email no autorizado",
-        description: "Este correo no está en la lista de usuarios autorizados",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
+    if (!/\S+@\S+\.\S+/.test(email)) {
       setError("Ingresa un correo electrónico válido");
       return;
     }
@@ -112,10 +121,9 @@ const Register: React.FC = () => {
 
     try {
       await register({
-        /* id: 0, */
-        username: username.trim(),
         email: email.trim(),
         password,
+        codigoInvitacion: invitationCode || undefined,
         activo: true,
         fechaCreacion: new Date().toISOString(),
       });
@@ -125,10 +133,10 @@ const Register: React.FC = () => {
       });
       navigate("/login");
     } catch (error) {
+      setError(error instanceof Error ? error.message : "No se pudo crear la cuenta");
       toast({
         title: "Error al registrar",
-        description:
-          error instanceof Error ? error.message : "No se pudo crear la cuenta",
+        description: error instanceof Error ? error.message : "No se pudo crear la cuenta",
         variant: "destructive",
       });
     } finally {
@@ -141,77 +149,88 @@ const Register: React.FC = () => {
       <Card className="w-full max-w-md animate-in fade-in-50 duration-500">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            Crear Cuenta
+            {invitationCode ? "Completar Registro" : "Crear Cuenta"}
           </CardTitle>
           <CardDescription className="text-center">
-            Completa el formulario para registrarte
+            {invitationCode 
+              ? "Vincula tu cuenta de alumno al sistema" 
+              : "Completa el formulario para registrarte"}
           </CardDescription>
         </CardHeader>
-        {error && (
-          <div className="px-6">
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          </div>
-        )}
+        
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Usuario</Label>
+            {isVerifyingCode && (
+              <div className="flex justify-center py-4">
+                <span className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></span>
+              </div>
+            )}
+
+            {invitationInfo && !isVerifyingCode && (
+              <Alert className="bg-primary/5 border-primary/20">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <AlertTitle>Invitación para {invitationInfo.nombre}</AlertTitle>
+                <AlertDescription>
+                  Tu cuenta se vinculará automáticamente con tu perfil de alumno.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {error && !isVerifyingCode && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Correo electrónico *</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="ejemplo@correo.com"
+                value={formData.email}
+                onChange={handleChange}
+                disabled={isSubmitting || !!invitationInfo?.email}
+                autoComplete="email"
+              />
+              {invitationInfo?.email && (
+                <p className="text-xs text-muted-foreground">
+                  Este correo está asignado a tu invitación.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Contraseña *</Label>
+              <div className="relative">
                 <Input
-                  id="username"
-                  name="username"
-                  placeholder="Juan"
-                  value={formData.username}
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={formData.password}
                   onChange={handleChange}
                   disabled={isSubmitting}
+                  autoComplete="new-password"
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Correo electrónico *</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Ingresa tu correo"
-                  value={formData.email}
-                  onChange={handleChange}
-                  disabled={isSubmitting}
-                  autoComplete="email"
-                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña *</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={handleChange}
-                    disabled={isSubmitting}
-                    autoComplete="new-password"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
+
             {formData.password && (
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
@@ -229,6 +248,7 @@ const Register: React.FC = () => {
                 <Progress value={passwordStrength} className="h-2" />
               </div>
             )}
+
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirmar contraseña *</Label>
               <Input
@@ -247,22 +267,17 @@ const Register: React.FC = () => {
             <Button
               type="submit"
               className="w-full"
-              disabled={isSubmitting || isCheckingEmail}
+              disabled={isSubmitting || isVerifyingCode || (!!invitationCode && !!error)}
             >
-              {isCheckingEmail ? (
+              {isSubmitting ? (
                 <span className="flex items-center gap-2">
                   <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></span>
-                  Validando email...
-                </span>
-              ) : isSubmitting ? (
-                <span className="flex items-center gap-2">
-                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></span>
-                  Registrando...
+                  Procesando...
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
                   <UserPlus className="h-4 w-4" />
-                  Crear Cuenta
+                  {invitationCode ? "Completar Registro" : "Crear Cuenta"}
                 </span>
               )}
             </Button>

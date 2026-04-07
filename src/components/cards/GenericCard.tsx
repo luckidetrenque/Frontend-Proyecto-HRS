@@ -20,6 +20,7 @@ interface Props<T> {
     type?: "text" | "badge";
     trueLabel?: string;
     falseLabel?: string;
+    warningLabel?: string;
   }[];
   onClick: () => void;
   onEdit: () => void;
@@ -141,10 +142,16 @@ export function GenericCard<T>({
           return (
             <div key={f.label} className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground/80 uppercase tracking-wider">{f.label}</span>
-              {f.type === "badge" && typeof f.value === "boolean" ? (
+              {f.type === "badge" ? (
                 <div className="mt-0.5">
-                  <StatusBadge status={f.value ? "success" : "default"}>
-                    {f.value ? (f.trueLabel ?? "Sí") : (f.falseLabel ?? "No")}
+                  <StatusBadge 
+                    status={f.value === "warning" ? "warning" : f.value ? "success" : "default"}
+                  >
+                    {f.value === "warning" 
+                      ? (f.warningLabel ?? "Pendiente")
+                      : f.value 
+                        ? (f.trueLabel ?? "Sí") 
+                        : (f.falseLabel ?? "No")}
                   </StatusBadge>
                 </div>
               ) : (

@@ -10,6 +10,7 @@ import {
   Plus,
   Table,
   Trash2,
+  Ticket,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -35,6 +36,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
@@ -216,6 +218,23 @@ export default function AlumnosPage() {
       toast.error(error.message || "Error al eliminar el alumno"),
   });
 
+  const invitarMutation = useMutation({
+    mutationFn: (id: number) => alumnosApi.invitar(id),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["alumnos"] });
+      const registroUrl = `${window.location.origin}/register?code=${res.codigo}`;
+      
+      // Copiar al portapapeles automáticamente para facilidad del admin
+      navigator.clipboard.writeText(registroUrl);
+      
+      toast.success("Invitación generada", {
+        description: `Enlace copiado al portapapeles: ${registroUrl}`,
+        duration: 5000,
+      });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const handleFilterChange = (name: string, value: string) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
     // Para campos de texto no reseteamos la página en cada keystroke,
@@ -280,11 +299,21 @@ export default function AlumnosPage() {
     },
     {
       header: "Estado",
-      cell: (row: Alumno) => (
-        <StatusBadge status={row.activo ? "success" : "default"}>
-          {row.activo ? "Activo" : "Inactivo"}
-        </StatusBadge>
-      ),
+      cell: (row: Alumno) => {
+        let status: "success" | "warning" | "default" = row.activo ? "success" : "default";
+        let label = row.activo ? "Activo" : "Inactivo";
+        
+        if (row.activo && !row.codigoUsado && row.codigoInvitacion) {
+          status = "warning";
+          label = "Pendiente";
+        }
+        
+        return (
+          <StatusBadge status={status}>
+            {label}
+          </StatusBadge>
+        );
+      },
     },
     {
       header: `Clases (${mesActualNombre.charAt(0).toUpperCase() + mesActualNombre.slice(1)})`,
@@ -321,7 +350,18 @@ export default function AlumnosPage() {
               <span className="sr-only">Abrir menú de acciones</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                invitarMutation.mutate(row.id);
+              }}
+              disabled={invitarMutation.isPending}
+            >
+              <Ticket className="mr-2 h-4 w-4 text-amber-600" />
+              {row.codigoInvitacion ? "Reenviar Invitación" : "Enviar Invitación"}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
@@ -560,10 +600,15 @@ export default function AlumnosPage() {
                   },
                   {
                     label: "Estado ",
-                    value: alumno.activo,
+                    value: (() => {
+                      if (!alumno.activo) return false;
+                      if (!alumno.codigoUsado && alumno.codigoInvitacion) return "warning";
+                      return true;
+                    })(),
                     type: "badge",
                     trueLabel: "Activo",
                     falseLabel: "Inactivo",
+                    warningLabel: "Pendiente",
                   },
                 ]}
                 onClick={() => navigate(`/alumnos/${alumno.id}`)}

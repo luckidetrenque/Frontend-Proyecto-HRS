@@ -35,6 +35,7 @@ const navigation = [
   { name: "Calendario", href: "/calendario", icon: CalendarDays },
   { name: "Reportes", href: "/reportes", icon: BarChart },
   { name: "Finanzas", href: "/finanzas", icon: CircleDollarSign },
+  { name: "Configuración", href: "/configuracion", icon: Shield },
   { name: "Usuarios", href: "/usuarios", icon: Shield },
   { name: "Mis Clases", href: "/mis-clases", icon: BookOpen }
 ];
@@ -46,15 +47,15 @@ export function Layout({ children }: LayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const filteredNavigation = navigation.filter((item) => {
-    if (user?.rol === "ADMIN") 
-       return ["Clases", "Calendario", "Caballos", "Alumnos", "Reportes", "Finanzas", "Usuarios", "Instructores"].includes(item.name);
+    if (user?.rol === "COORDINADOR" || user?.rol === "SUPERADMIN")
+       return ["Clases", "Calendario", "Caballos", "Alumnos", "Reportes", "Finanzas", "Configuración", "Usuarios", "Instructores"].includes(item.name);
     if (user?.rol === "INSTRUCTOR") {
       return ["Clases", "Calendario", "Caballos", "Alumnos", "Reportes"].includes(item.name);
     }
     if (user?.rol === "ALUMNO") {
       return ["Mis Clases", "Calendario"].includes(item.name);
     }
-    return false; // ALUMNO no ve módulos de gestión
+    return false;
   });
 
   return (

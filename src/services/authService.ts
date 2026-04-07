@@ -4,11 +4,7 @@ export const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/auth`;
 
 export interface User {
   id: number;
-  username: string;
   email: string;
-  // nombre?: string;
-  // apellido?: string;
-  password: string;
   rol?: string;
   activo: boolean;
   fechaCreacion: string;
@@ -20,43 +16,34 @@ export interface User {
 export type SafeUser = Omit<User, "password">;
 
 export interface LoginCredentials {
-  username: string;
+  email: string;
   password: string;
 }
 
 export interface RegisterData {
   id?: number;
-  username: string;
   email: string;
   password: string;
-  // nombre?: string;
-  // apellido?: string;
+  codigoInvitacion?: string;
   rol?: string;
   activo: true;
   fechaCreacion: string;
-  // personaDni?: string;
-  // personaTipoDni?: string;
 }
 
 export interface UpdateData {
   id: number;
-  username: string;
   email: string;
-  // nombre?: string;
-  // apellido?: string;
   rol?: string;
   activo: boolean;
   fechaCreacion: string;
-  // personaDni?: string;
-  // personaTipoDni?: string;
 }
 
-// Codifica credenciales en Base64 para Basic Auth
+// Codifica credenciales en Base64 para Basic Auth (ahora usa email)
 export const encodeCredentials = (
-  username: string,
+  email: string,
   password: string,
 ): string => {
-  return btoa(`${username}:${password}`);
+  return btoa(`${email}:${password}`);
 };
 
 // Obtiene las credenciales guardadas
@@ -67,8 +54,7 @@ export const getStoredCredentials = (): string | null => {
 // Guarda las credenciales
 export const storeCredentials = (credentials: string, user: User): void => {
   sessionStorage.setItem("authCredentials", credentials);
-  const { password, ...safeUser } = user;
-  sessionStorage.setItem("user", JSON.stringify(safeUser));
+  sessionStorage.setItem("user", JSON.stringify(user));
 };
 
 // Limpia las credenciales
@@ -107,7 +93,7 @@ const parseApiError = async (response: Response): Promise<never> => {
 
 // Login con Basic Auth
 export const login = async (credentials: LoginCredentials): Promise<User> => {
-  const encoded = encodeCredentials(credentials.username, credentials.password);
+  const encoded = encodeCredentials(credentials.email, credentials.password);
 
   const response = await fetch(`${API_BASE_URL}/login`, {
     method: "POST",
@@ -124,7 +110,7 @@ export const login = async (credentials: LoginCredentials): Promise<User> => {
   const user = await response.json();
   storeCredentials(encoded, user);
 
-  const { password, ...safeUser } = user;
+  const { ...safeUser } = user;
   return safeUser as User;
 };
 

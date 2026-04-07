@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 const Login: React.FC = () => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,7 +34,7 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!username.trim() || !password.trim()) {
+    if (!email.trim() || !password.trim()) {
       toast({
         title: "Error",
         description: "Por favor completa todos los campos",
@@ -48,10 +48,10 @@ const Login: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      await login({ username: username.trim(), password });
+      await login({ email: email.trim(), password });
       toast({
         title: "¡Bienvenido!",
-        description: `Sesión iniciada como ${username}`,
+        description: `Sesión iniciada correctamente`,
       });
       navigate(from, { replace: true });
     } catch (error) {
@@ -76,7 +76,7 @@ const Login: React.FC = () => {
             Iniciar Sesión
           </CardTitle>
           <CardDescription className="text-center">
-            Ingresa tus credenciales para acceder
+            Ingresa tu correo para acceder
           </CardDescription>
         </CardHeader>
         {error && (
@@ -89,15 +89,15 @@ const Login: React.FC = () => {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Usuario</Label>
+              <Label htmlFor="email">Correo electrónico</Label>
               <Input
-                id="username"
-                type="text"
-                placeholder="Ingresa tu usuario"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="ejemplo@correo.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 disabled={isSubmitting}
-                autoComplete="username"
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">

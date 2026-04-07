@@ -99,7 +99,6 @@ export default function UsuariosPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead>Nombre de Usuario</TableHead>
                   <TableHead>Correo Electrónico</TableHead>
                   <TableHead>Rol de Seguridad</TableHead>
                   <TableHead>Estado</TableHead>
@@ -110,7 +109,7 @@ export default function UsuariosPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                       <div className="flex justify-center items-center gap-3">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
                         Cargando usuarios...
@@ -119,17 +118,19 @@ export default function UsuariosPage() {
                   </TableRow>
                 ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                       No hay usuarios en la base de datos.
                     </TableCell>
                   </TableRow>
                 ) : (
                   users.map((u) => (
                     <TableRow key={u.id} className="hover:bg-muted/50 transition-colors">
-                      <TableCell className="font-medium">{u.username}</TableCell>
-                      <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                      <TableCell className="font-medium">{u.email}</TableCell>
                       <TableCell>
-                        <Badge variant={u.rol === "ADMIN" ? "default" : u.rol === "INSTRUCTOR" ? "secondary" : "outline"} className="font-semibold shadow-sm">
+                        <Badge 
+                          variant={u.rol === "SUPERADMIN" ? "destructive" : u.rol === "COORDINADOR" ? "default" : u.rol === "INSTRUCTOR" ? "secondary" : "outline"} 
+                          className="font-semibold shadow-sm"
+                        >
                           {u.rol || "ALUMNO"}
                         </Badge>
                       </TableCell>
@@ -143,23 +144,34 @@ export default function UsuariosPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
-<DropdownMenuTrigger asChild>
-  <Button variant="ghost" size="icon" className="h-8 w-8" disabled={u.id === currentUser?.id}>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8" 
+                              disabled={u.id === currentUser?.id || u.rol === "SUPERADMIN"}
+                            >
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
                             <DropdownMenuLabel>Modificar Permisos</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleRoleChange(u.id, "ADMIN")} className="cursor-pointer">
-                              Hacer Administrador
-                            </DropdownMenuItem>
+                            
+                            {/* Un COORDINADOR no puede crear otros COORDINADORES, solo el SUPERADMIN */}
+                            {currentUser?.rol === "SUPERADMIN" && (
+                              <DropdownMenuItem onClick={() => handleRoleChange(u.id, "COORDINADOR")} className="cursor-pointer">
+                                Hacer Coordinador
+                              </DropdownMenuItem>
+                            )}
+                            
                             <DropdownMenuItem onClick={() => handleRoleChange(u.id, "INSTRUCTOR")} className="cursor-pointer">
                               Hacer Instructor
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleRoleChange(u.id, "ALUMNO")} className="cursor-pointer">
                               Hacer Alumno
                             </DropdownMenuItem>
+                            
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleStatusChange(u.id, !u.activo)} className="cursor-pointer font-medium">
                               {u.activo ? "Bloquear Acceso (Suspender)" : "Desbloquear (Activar)"}

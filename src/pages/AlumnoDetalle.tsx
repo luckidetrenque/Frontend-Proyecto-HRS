@@ -14,6 +14,8 @@ import {
   TrendingUp,
   User,
   XCircle,
+  Ticket,
+  AlertTriangle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -22,6 +24,7 @@ import { toast } from "sonner";
 import { AlumnoForm } from "@/components/forms/AlumnoForm";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
@@ -65,7 +68,7 @@ export default function AlumnoDetalle() {
     mutationFn: ({ id, data }: { id: number; data: Partial<Alumno> }) =>
       alumnosApi.actualizar(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["caballo", alumnoId] });
+      queryClient.invalidateQueries({ queryKey: ["alumno", alumnoId] });
       closeEdit();
       toast.success("Alumno actualizado correctamente");
     },
@@ -81,6 +84,20 @@ export default function AlumnoDetalle() {
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al eliminar el alumno"),
+  });
+
+  const invitarMutation = useMutation({
+    mutationFn: (id: number) => alumnosApi.invitar(id),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["alumno", alumnoId] });
+      const registroUrl = `${window.location.origin}/register?code=${res.codigo}`;
+      navigator.clipboard.writeText(registroUrl);
+      toast.success("Invitación generada", {
+        description: `Enlace copiado al portapapeles: ${registroUrl}`,
+        duration: 5000,
+      });
+    },
+    onError: (error: Error) => toast.error(error.message),
   });
 
   const { data: alumno, isLoading: loadingAlumno } = useQuery({
@@ -268,6 +285,28 @@ export default function AlumnoDetalle() {
       </div>
 
       <div className="space-y-6">
+        {alumno.activo && !alumno.codigoUsado && alumno.codigoInvitacion && (
+          <Alert className="bg-amber-50 border-amber-200">
+            <AlertTriangle className="h-5 w-5 text-amber-600" />
+            <div className="ml-3">
+              <h4 className="text-sm font-bold text-amber-900">Registro de usuario pendiente</h4>
+              <AlertDescription className="text-sm text-amber-800">
+                El alumno aún no ha completado su registro en el sistema con el código enviado.
+              </AlertDescription>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-3 border-amber-300 text-amber-900 hover:bg-amber-100"
+                onClick={() => invitarMutation.mutate(alumno.id)}
+                disabled={invitarMutation.isPending}
+              >
+                <Ticket className="mr-2 h-4 w-4" />
+                Reenviar Código de Invitación
+              </Button>
+            </div>
+          </Alert>
+        )}
+
         {/* Información Personal + Caballo */}
         <div className="grid gap-6 md:grid-cols-2">
           {/* Card de Información Personal */}
@@ -287,9 +326,6 @@ export default function AlumnoDetalle() {
             </CardHeader>
 
             <CardContent className="space-y-6">
-              {" "}
-              {/* Aumento el espacio entre secciones principales */}
-              {/* Sección 1: Datos Principales (Grid 2x2) */}
               <div className="grid grid-cols-2 gap-4">
                 <InfoField label="Nombre Completo">
                   {alumno.nombre} {alumno.apellido}
@@ -310,7 +346,6 @@ export default function AlumnoDetalle() {
                   años
                 </InfoField>
               </div>
-              {/* Sección 2: Contacto y Email (Grid 2x2) */}
               <div className="pt-4 border-t grid grid-cols-2 gap-4">
                 <InfoField label="Teléfono">
                   <div className="flex items-center gap-2">
@@ -327,7 +362,6 @@ export default function AlumnoDetalle() {
                   </div>
                 </InfoField>
               </div>
-              {/* Sección 3: Clases e Inscripción (Grid 2x2) */}
               <div className="pt-4 border-t grid grid-cols-2 gap-4">
                 <InfoField label="Fecha de Inscripción">
                   {alumno.fechaInscripcion
@@ -339,10 +373,11 @@ export default function AlumnoDetalle() {
                 <InfoField label="Clases por Mes">
                   <span className="text-lg">{alumno.cantidadClases}</span>
                 </InfoField>
-                {/* Muevo el estado aquí para que encaje en la cuadrícula */}
                 <InfoField label="Estado">
-                  <StatusBadge status={alumno.activo ? "success" : "default"}>
-                    {alumno.activo ? "Activo" : "Inactivo"}
+                  <StatusBadge 
+                    status={!alumno.activo ? "default" : (!alumno.codigoUsado && alumno.codigoInvitacion ? "warning" : "success")}
+                  >
+                    {!alumno.activo ? "Inactivo" : (!alumno.codigoUsado && alumno.codigoInvitacion ? "Pendiente" : "Activo")}
                   </StatusBadge>
                 </InfoField>
               </div>
@@ -447,7 +482,6 @@ export default function AlumnoDetalle() {
                         }
                       }}
                     >
-                      {/* Se agrega un icono visible al botón */}
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>

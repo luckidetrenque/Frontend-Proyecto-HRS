@@ -17,6 +17,7 @@ const CaballosPage = lazy(() => import("./pages/Caballos"));
 const CalendarioPage = lazy(() => import("./pages/Calendario"));
 const ClaseDetalle = lazy(() => import("./pages/ClaseDetalle"));
 const ClasesPage = lazy(() => import("./pages/Clases"));
+const ConfiguracionPage = lazy(() => import("@/pages/Configuracion"));
 const Finanzas = lazy(() => import("./pages/Finanzas"));
 const Index = lazy(() => import("./pages/Index"));
 const InstructorDetalle = lazy(() => import("./pages/InstructorDetalle"));
@@ -58,7 +59,7 @@ const App = () => (
               <Route
                 path="/alumnos"
                 element={
-                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
+                  <ProtectedRoute allowedRoles={["COORDINADOR", "SUPERADMIN", "INSTRUCTOR"]}>
                     <AlumnosPage />
                   </ProtectedRoute>
                 }
@@ -66,7 +67,7 @@ const App = () => (
               <Route
                 path="/caballos"
                 element={
-                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
+                  <ProtectedRoute allowedRoles={["COORDINADOR", "SUPERADMIN", "INSTRUCTOR"]}>
                     <CaballosPage />
                   </ProtectedRoute>
                 }
@@ -74,7 +75,7 @@ const App = () => (
               <Route
                 path="/instructores"
                 element={
-                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
+                  <ProtectedRoute allowedRoles={["COORDINADOR", "SUPERADMIN", "INSTRUCTOR"]}>
                     <InstructoresPage />
                   </ProtectedRoute>
                 }
@@ -82,7 +83,7 @@ const App = () => (
               <Route
                 path="/clases"
                 element={
-                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
+                  <ProtectedRoute allowedRoles={["COORDINADOR", "SUPERADMIN", "INSTRUCTOR"]}>
                     <ClasesPage />
                   </ProtectedRoute>
                 }
@@ -90,7 +91,7 @@ const App = () => (
               <Route
                 path="/calendario"
                 element={
-                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR", "ALUMNO"]}>
+                  <ProtectedRoute allowedRoles={["COORDINADOR", "SUPERADMIN", "INSTRUCTOR", "ALUMNO"]}>
                     <CalendarioPage />
                   </ProtectedRoute>
                 }
@@ -106,7 +107,7 @@ const App = () => (
               <Route
                 path="/reportes"
                 element={
-                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
+                  <ProtectedRoute allowedRoles={["COORDINADOR", "SUPERADMIN", "INSTRUCTOR"]}>
                     <Reportes />
                   </ProtectedRoute>
                 }
@@ -114,15 +115,23 @@ const App = () => (
               <Route
                 path="/finanzas"
                 element={
-                  <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <ProtectedRoute allowedRoles={["COORDINADOR", "SUPERADMIN"]}>
                     <Finanzas />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/configuracion"
+                element={
+                  <ProtectedRoute allowedRoles={["COORDINADOR", "SUPERADMIN"]}>
+                    <ConfiguracionPage />
                   </ProtectedRoute>
                 }
               />
               <Route
                 path="/usuarios"
                 element={
-                  <ProtectedRoute allowedRoles={["ADMIN"]}>
+                  <ProtectedRoute allowedRoles={["COORDINADOR", "SUPERADMIN"]}>
                     <UsuariosPage />
                   </ProtectedRoute>
                 }
@@ -130,7 +139,7 @@ const App = () => (
               <Route
                 path="/alumnos/:id"
                 element={
-                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
+                  <ProtectedRoute allowedRoles={["COORDINADOR", "SUPERADMIN", "INSTRUCTOR"]}>
                     <AlumnoDetalle />
                   </ProtectedRoute>
                 }
@@ -139,7 +148,7 @@ const App = () => (
               <Route
                 path="/caballos/:id"
                 element={
-                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
+                  <ProtectedRoute allowedRoles={["COORDINADOR", "SUPERADMIN", "INSTRUCTOR"]}>
                     <CaballoDetalle />
                   </ProtectedRoute>
                 }
@@ -147,7 +156,7 @@ const App = () => (
               <Route
                 path="/instructores/:id"
                 element={
-                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
+                  <ProtectedRoute allowedRoles={["COORDINADOR", "SUPERADMIN", "INSTRUCTOR"]}>
                     <InstructorDetalle />
                   </ProtectedRoute>
                 }
@@ -155,7 +164,7 @@ const App = () => (
               <Route
                 path="/clases/:id"
                 element={
-                  <ProtectedRoute allowedRoles={["ADMIN", "INSTRUCTOR"]}>
+                  <ProtectedRoute allowedRoles={["COORDINADOR", "SUPERADMIN", "INSTRUCTOR"]}>
                     <ClaseDetalle />
                   </ProtectedRoute>
                 }
