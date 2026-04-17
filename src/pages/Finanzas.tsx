@@ -51,6 +51,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AbonosTable } from "@/components/finanzas/AbonosTable";
+import { FacturasTable } from "@/components/finanzas/FacturasTable";
+import { PagosTable } from "@/components/finanzas/PagosTable";
+import { 
+  History, 
+  ReceiptText, 
+  CreditCard as CreditCardIcon 
+} from "lucide-react";
 
 // ─── Paleta de colores ────────────────────────────────────────────────────────
 const COLORS = {
@@ -467,6 +475,18 @@ export default function FinanzasPage() {
             <TabsTrigger value="configuracion" className="gap-1.5">
               <CircleDollarSign className="h-4 w-4" />
               Precios
+            </TabsTrigger>
+            <TabsTrigger value="gestion-abonos" className="gap-1.5">
+              <CreditCardIcon className="h-4 w-4" />
+              Abonos
+            </TabsTrigger>
+            <TabsTrigger value="gestion-facturas" className="gap-1.5">
+              <ReceiptText className="h-4 w-4" />
+              Facturas
+            </TabsTrigger>
+            <TabsTrigger value="gestion-pagos" className="gap-1.5">
+              <History className="h-4 w-4" />
+              Pagos
             </TabsTrigger>
           </TabsList>
 
@@ -1127,6 +1147,52 @@ export default function FinanzasPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* ── TAB GESTIÓN DE ABONOS ─────────────────────────────────────────── */}
+          <TabsContent value="gestion-abonos" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Gestión de Abonos</CardTitle>
+                <CardDescription>
+                  Administra los pases de clase activos de los alumnos (pausar, reactivar o cancelar).
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AbonosTable />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── TAB GESTIÓN DE FACTURAS ───────────────────────────────────────── */}
+          <TabsContent value="gestion-facturas" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Facturas Pendientes</CardTitle>
+                <CardDescription>
+                  Listado de facturas con saldo pendiente. Podés registrar pagos directamente aquí.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FacturasTable />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── TAB GESTIÓN DE PAGOS ──────────────────────────────────────────── */}
+          <TabsContent value="gestion-pagos" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Historial de Pagos</CardTitle>
+                <CardDescription>
+                  Registro cronológico de todos los cobros realizados.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PagosTable />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
         </Tabs>
       </div>
     </Layout>

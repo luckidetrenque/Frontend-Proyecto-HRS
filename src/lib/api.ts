@@ -4,6 +4,11 @@ import {
   EstadoClase,
   TipoCaballo,
   TipoPension,
+  FormaPago,
+  EstadoAbono,
+  EstadoFactura,
+  ModalidadClase,
+  TipoClase,
 } from "@/types/enums";
 // API Configuration for HRS - Escuela de Equitación
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -225,6 +230,81 @@ export interface Honorarios {
   filas: FilaInstructor[];
 }
 
+export interface Abono {
+  id: number;
+  alumnoId: number;
+  alumnoNombre?: string;
+  planClases: number;
+  planPension: string;
+  caballoNombre?: string;
+  fechaContratacion: string;
+  fechaVencimiento: string;
+  clasesRestantes: number;
+  precioClases: number;
+  precioPension: number;
+  cuotaSocio: number;
+  totalMensual: number;
+  estado: EstadoAbono;
+  observaciones?: string;
+}
+
+export interface Factura {
+  id: number;
+  numeroFactura: string; 
+  numero: string; // Alias
+  alumnoId: number;
+  alumnoNombre?: string;
+  fechaEmision: string;
+  fechaVencimiento: string;
+  total: number;
+  montoTotal: number; // Alias
+  montoPagado: number;
+  saldoPendiente: number;
+  estado: EstadoFactura;
+  periodo?: string;
+}
+
+export interface Pago {
+  id: number;
+  facturaId: number;
+  facturaNumero?: string;
+  alumnoNombre?: string;
+  fechaPago: string;
+  monto: number;
+  formaPago: FormaPago;
+  numeroComprobante?: string;
+  observaciones?: string;
+}
+
+export interface RegistrarPagoRequest {
+  facturaId: number;
+  fechaPago: string;
+  monto: number;
+  formaPago: FormaPago;
+  numeroComprobante?: string;
+  observaciones?: string;
+}
+
+export interface InscripcionRequest {
+  alumnoId: number;
+  edad?: number;
+  esSocio: boolean;
+  modalidad: ModalidadClase;
+  tipoClase?: TipoClase;
+  cantidadClases: number;
+  tipoPension: TipoPension;
+  caballoId?: number;
+  formaPago: FormaPago;
+  fechaPago: string;
+}
+
+export interface PrecioCalculado {
+  subtotalClases: number;
+  subtotalPension: number;
+  cuotaSocio: number;
+  total: number;
+}
+
 export interface PageResponse<T> {
   content: T[];
   totalElements: number;
@@ -347,10 +427,10 @@ export const alumnosApi = {
     });
     if (!response.ok) throw new Error("Error al eliminar");
   },
-  obtenerMiPerfil: async (): Promise<Alumno> => {
-  const response = await apiFetch(`/alumnos/me`);
-  return handleResponse<Alumno>(response);
-},
+  me: async (): Promise<Alumno> => {
+    const response = await apiFetch(`/alumnos/me`);
+    return handleResponse<Alumno>(response);
+  },
   buscar: async (filters: AlumnoSearchFilters): Promise<Alumno[]> => {
     const query = new URLSearchParams();
     if (filters.dni) query.append("dni", filters.dni);
@@ -365,6 +445,97 @@ export const alumnosApi = {
       method: "POST",
     });
     return handleResponse<{ codigo: string; email: string; nombre: string }>(response);
+  },
+  enviarInvitacionEmail: async (id: number): Promise<{ mensaje: string }> => {
+    const response = await apiFetch(`/alumnos/${id}/invitar/enviar-email`, {
+      method: "POST",
+    });
+    return handleResponse<{ mensaje: string }>(response);
+  },
+};
+
+// Abonos
+export const abonosApi = {
+  obtenerActivo: async (alumnoId: number): Promise<Abono> => {
+    const response = await apiFetch(`/abonos/alumno/${alumnoId}/activo`);
+    return handleResponse<Abono>(response);
+  },
+  listarPorAlumno: async (alumnoId: number): Promise<Abono[]> => {
+    const response = await apiFetch(`/abonos/alumno/${alumnoId}`);
+    return handleResponse<Abono[]>(response);
+  },
+  listar: async (estado?: string): Promise<Abono[]> => {
+    const query = estado ? `?estado=${estado}` : "";
+    const response = await apiFetch(`/abonos${query}`);
+    return handleResponse<Abono[]>(response);
+  },
+  pausar: async (id: number, motivo: string): Promise<void> => {
+    await apiFetch(`/abonos/${id}/pausar?motivo=${encodeURIComponent(motivo)}`, {
+      method: "POST",
+    });
+  },
+  reactivar: async (id: number): Promise<void> => {
+    await apiFetch(`/abonos/${id}/reactivar`, {
+      method: "POST",
+    });
+  },
+  cancelar: async (id: number, motivo: string): Promise<void> => {
+    await apiFetch(`/abonos/${id}/cancelar?motivo=${encodeURIComponent(motivo)}`, {
+      method: "POST",
+    });
+  },
+  calcularPrecio: async (request: InscripcionRequest): Promise<PrecioCalculado> => {
+    const response = await apiFetch(`/abonos/calcular-precio`, {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
+    return handleResponse<PrecioCalculado>(response);
+  },
+  crear: async (request: InscripcionRequest): Promise<{ id: number; mensaje: string }> => {
+    const response = await apiFetch(`/abonos`, {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
+    return handleResponse<{ id: number; mensaje: string }>(response);
+  },
+};
+
+// Facturas
+export const facturasApi = {
+  listarPorAlumno: async (alumnoId: number): Promise<Factura[]> => {
+    const response = await apiFetch(`/facturas/alumno/${alumnoId}`);
+    return handleResponse<Factura[]>(response);
+  },
+  listarPendientes: async (): Promise<Factura[]> => {
+    const response = await apiFetch(`/facturas/pendientes`);
+    return handleResponse<Factura[]>(response);
+  },
+  obtener: async (id: number): Promise<Factura> => {
+    const response = await apiFetch(`/facturas/${id}`);
+    return handleResponse<Factura>(response);
+  },
+};
+
+// Pagos
+export const pagosApi = {
+  registrar: async (pago: RegistrarPagoRequest): Promise<Pago> => {
+    const response = await apiFetch(`/pagos`, {
+      method: "POST",
+      body: JSON.stringify(pago),
+    });
+    return handleResponse<Pago>(response);
+  },
+  listarPorAlumno: async (alumnoId: number): Promise<Pago[]> => {
+    const response = await apiFetch(`/pagos/alumno/${alumnoId}`);
+    return handleResponse<Pago[]>(response);
+  },
+  listar: async (): Promise<Pago[]> => {
+    const response = await apiFetch(`/pagos`);
+    return handleResponse<Pago[]>(response);
+  },
+  listarPorFactura: async (facturaId: number): Promise<Pago[]> => {
+    const response = await apiFetch(`/pagos/factura/${facturaId}`);
+    return handleResponse<Pago[]>(response);
   },
 };
 

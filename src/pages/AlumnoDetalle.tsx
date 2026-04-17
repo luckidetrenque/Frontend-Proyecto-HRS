@@ -16,6 +16,7 @@ import {
   XCircle,
   Ticket,
   AlertTriangle,
+  CreditCard,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -23,6 +24,7 @@ import { toast } from "sonner";
 
 import { AlumnoForm } from "@/components/forms/AlumnoForm";
 import { Layout } from "@/components/Layout";
+import { InscripcionDialog } from "@/components/finanzas/InscripcionDialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -64,6 +66,8 @@ export default function AlumnoDetalle() {
     closeDelete,
   } = useEntityActions<Alumno>();
 
+  const [isInscribirOpen, setIsInscribirOpen] = useState(false);
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Alumno> }) =>
       alumnosApi.actualizar(id, data),
@@ -88,14 +92,22 @@ export default function AlumnoDetalle() {
 
   const invitarMutation = useMutation({
     mutationFn: (id: number) => alumnosApi.invitar(id),
-    onSuccess: (res) => {
+    onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ["alumno", alumnoId] });
-      const registroUrl = `${window.location.origin}/register?code=${res.codigo}`;
+      const registroUrl = res.urlInvitacion || `${window.location.origin}/register?code=${res.codigo}`;
       navigator.clipboard.writeText(registroUrl);
       toast.success("Invitación generada", {
-        description: `Enlace copiado al portapapeles: ${registroUrl}`,
+        description: `Enlace copiado: ${registroUrl}`,
         duration: 5000,
       });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const enviarEmailMutation = useMutation({
+    mutationFn: (id: number) => alumnosApi.enviarInvitacionEmail(id),
+    onSuccess: (res) => {
+      toast.success(res.mensaje);
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -230,21 +242,22 @@ export default function AlumnoDetalle() {
   }
 
   const handleContactWhatsApp = () => {
-    window.open(
-      encodeURI(
-        `https://wa.me/${alumno.codigoArea}${alumno.telefono}?text=Hola ${alumno.nombre}, te contactamos desde la Escuela para avisarte que... `,
-      ),
-      "_blank",
-    );
+    window.open(`https://wa.me/${alumno.codigoArea}${alumno.telefono}`, "_blank");
   };
 
   const handleContactWEmail = () => {
-    window.open(
-      encodeURI(
-        `mailto:${alumno.email}?subject=${encodeURIComponent(`Contacto para ${alumno.nombre} ${alumno.apellido}`)}`,
-      ),
-      "_blank",
-    );
+    window.open(`mailto:${alumno.email}`, "_blank");
+  };
+
+  const handleSendInvitationWhatsApp = () => {
+    if (!alumno.codigoInvitacion) return;
+    const link = `${window.location.origin}/register?code=${alumno.codigoInvitacion}`;
+    const message = `Hola ${alumno.nombre}! 👋 Te enviamos tu link de registro para la Escuela de Equitación HRS: ${link}`;
+    window.open(`https://wa.me/${alumno.codigoArea}${alumno.telefono}?text=${encodeURIComponent(message)}`, "_blank");
+  };
+
+  const handleSendInvitationEmail = () => {
+    enviarEmailMutation.mutate(alumno.id);
   };
 
   const caballo = caballos.find((c) => c.id === alumno.caballoId);
@@ -274,6 +287,13 @@ export default function AlumnoDetalle() {
                   Email
                 </Button>
               )}
+              <Button 
+                className="bg-primary hover:bg-primary/90"
+                onClick={() => setIsInscribirOpen(true)}
+              >
+                <Ticket className="mr-2 h-4 w-4" />
+                Inscribir Alumno
+              </Button>
               <EntityDetailActions
                 onEdit={() => openEdit(alumno)}
                 onDelete={() => openDelete(alumno)}
@@ -293,16 +313,46 @@ export default function AlumnoDetalle() {
               <AlertDescription className="text-sm text-amber-800">
                 El alumno aún no ha completado su registro en el sistema con el código enviado.
               </AlertDescription>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mt-3 border-amber-300 text-amber-900 hover:bg-amber-100"
-                onClick={() => invitarMutation.mutate(alumno.id)}
-                disabled={invitarMutation.isPending}
-              >
-                <Ticket className="mr-2 h-4 w-4" />
-                Reenviar Código de Invitación
-              </Button>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-amber-300 text-amber-900 hover:bg-amber-100"
+                  onClick={() => invitarMutation.mutate(alumno.id)}
+                  disabled={invitarMutation.isPending}
+                >
+                  <Ticket className="mr-2 h-4 w-4" />
+                  Regenerar Link
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-primary text-primary hover:bg-primary/10"
+                  onClick={() => setIsInscribirOpen(true)}
+                >
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Inscribir (Activar)
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-amber-300 text-amber-900 hover:bg-amber-100"
+                  onClick={handleSendInvitationWhatsApp}
+                >
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  Enviar por WhatsApp
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-amber-300 text-amber-900 hover:bg-amber-100"
+                  onClick={handleSendInvitationEmail}
+                  disabled={enviarEmailMutation.isPending}
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  Enviar por Email
+                </Button>
+              </div>
             </div>
           </Alert>
         )}
@@ -653,6 +703,11 @@ export default function AlumnoDetalle() {
           </DialogContent>
         </Dialog>
       </div>
+      <InscripcionDialog 
+        alumno={alumno} 
+        isOpen={isInscribirOpen} 
+        onOpenChange={setIsInscribirOpen} 
+      />
     </Layout>
   );
 }

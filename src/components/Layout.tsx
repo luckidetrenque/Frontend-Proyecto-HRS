@@ -37,7 +37,8 @@ const navigation = [
   { name: "Finanzas", href: "/finanzas", icon: CircleDollarSign },
   { name: "Configuración", href: "/configuracion", icon: Shield },
   { name: "Usuarios", href: "/usuarios", icon: Shield },
-  { name: "Mis Clases", href: "/mis-clases", icon: BookOpen }
+  { name: "Mis Clases", href: "/mis-clases", icon: BookOpen },
+  { name: "Mis Finanzas", href: "/mis-finanzas", icon: CircleDollarSign }
 ];
 
 export function Layout({ children }: LayoutProps) {
@@ -53,7 +54,7 @@ export function Layout({ children }: LayoutProps) {
       return ["Clases", "Calendario", "Caballos", "Alumnos", "Reportes"].includes(item.name);
     }
     if (user?.rol === "ALUMNO") {
-      return ["Mis Clases", "Calendario"].includes(item.name);
+      return ["Mis Clases", "Mis Finanzas", "Calendario"].includes(item.name);
     }
     return false;
   });

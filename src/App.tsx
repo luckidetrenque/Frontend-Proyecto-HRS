@@ -29,6 +29,7 @@ const Register = lazy(() => import("./pages/Register"));
 const Reportes = lazy(() => import("./pages/Reportes"));
 const UsuariosPage = lazy(() => import("./pages/Usuarios"));
 const MisClasesPage = lazy(() => import("./pages/MisClases"));
+const MisFinanzas = lazy(() => import("./pages/MisFinanzas"));
 
 const queryClient = new QueryClient();
 
@@ -175,6 +176,15 @@ const App = () => (
                 element={
                   <ProtectedRoute allowedRoles={["ALUMNO"]}>
                     <MisClasesPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/mis-finanzas"
+                element={
+                  <ProtectedRoute allowedRoles={["ALUMNO"]}>
+                    <MisFinanzas />
                   </ProtectedRoute>
                 }
               />

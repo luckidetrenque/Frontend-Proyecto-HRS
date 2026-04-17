@@ -91,8 +91,17 @@ export function useCalendar() {
     queryKey: ["alumnos-cal"],
     queryFn: () =>
       alumnosApi.listar({ page: 0, size: 500, sort: "apellido,asc" }),
+    enabled: !isAlumno, // Solo admin/instructor listan todos
   });
   const alumnos: Alumno[] = alumnosData?.content ?? [];
+
+  // Query para el perfil del propio alumno
+  const { data: miAlumno } = useQuery({
+    queryKey: ["alumno-me"],
+    queryFn: alumnosApi.me,
+    enabled: isAlumno && !!user?.alumnoId,
+    staleTime: Infinity,
+  });
 
   const { data: instructoresData } = useQuery({
     queryKey: ["instructores-cal"],
@@ -613,5 +622,6 @@ export function useCalendar() {
     getInstructorNombre,
     getCaballoNombre,
     getInstructorColor,
+    miAlumno,
   };
 }

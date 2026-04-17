@@ -26,7 +26,7 @@ export default function MisClasesPage() {
   // 1. Obtener el perfil del alumno logueado
   const { data: miPerfil, isLoading: loadingPerfil } = useQuery({
     queryKey: ["alumno-me"],
-    queryFn: alumnosApi.obtenerMiPerfil,
+    queryFn: alumnosApi.me,
     enabled: user?.rol === "ALUMNO",
   });
 

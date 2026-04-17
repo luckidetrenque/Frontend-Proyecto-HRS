@@ -81,6 +81,7 @@ export default function CalendarioPage() {
     getCaballoNombre,
     getInstructorColor,
     conflictSet,
+    miAlumno,
   } = useCalendar();
 
   const [alumnoIdState, setAlumnoIdState] = useState<string>("");
@@ -204,19 +205,33 @@ export default function CalendarioPage() {
           {cardTitle}
         </CardTitle>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsExpanded((v) => !v)}
-          title={isExpanded ? "Contraer (Esc)" : "Expandir a pantalla completa"}
-          className="h-7 w-7 shrink-0"
-        >
-          {isExpanded ? (
-            <Minimize2 className="h-4 w-4" />
-          ) : (
-            <Maximize2 className="h-4 w-4" />
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+            <Button 
+                variant="outline"
+                size="sm"
+                onClick={() => handleDayClick(new Date())}
+                className={cn(
+                    "h-7 px-3 text-xs gap-1.5",
+                    isAlumno ? "border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800" : ""
+                )}
+            >
+                <CalendarCheck className="h-3.5 w-3.5" />
+                {isAlumno ? "Nueva Reserva" : "Nueva Clase"}
+            </Button>
+            <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsExpanded((v) => !v)}
+                title={isExpanded ? "Contraer (Esc)" : "Expandir a pantalla completa"}
+                className="h-7 w-7 shrink-0"
+            >
+                {isExpanded ? (
+                    <Minimize2 className="h-4 w-4" />
+                ) : (
+                    <Maximize2 className="h-4 w-4" />
+                )}
+            </Button>
+        </div>
       </CardHeader>
 
       <CardContent
@@ -304,13 +319,13 @@ export default function CalendarioPage() {
         title="Calendario de Clases"
         description="Vista interactiva de las clases programadas"
         action={
-          <CalendarControls
-            currentDate={currentDate}
-            viewMode={viewMode}
-            onNavigate={navigate}
-            onToday={goToToday}
-            onViewModeChange={setViewMode}
-          />
+            <CalendarControls
+              currentDate={currentDate}
+              viewMode={viewMode}
+              onNavigate={navigate}
+              onToday={goToToday}
+              onViewModeChange={setViewMode}
+            />
         }
       />
 
@@ -440,18 +455,23 @@ export default function CalendarioPage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display">
-              {claseToEdit ? "Editar Clase" : "Nueva Clase"}
+              {claseToEdit 
+                ? "Editar Clase" 
+                : (isAlumno ? "Nueva Reserva" : "Nueva Clase")}
             </DialogTitle>
             <DialogDescription>
               {claseToEdit
                 ? `Editando clase de ${getNombreCompletoParaClase(claseToEdit)}`
-                : `Programar clase para el ${format(currentDate, "d 'de' MMMM 'de' yyyy", { locale: es })}`}
+                : (isAlumno 
+                    ? `Reservar clase para el ${format(currentDate, "d 'de' MMMM 'de' yyyy", { locale: es })}`
+                    : `Programar clase para el ${format(currentDate, "d 'de' MMMM 'de' yyyy", { locale: es })}`
+                  )}
             </DialogDescription>
           </DialogHeader>
 
           <ClaseForm
             clase={claseToEdit ?? undefined}
-            alumnos={alumnos}
+            alumnos={isAlumno && miAlumno ? [miAlumno] : alumnos}
             instructores={instructores}
             caballos={caballos}
             clases={filteredClases}
